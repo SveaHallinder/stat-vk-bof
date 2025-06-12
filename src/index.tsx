@@ -6,6 +6,7 @@ import { KunderPage } from "./screens/KunderPage";
 import { RegisteraTidPage } from "./screens/RegisteraTidPage";
 import { ArendelistaPage } from "./screens/ArendelistaPage";
 import { StatistikPage } from "./screens/StatistikPage";
+import { AdminPage } from "./screens/AdminPage";
 
 createRoot(document.getElementById("app") as HTMLElement).render(
   <StrictMode>
@@ -16,6 +17,7 @@ createRoot(document.getElementById("app") as HTMLElement).render(
         <Route path="/registrera-tid" element={<RegisteraTidPage />} />
         <Route path="/arendelista" element={<ArendelistaPage />} />
         <Route path="/statistik" element={<StatistikPage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
