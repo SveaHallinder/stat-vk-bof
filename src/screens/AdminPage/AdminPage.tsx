@@ -1,6 +1,9 @@
-import React, { useState } from "react";
-import { Sidebar } from "../DashboardRedesign/components/Sidebar";
-import { MoreHorizontal } from "lucide-react";
+import React from "react";
+import { Layout } from "../../components/Layout";
+import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { Card, CardContent } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 
 const insatserList = [
   { name: "Samtal", for: "Biståndsbedömda" },
@@ -20,90 +23,99 @@ const behandlareList = [
   { name: "Oskar P", mail: "mail.mail@mail.se", start: "åååå-mm-dd" },
 ];
 
-export const AdminPage = (): JSX.Element => {
-  const [tab, setTab] = useState<"insatser" | "behandlare">("insatser");
+const TableHeader = ({ children }: { children: React.ReactNode }) => (
+  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">{children}</th>
+);
 
+const TableRow = ({ children }: { children: React.ReactNode }) => (
+  <tr className="hover:bg-gray-50 border-b border-gray-200">{children}</tr>
+);
+
+const TableCell = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
+  <td className={`px-6 py-4 text-gray-600 ${className}`}>{children}</td>
+);
+
+export const AdminPage = (): JSX.Element => {
   return (
-    <div className="min-h-screen bg-[#f5f7fa] flex">
-      <Sidebar activeItem="Admin" />
-      <div className="flex-1 flex flex-col px-12 pt-10 pb-4">
-        <h1 className="text-3xl font-bold text-[#333] mb-6">Admin</h1>
-        {/* Flikar */}
-        <div className="flex gap-2 mb-6">
-          <button
-            className={`px-6 py-2 rounded-full font-semibold text-lg transition ${tab === "insatser" ? "bg-[#17694c] text-white" : "bg-[#eaf6f1] text-[#17694c] hover:bg-[#d2ede1]"}`}
-            onClick={() => setTab("insatser")}
-          >
-            Insatser
-          </button>
-          <button
-            className={`px-6 py-2 rounded-full font-semibold text-lg transition ${tab === "behandlare" ? "bg-[#17694c] text-white" : "bg-[#eaf6f1] text-[#17694c] hover:bg-[#d2ede1]"}`}
-            onClick={() => setTab("behandlare")}
-          >
-            Behandlare
-          </button>
-        </div>
-        {/* Innehåll */}
-        {tab === "insatser" && (
-          <div className="bg-white rounded-2xl shadow-md p-8">
-            <div className="flex items-center justify-between mb-6">
-              <span className="text-xl font-bold text-[#17694c]">Lägg till ny insats</span>
-              <button className="bg-[#17694c] text-white font-semibold px-5 py-2 rounded-full text-base hover:bg-[#145c41] transition">+</button>
-            </div>
-            <table className="w-full text-left">
-              <thead className="bg-[#eaf6f1] text-[#17694c]">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Insats</th>
-                  <th className="px-4 py-3 font-semibold">Tillgänglig för</th>
-                  <th className="px-4 py-3 font-semibold">Åtgärder</th>
-                </tr>
-              </thead>
-              <tbody>
-                {insatserList.map((i, idx) => (
-                  <tr key={i.name + idx} className="border-b border-[#eaf6f1]">
-                    <td className="px-4 py-2">{i.name}</td>
-                    <td className="px-4 py-2">{i.for}</td>
-                    <td className="px-4 py-2">
-                      <button className="p-1 hover:bg-gray-100 rounded" title="Åtgärder"><MoreHorizontal className="w-6 h-6 text-[#17694c]" /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {tab === "behandlare" && (
-          <div className="bg-white rounded-2xl shadow-md p-8">
-            <div className="flex items-center justify-between mb-6">
-              <span className="text-xl font-bold text-[#17694c]">Lägg till ny behandlare</span>
-              <button className="bg-[#17694c] text-white font-semibold px-5 py-2 rounded-full text-base hover:bg-[#145c41] transition">+</button>
-            </div>
-            <div className="text-lg font-semibold text-[#17694c] mb-2">Dina aktiva behandlare</div>
-            <table className="w-full text-left">
-              <thead className="bg-[#eaf6f1] text-[#17694c]">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Namn</th>
-                  <th className="px-4 py-3 font-semibold">Mail</th>
-                  <th className="px-4 py-3 font-semibold">Startdatum</th>
-                  <th className="px-4 py-3 font-semibold">Åtgärder</th>
-                </tr>
-              </thead>
-              <tbody>
-                {behandlareList.map((b, idx) => (
-                  <tr key={b.name + idx} className="border-b border-[#eaf6f1]">
-                    <td className="px-4 py-2">{b.name}</td>
-                    <td className="px-4 py-2">{b.mail}</td>
-                    <td className="px-4 py-2">{b.start}</td>
-                    <td className="px-4 py-2">
-                      <button className="p-1 hover:bg-gray-100 rounded" title="Åtgärder"><MoreHorizontal className="w-6 h-6 text-[#17694c]" /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+    <Layout activeItem="Admin" title="Admin">
+      <Tabs defaultValue="insatser" className="w-full">
+        <TabsList className="flex w-full bg-gray-100 rounded-2xl mb-2 p-1 gap-2">
+          <TabsTrigger value="insatser" className="flex-1 py-3 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Insatser</TabsTrigger>
+          <TabsTrigger value="behandlare" className="flex-1 py-3 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Behandlare</TabsTrigger>
+        </TabsList>
+        <TabsContent value="insatser">
+          <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
+            <CardContent className="p-6">
+              <div className="flex justify-start mb-4">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <PlusCircle className="w-5 h-5" /> Lägg till ny insats
+                </Button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <TableHeader>Insats</TableHeader>
+                      <TableHeader>Tillgänglig för</TableHeader>
+                      <TableHeader>Åtgärder</TableHeader>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {insatserList.map((i, idx) => (
+                      <TableRow key={i.name + idx}>
+                        <TableCell className="font-medium text-gray-800">{i.name}</TableCell>
+                        <TableCell>{i.for}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="w-5 h-5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="behandlare">
+          <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
+            <CardContent className="p-6">
+               <div className="flex justify-end mb-4">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <PlusCircle className="w-5 h-5" /> Lägg till ny behandlare
+                </Button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <TableHeader>Namn</TableHeader>
+                      <TableHeader>Mail</TableHeader>
+                      <TableHeader>Startdatum</TableHeader>
+                      <TableHeader>Åtgärder</TableHeader>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {behandlareList.map((b, idx) => (
+                      <TableRow key={b.name + idx}>
+                        <TableCell className="font-medium text-gray-800">{b.name}</TableCell>
+                        <TableCell>{b.mail}</TableCell>
+                        <TableCell>{b.start}</TableCell>
+                        <TableCell>
+                           <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="w-5 h-5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </Layout>
   );
 };

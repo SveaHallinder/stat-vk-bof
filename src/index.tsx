@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import "./globals.css";
 import { DashboardRedesign } from "./screens/DashboardRedesign";
 import { KunderPage, CustomerProfile } from "./screens/KunderPage";
 import { RegisteraTidPage } from "./screens/RegisteraTidPage";

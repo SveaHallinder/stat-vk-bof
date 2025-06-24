@@ -24,7 +24,7 @@ export const Sidebar = ({ activeItem }: SidebarProps): JSX.Element => {
   ];
 
   return (
-    <aside className="w-[280px] bg-[#17694c] flex flex-col h-screen">
+    <aside className="w-[280px] bg-[#17694c] flex flex-col h-screen sticky top-0">
       <div className="flex flex-col items-center gap-12 p-8 flex-1">
         {/* Logo and title section */}
         <div className="flex flex-col items-center">
