@@ -34,7 +34,7 @@ export const Sidebar = ({ activeItem }: SidebarProps): JSX.Element => {
               VA
             </AvatarFallback>
           </Avatar>
-          <h2 className="font-bold text-white text-2xl mt-4 font-['Arial-Bold',Helvetica]">
+          <h2 className="font-light text-white text-2xl mt-4 font-['Arial-Bold',Helvetica]">
             Vallentuna
           </h2>
           <p className="font-normal text-white/80 text-base font-['Arial-Regular',Helvetica]">

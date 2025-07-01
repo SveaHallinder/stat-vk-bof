@@ -14,7 +14,7 @@ export const Modal = ({ open, onClose, children }: ModalProps) => {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-lg max-w-md w-full relative"
+        className="rounded-2xl shadow-lg w-full max-w-fit relative flex justify-center items-center bg-white"
         onClick={e => e.stopPropagation()}
       >
         {children}

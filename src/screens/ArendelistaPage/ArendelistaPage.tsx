@@ -5,36 +5,39 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Button } from "../../components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface CaseEntry {
   customerId: string;
   customer: string;
   effort: string;
   date: string;
-  type: string;
   status: string;
-  handler: string;
+  handler1: string;
+  handler2: string;
 }
 
 const initialCases: CaseEntry[] = [
-  { customerId: "1", customer: "AL Flicka 2005", effort: "Repulse", date: "2025-03-25", type: "Besök", status: "Pågående", handler: "Anna L" },
-  { customerId: "2", customer: "BN Pojke 2012", effort: "Samverkan", date: "2025-03-24", type: "Behandling", status: "Avslutad", handler: "Jessica S" },
-  { customerId: "3", customer: "CL Flicka 2009", effort: "Repulse", date: "2025-03-24", type: "Besök", status: "Pågående", handler: "Anna L" },
-  { customerId: "4", customer: "DM Pojke 2011", effort: "Repulse", date: "2025-02-15", type: "Behandling", status: "Avslutad", handler: "Maria A" },
+  { customerId: "1", customer: "AL Flicka 2005", effort: "Repulse", date: "2025-03-25", status: "Pågående", handler1: "Anna L", handler2: "-" },
+  { customerId: "2", customer: "BN Pojke 2012", effort: "Samverkan", date: "2025-03-24", status: "Avslutad", handler1: "Jessica S", handler2: "-" },
+  { customerId: "3", customer: "CL Flicka 2009", effort: "Repulse", date: "2025-03-24", status: "Pågående", handler1: "Anna L", handler2: "-" },
+  { customerId: "4", customer: "DM Pojke 2011", effort: "Repulse", date: "2025-02-15", status: "Avslutad", handler1: "Maria A", handler2: "-" },
 ];
 
 export const ArendelistaPage = (): JSX.Element => {
-  const [cases] = useState<CaseEntry[]>(initialCases);
+  const [caseList, setCaseList] = useState<CaseEntry[]>(initialCases);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [handlerFilter, setHandlerFilter] = useState("all");
+  const [handler1Filter, setHandler1Filter] = useState("all");
+  const [handler2Filter, setHandler2Filter] = useState("all");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const filteredCases = cases.filter(c =>
+  const filteredCases = caseList.filter(c =>
     (search === "" || c.customer.toLowerCase().includes(search.toLowerCase()) || c.effort.toLowerCase().includes(search.toLowerCase())) &&
     (statusFilter === "all" || c.status === statusFilter) &&
-    (typeFilter === "all" || c.type === typeFilter) &&
-    (handlerFilter === "all" || c.handler === handlerFilter)
+    (handler1Filter === "all" || c.handler1 === handler1Filter) &&
+    (handler2Filter === "all" || c.handler2 === handler2Filter)
   );
 
   return (
@@ -59,22 +62,24 @@ export const ArendelistaPage = (): JSX.Element => {
                 <SelectItem value="Avslutad">Avslutad</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <Select value={handler1Filter} onValueChange={setHandler1Filter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Alla typer" />
+                <SelectValue placeholder="Alla behandlare 1" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alla typer</SelectItem>
-                <SelectItem value="Besök">Besök</SelectItem>
-                <SelectItem value="Behandling">Behandling</SelectItem>
+                <SelectItem value="all">Alla behandlare 1</SelectItem>
+                <SelectItem value="Anna L">Anna L</SelectItem>
+                <SelectItem value="Jessica S">Jessica S</SelectItem>
+                <SelectItem value="Maria A">Maria A</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={handlerFilter} onValueChange={setHandlerFilter}>
+            <Select value={handler2Filter} onValueChange={setHandler2Filter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Alla handläggare" />
+                <SelectValue placeholder="Alla behandlare 2" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alla handläggare</SelectItem>
+                <SelectItem value="all">Alla behandlare 2</SelectItem>
+                <SelectItem value="-">-</SelectItem>
                 <SelectItem value="Anna L">Anna L</SelectItem>
                 <SelectItem value="Jessica S">Jessica S</SelectItem>
                 <SelectItem value="Maria A">Maria A</SelectItem>
@@ -88,9 +93,9 @@ export const ArendelistaPage = (): JSX.Element => {
                   <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Kund</th>
                   <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Insats</th>
                   <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Datum</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Typ</th>
                   <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Status</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Handläggare</th>
+                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Behandlare 1</th>
+                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Behandlare 2</th>
                   <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-right">Åtgärder</th>
                 </tr>
               </thead>
@@ -100,7 +105,6 @@ export const ArendelistaPage = (): JSX.Element => {
                     <td className="px-6 py-4 font-medium text-gray-800">{c.customer}</td>
                     <td className="px-6 py-4 text-gray-600">{c.effort}</td>
                     <td className="px-6 py-4 text-gray-600">{c.date}</td>
-                    <td className="px-6 py-4 text-gray-600">{c.type}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`inline-block px-3 py-1 text-xs rounded-full font-semibold ${
@@ -112,16 +116,25 @@ export const ArendelistaPage = (): JSX.Element => {
                         {c.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">{c.handler}</td>
+                    <td className="px-6 py-4 text-gray-600">{c.handler1}</td>
+                    <td className="px-6 py-4 text-gray-600">{c.handler2}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex gap-2 items-center justify-end">
-                        <button className="p-2 hover:bg-gray-200 rounded-full" title="Ändra">
+                        <button
+                          className="p-2 hover:bg-gray-200 rounded-full"
+                          title="Ändra"
+                          onClick={() => {
+                            // Navigera till kundsida och öppna rätt insats/tid (dummy nu)
+                            alert(`Navigera till kundsida för ${c.customer} och öppna insats ${c.effort}`);
+                          }}
+                        >
                           <Edit2 className="w-5 h-5 text-gray-600" />
                         </button>
-                        <button className="p-2 hover:bg-gray-200 rounded-full" title="Visa historik">
-                          <FileText className="w-5 h-5 text-gray-600" />
-                        </button>
-                        <button className="p-2 hover:bg-gray-200 rounded-full" title="Avsluta ärende">
+                        <button
+                          className="p-2 hover:bg-gray-200 rounded-full"
+                          title="Radera"
+                          onClick={() => setDeleteId(c.customerId)}
+                        >
                           <XCircle className="w-5 h-5 text-red-500" />
                         </button>
                       </div>
@@ -131,6 +144,33 @@ export const ArendelistaPage = (): JSX.Element => {
               </tbody>
             </table>
           </div>
+          {/* Popup för radering */}
+          {deleteId && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+              <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full flex flex-col items-center">
+                <div className="text-lg font-semibold mb-4">Är du säker att du vill radera detta ärende?</div>
+                <div className="flex gap-4 mt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteId(null)}
+                    className="min-w-[100px]"
+                  >
+                    Avbryt
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setCaseList(prev => prev.filter(c => c.customerId !== deleteId));
+                      setDeleteId(null);
+                    }}
+                    className="min-w-[100px]"
+                  >
+                    Radera
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </Layout>

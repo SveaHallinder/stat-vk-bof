@@ -16,7 +16,7 @@ export const Header = ({ title }: HeaderProps): JSX.Element => {
   return (
     <header className="flex h-20 items-center justify-between border-b border-gray-200 bg-white px-8">
       <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
+        <h1 className="text-2xl font-light">{title}</h1>
       </div>
       <div className="flex items-center gap-4">
         <div className="relative">

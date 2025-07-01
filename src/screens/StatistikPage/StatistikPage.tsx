@@ -5,6 +5,9 @@ import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Input } from "../../components/ui/input";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import * as XLSX from "xlsx";
 
 const tabList = [
   { key: "anpassad", label: "Anpassad" },
@@ -59,6 +62,29 @@ const StatCard = ({ title, value, colorClass }: { title: string, value: string |
 
 export const StatistikPage = (): JSX.Element => {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; value: string } | null>(null);
+
+  // Exportfunktioner
+  const handleExportPDF = () => {
+    const input = document.querySelector('.bg-white.rounded-xl.p-8'); // diagramkortet
+    if (!input) return;
+    html2canvas(input as HTMLElement).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'landscape' });
+      pdf.addImage(imgData, 'PNG', 10, 10, 270, 150);
+      pdf.save('statistik.pdf');
+    });
+  };
+
+  const handleExportExcel = () => {
+    const data = [
+      ['Insats', 'Antal besök', 'Antal kunder'],
+      ...chartData.map(d => [d.label, d.besok, d.kunder])
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Statistik');
+    XLSX.writeFile(wb, 'statistik.xlsx');
+  };
 
   return (
     <Layout activeItem="Statistik" title="Statistik">
@@ -193,8 +219,8 @@ export const StatistikPage = (): JSX.Element => {
             )}
           </div>
           <div className="flex gap-4 justify-center mt-2">
-            <Button variant="outline" className="rounded-lg text-sm font-medium">Exportera som PDF</Button>
-            <Button className="rounded-lg text-sm font-medium" variant="outline">Ladda ner som Excel</Button>
+            <Button variant="outline" className="rounded-lg text-sm font-medium" onClick={handleExportPDF}>Exportera som PDF</Button>
+            <Button className="rounded-lg text-sm font-medium" variant="outline" onClick={handleExportExcel}>Ladda ner som Excel</Button>
           </div>
         </div>
       </div>

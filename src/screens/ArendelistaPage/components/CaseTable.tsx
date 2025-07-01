@@ -1,7 +1,8 @@
 import React from "react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
-import { EyeIcon, EditIcon, MessageSquareIcon, ClockIcon, AlertTriangleIcon } from "lucide-react";
+import { EyeIcon, EditIcon, TrashIcon, MessageSquareIcon, ClockIcon, AlertTriangleIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface CaseTableProps {
   searchTerm: string;
@@ -89,8 +90,12 @@ export const CaseTable = ({ searchTerm, selectedFilter, selectedStatus }: CaseTa
     },
   ];
 
+  const [caseList, setCaseList] = React.useState(cases);
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const navigate = useNavigate();
+
   // Filter cases based on search term and selected filters
-  const filteredCases = cases.filter((caseItem) => {
+  const filteredCases = caseList.filter((caseItem) => {
     const matchesSearch = searchTerm === "" || 
       caseItem.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       caseItem.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -154,20 +159,21 @@ export const CaseTable = ({ searchTerm, selectedFilter, selectedStatus }: CaseTa
     <Card className="bg-white shadow-sm border border-gray-200">
       <CardContent className="p-0">
         {/* Table Header */}
-        <div className="grid grid-cols-12 gap-4 p-4 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-[#666666]">
+        <div className="grid grid-cols-13 gap-4 p-4 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-[#666666]">
           <div className="col-span-2">Ärendenummer</div>
           <div className="col-span-2">Kund</div>
           <div className="col-span-3">Titel & Beskrivning</div>
           <div className="col-span-1">Status</div>
           <div className="col-span-1">Prioritet</div>
-          <div className="col-span-2">Handläggare</div>
+          <div className="col-span-1">Behandlare 1</div>
+          <div className="col-span-1">Behandlare 2</div>
           <div className="col-span-1">Åtgärder</div>
         </div>
 
         {/* Table Body */}
         <div className="divide-y divide-gray-200">
           {filteredCases.map((caseItem) => (
-            <div key={caseItem.id} className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-colors">
+            <div key={caseItem.id} className="grid grid-cols-13 gap-4 p-4 hover:bg-gray-50 transition-colors">
               <div className="col-span-2">
                 <div className="font-semibold text-[#17694c] text-sm">{caseItem.id}</div>
                 <div className="text-xs text-[#666666]">{caseItem.category}</div>
@@ -219,8 +225,12 @@ export const CaseTable = ({ searchTerm, selectedFilter, selectedStatus }: CaseTa
                 </div>
               </div>
               
-              <div className="col-span-2">
-                <div className="text-sm text-[#333333]">{caseItem.caseworker}</div>
+              <div className="col-span-1">
+                <div className="text-sm text-[#333333]">{caseItem.caseworker.split(",")[0] || "-"}</div>
+              </div>
+              
+              <div className="col-span-1">
+                <div className="text-sm text-[#333333]">{caseItem.caseworker.split(",")[1] || "-"}</div>
               </div>
               
               <div className="col-span-1">
@@ -228,24 +238,57 @@ export const CaseTable = ({ searchTerm, selectedFilter, selectedStatus }: CaseTa
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                    title="Visa detaljer"
+                    className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                    title="Redigera"
+                    onClick={() => {
+                      // Navigera till kundens sida och visa rätt insats/tid (dummy nu)
+                      alert(`Navigera till kundsida för ${caseItem.customer} och öppna rätt insats/tid!`);
+                    }}
                   >
-                    <EyeIcon className="h-4 w-4" />
+                    <EditIcon className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
-                    title="Redigera"
+                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                    title="Radera"
+                    onClick={() => setDeleteId(caseItem.id)}
                   >
-                    <EditIcon className="h-4 w-4" />
+                    <TrashIcon className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Popup för radering */}
+        {deleteId && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full flex flex-col items-center">
+              <div className="text-lg font-semibold mb-4">Är du säker att du vill radera detta ärende?</div>
+              <div className="flex gap-4 mt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteId(null)}
+                  className="min-w-[100px]"
+                >
+                  Avbryt
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setCaseList(prev => prev.filter(c => c.id !== deleteId));
+                    setDeleteId(null);
+                  }}
+                  className="min-w-[100px]"
+                >
+                  Radera
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Empty State */}
         {filteredCases.length === 0 && (

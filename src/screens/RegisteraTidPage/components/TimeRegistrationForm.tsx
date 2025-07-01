@@ -8,13 +8,19 @@ export const TimeRegistrationForm = (): JSX.Element => {
   const [formData, setFormData] = useState({
     customer: "",
     date: new Date().toISOString().split('T')[0],
-    startTime: "",
-    endTime: "",
     activity: "",
     description: "",
     location: "",
     travelTime: "",
+    hours: "",
   });
+
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [insatsSearch, setInsatsSearch] = useState("");
+  const [behandlareSearch, setBehandlareSearch] = useState("");
+  const [sekBehandlareSearch, setSekBehandlareSearch] = useState("");
+  const insatser = ["Repulse", "Samverkan", "Trappan", "KIBB", "Familjesöd"];
+  const behandlare = ["Anna L", "Jessica S", "Malin K", "PNI"];
 
   const activities = [
     "Hembesök",
@@ -48,18 +54,6 @@ export const TimeRegistrationForm = (): JSX.Element => {
     // Here you would typically send the data to your backend
   };
 
-  const calculateDuration = () => {
-    if (formData.startTime && formData.endTime) {
-      const start = new Date(`2000-01-01T${formData.startTime}`);
-      const end = new Date(`2000-01-01T${formData.endTime}`);
-      const diff = end.getTime() - start.getTime();
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      return `${hours}h ${minutes}m`;
-    }
-    return "";
-  };
-
   return (
     <Card className="bg-white shadow-sm border border-gray-200">
       <CardHeader>
@@ -70,25 +64,30 @@ export const TimeRegistrationForm = (): JSX.Element => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Customer Selection */}
+          {/* Kund sökbar select */}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-[#333333] flex items-center gap-2">
               <UserIcon className="w-4 h-4" />
               Kund
             </label>
-            <select
-              value={formData.customer}
-              onChange={(e) => handleInputChange("customer", e.target.value)}
+            <input
+              type="text"
+              value={customerSearch}
+              onChange={e => setCustomerSearch(e.target.value)}
+              placeholder="Sök kund..."
               className="w-full p-3 border border-gray-300 rounded-lg focus:border-[#17694c] focus:ring-0 text-[#333333]"
-              required
-            >
-              <option value="">Välj kund...</option>
-              {customers.map((customer, index) => (
-                <option key={index} value={customer}>
+            />
+            <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+              {customers.filter(c => c.toLowerCase().includes(customerSearch.toLowerCase())).map((customer, index) => (
+                <div
+                  key={index}
+                  className={`p-2 cursor-pointer hover:bg-[#eaf6f1] ${formData.customer === customer ? 'bg-[#eaf6f1]' : ''}`}
+                  onClick={() => { handleInputChange("customer", customer); setCustomerSearch(customer); }}
+                >
                   {customer}
-                </option>
+                </div>
               ))}
-            </select>
+            </div>
           </div>
 
           {/* Date and Time Row */}
@@ -108,60 +107,43 @@ export const TimeRegistrationForm = (): JSX.Element => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-[#333333]">
-                Starttid
-              </label>
+              <label className="text-sm font-semibold text-[#333333]">Timmar</label>
               <Input
-                type="time"
-                value={formData.startTime}
-                onChange={(e) => handleInputChange("startTime", e.target.value)}
-                className="p-3 border border-gray-300 rounded-lg focus:border-[#17694c] focus:ring-0"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-[#333333]">
-                Sluttid
-              </label>
-              <Input
-                type="time"
-                value={formData.endTime}
-                onChange={(e) => handleInputChange("endTime", e.target.value)}
+                type="number"
+                value={formData.hours || ""}
+                onChange={e => handleInputChange("hours", e.target.value)}
+                placeholder="Antal timmar"
+                min="0"
                 className="p-3 border border-gray-300 rounded-lg focus:border-[#17694c] focus:ring-0"
                 required
               />
             </div>
           </div>
 
-          {/* Duration Display */}
-          {calculateDuration() && (
-            <div className="bg-[#17694c]/5 border border-[#17694c]/20 rounded-lg p-3">
-              <div className="text-sm text-[#17694c] font-semibold">
-                Total tid: {calculateDuration()}
-              </div>
-            </div>
-          )}
-
-          {/* Activity Selection */}
+          {/* Insats sökbar select */}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-[#333333] flex items-center gap-2">
               <FileTextIcon className="w-4 h-4" />
-              Aktivitet
+              Insats
             </label>
-            <select
-              value={formData.activity}
-              onChange={(e) => handleInputChange("activity", e.target.value)}
+            <input
+              type="text"
+              value={insatsSearch}
+              onChange={e => setInsatsSearch(e.target.value)}
+              placeholder="Sök insats..."
               className="w-full p-3 border border-gray-300 rounded-lg focus:border-[#17694c] focus:ring-0 text-[#333333]"
-              required
-            >
-              <option value="">Välj aktivitet...</option>
-              {activities.map((activity, index) => (
-                <option key={index} value={activity}>
-                  {activity}
-                </option>
+            />
+            <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+              {insatser.filter(i => i.toLowerCase().includes(insatsSearch.toLowerCase())).map((insats, index) => (
+                <div
+                  key={index}
+                  className={`p-2 cursor-pointer hover:bg-[#eaf6f1] ${formData.activity === insats ? 'bg-[#eaf6f1]' : ''}`}
+                  onClick={() => { handleInputChange("activity", insats); setInsatsSearch(insats); }}
+                >
+                  {insats}
+                </div>
               ))}
-            </select>
+            </div>
           </div>
 
           {/* Location */}
@@ -206,6 +188,58 @@ export const TimeRegistrationForm = (): JSX.Element => {
               className="w-full p-3 border border-gray-300 rounded-lg focus:border-[#17694c] focus:ring-0 resize-none"
               required
             />
+          </div>
+
+          {/* Behandlare sökbar select */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[#333333] flex items-center gap-2">
+              <UserIcon className="w-4 h-4" />
+              Behandlare
+            </label>
+            <input
+              type="text"
+              value={behandlareSearch}
+              onChange={e => setBehandlareSearch(e.target.value)}
+              placeholder="Sök behandlare..."
+              className="w-full p-3 border border-gray-300 rounded-lg focus:border-[#17694c] focus:ring-0 text-[#333333]"
+            />
+            <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+              {behandlare.filter(b => b.toLowerCase().includes(behandlareSearch.toLowerCase())).map((b, index) => (
+                <div
+                  key={index}
+                  className={`p-2 cursor-pointer hover:bg-[#eaf6f1] ${formData.handler1 === b ? 'bg-[#eaf6f1]' : ''}`}
+                  onClick={() => { handleInputChange("handler1", b); setBehandlareSearch(b); }}
+                >
+                  {b}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sekundär behandlare sökbar select */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[#333333] flex items-center gap-2">
+              <UserIcon className="w-4 h-4" />
+              Sekundär (valfritt)
+            </label>
+            <input
+              type="text"
+              value={sekBehandlareSearch}
+              onChange={e => setSekBehandlareSearch(e.target.value)}
+              placeholder="Sök sekundär behandlare..."
+              className="w-full p-3 border border-gray-300 rounded-lg focus:border-[#17694c] focus:ring-0 text-[#333333]"
+            />
+            <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+              {behandlare.filter(b => b.toLowerCase().includes(sekBehandlareSearch.toLowerCase())).map((b, index) => (
+                <div
+                  key={index}
+                  className={`p-2 cursor-pointer hover:bg-[#eaf6f1] ${formData.handler2 === b ? 'bg-[#eaf6f1]' : ''}`}
+                  onClick={() => { handleInputChange("handler2", b); setSekBehandlareSearch(b); }}
+                >
+                  {b}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Submit Buttons */}
