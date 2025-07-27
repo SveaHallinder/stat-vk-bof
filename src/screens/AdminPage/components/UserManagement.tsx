@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "../../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { Card, CardContent } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
 import { 
   PlusIcon, 
@@ -9,7 +9,6 @@ import {
   ShieldIcon, 
   UserIcon, 
   MailIcon,
-  PhoneIcon,
   SearchIcon,
   FilterIcon
 } from "lucide-react";
@@ -122,7 +121,7 @@ export const UserManagement = (): JSX.Element => {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-lg">
-                <UsersIcon className="w-5 h-5 text-blue-600" />
+                <UserIcon className="w-5 h-5 text-blue-600" />
               </div>
               <div>
                 <div className="text-2xl font-bold text-[#333333]">24</div>

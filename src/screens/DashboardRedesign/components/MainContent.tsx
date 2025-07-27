@@ -1,11 +1,6 @@
-import { PlusIcon, X } from "lucide-react";
-import React, { useState } from "react";
+import { X } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { Button } from "../../../components/ui/button";
-import { Card, CardContent } from "../../../components/ui/card";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "../../../components/ui/toggle-group";
 import { Modal } from "../../../components/ui/modal";
 import { BarChartStatistik } from "./BarChartStatistik";
 import { PieChart as RePieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -13,33 +8,53 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 import { createCustomer } from '../../../lib/api';
+import { KundCombobox } from "../../../components/ui/kund-combobox";
+import { InsatsCombobox } from "../../../components/ui/insats-combobox";
+import { BehandlareCombobox } from "../../../components/ui/behandlare-combobox";
+import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+import { getStatsSummary, getStatsByEffort } from "../../../lib/api";
 
 export const MainContent = (): JSX.Element => {
+  // Dynamisk statistik
+  const [stats, setStats] = useState<{ antal_besok: number; antal_kunder: number; genomsnittlig_tid: number; avbokningsgrad: number } | null>(null);
+  const [effortData, setEffortData] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    getStatsSummary({ from, to }).then(setStats);
+    getStatsByEffort({ from, to }).then(setEffortData);
+  }, []);
+
   const statsCards = [
     {
       title: "Kunder totalt",
-      value: "46",
-      note: "2025 siffror för hela enheten",
+      value: stats ? stats.antal_kunder : "-",
+      note: `${new Date().getFullYear()} siffror för hela enheten`,
     },
     {
       title: "Aktiva insatser",
-      value: "3",
-      note: "2025 siffror",
+      value: effortData ? effortData.length : "-",
+      note: `${new Date().getFullYear()} siffror`,
     },
     {
       title: "Månadens besök",
-      value: "124",
+      value: stats ? stats.antal_besok : "-",
       note: "",
     },
   ];
 
-  const [openModal, setOpenModal] = useState<null | "kund" | "tid" | "statistik">(null);
+  const chartData = effortData
+    ? effortData.map(d => ({
+        label: d.effort_name,
+        besok: Number(d.antal_besok),
+        kunder: Number(d.antal_kunder),
+      }))
+    : [];
 
-  const quickActions = [
-    { label: "Lägg till kund" },
-    { label: "Registrera tid" },
-    { label: "Ta ut statistik" },
-  ];
+  const [openModal, setOpenModal] = useState<null | "kund" | "tid" | "statistik">(null);
 
   // Form state för Lägg till kund
   const [newCustomer, setNewCustomer] = useState({
@@ -48,24 +63,31 @@ export const MainContent = (): JSX.Element => {
     birthYear: "",
   });
 
-  const [toast, setToast] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ initials?: string; gender?: string; birthYear?: string }>({});
 
+  function validateCustomer(c: typeof newCustomer) {
+    const err: { initials?: string; gender?: string; birthYear?: string } = {};
+    if (!c.initials) err.initials = "Obligatoriskt fält";
+    if (!c.gender) err.gender = "Obligatoriskt fält";
+    if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
+    else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
+    return err;
+  }
+
   const handleCustomerChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setNewCustomer({ ...newCustomer, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: undefined });
+    const updated = { ...newCustomer, [e.target.name]: e.target.value };
+    setNewCustomer(updated);
+    setErrors(validateCustomer(updated));
   };
 
   const handleCustomerCancel = () => {
     setOpenModal(null);
     setNewCustomer({ initials: "", gender: "", birthYear: "" });
+    setErrors({});
   };
 
   const handleCustomerSave = async () => {
-    const newErrors: typeof errors = {};
-    if (!newCustomer.initials) newErrors.initials = 'Obligatoriskt fält';
-    if (!newCustomer.gender) newErrors.gender = 'Obligatoriskt fält';
-    if (!newCustomer.birthYear) newErrors.birthYear = 'Obligatoriskt fält';
+    const newErrors = validateCustomer(newCustomer);
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
     try {
@@ -76,24 +98,23 @@ export const MainContent = (): JSX.Element => {
       });
       setOpenModal(null);
       setNewCustomer({ initials: '', gender: '', birthYear: '' });
-      setToast('Kund registrerad!');
-      setTimeout(() => setToast(null), 3000);
+      toast.success('Kund registrerad!');
       setErrors({});
     } catch (err) {
-      setToast('Kunde inte spara kund');
-      setTimeout(() => setToast(null), 3000);
+      toast.error('Kunde inte spara kund');
     }
   };
 
   // Form state för Registrera tid
   const [registerTime, setRegisterTime] = useState({
-    customer: "",
-    effort: "",
-    handler: "",
-    secondary: "",
+    customer: "",   // ska vara ett ID (sträng eller siffra)
+    effort: "",     // ska vara ett ID
+    handler: "",    // ska vara ett ID
+    secondary: "",  // ska vara ett ID eller tom sträng
     date: "",
-    hours: "",
+    hours: ""
   });
+  const [registerTimeErrors, setRegisterTimeErrors] = useState<{ customer?: string; effort?: string; handler?: string; date?: string; hours?: string }>({});
 
   const handleRegisterTimeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -101,7 +122,18 @@ export const MainContent = (): JSX.Element => {
       ...registerTime,
       [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     });
+    setRegisterTimeErrors(prev => ({ ...prev, [name]: undefined }));
   };
+
+  function validateRegisterTime(rt: typeof registerTime) {
+    const err: { customer?: string; effort?: string; handler?: string; date?: string; hours?: string } = {};
+    if (!rt.customer) err.customer = "Du måste välja kund";
+    if (!rt.effort) err.effort = "Du måste välja insats";
+    if (!rt.handler) err.handler = "Du måste välja behandlare";
+    if (!rt.date) err.date = "Du måste ange datum";
+    if (!rt.hours || isNaN(Number(rt.hours))) err.hours = "Du måste ange antal timmar";
+    return err;
+  }
 
   const handleRegisterTimeCancel = () => {
     setOpenModal(null);
@@ -110,21 +142,53 @@ export const MainContent = (): JSX.Element => {
       effort: "",
       handler: "",
       secondary: "",
-      date: "",
+      date: getToday(),
       hours: "",
     });
+    setRegisterTimeErrors({});
   };
 
-  const handleRegisterTimeSave = () => {
-    setOpenModal(null);
-    setRegisterTime({
-      customer: "",
-      effort: "",
-      handler: "",
-      secondary: "",
-      date: "",
-      hours: "",
-    });
+  const handleRegisterTimeSave = async () => {
+    const errors = validateRegisterTime(registerTime);
+    setRegisterTimeErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    // Bygg payload med ID:n
+    const payload = {
+      customer_id: registerTime.customer,           // ID (sträng/siffra)
+      effort_id: registerTime.effort,               // ID
+      handler1_id: registerTime.handler,            // ID
+      handler2_id: registerTime.secondary || null,  // ID eller null
+      date: registerTime.date,
+      hours: registerTime.hours,
+      status: "Utförd" // eller vad du vill sätta
+    };
+
+
+    try {
+      const res = await fetch("http://localhost:4000/cases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        toast.error("Kunde inte spara ärende: " + text);
+        return;
+      }
+      // Nollställ formuläret eller visa feedback
+      setRegisterTime({
+        customer: "",
+        effort: "",
+        handler: "",
+        secondary: "",
+        date: "",
+        hours: ""
+      });
+      toast.success("Tid registrerad!");
+    } catch (err) {
+      toast.error("Nätverksfel: " + err);
+    }
   };
 
   // Form state för Ta ut statistik
@@ -152,52 +216,6 @@ export const MainContent = (): JSX.Element => {
     setStatistik({ year: "2015", month: "Januari", gender: "", age: "", effort: "" });
     setShowStatistikChart(false);
   };
-
-  // Original chartData (weeks) from previous iteration
-  const chartDataWeeks = [
-    { week: "V. 9", value: 18 },
-    { week: "V. 10", value: 22 },
-    { week: "V. 11", value: 27 },
-    { week: "V. 12", value: 22 },
-    { week: "V. 13", value: 18 },
-  ];
-
-  // Placeholder for `statType` and `chartType` as they are no longer dropdowns but the toggle group
-  // We'll use a state for the selected time period in the toggle group
-  const [timePeriod, setTimePeriod] = useState("vecka"); // 'dag', 'vecka', 'månad'
-
-  // Dummy data based on time period
-  const getChartDataForPeriod = () => {
-    switch (timePeriod) {
-      case "dag":
-        return [
-          { label: "Mån", value: 10 },
-          { label: "Tis", value: 15 },
-          { label: "Ons", value: 12 },
-          { label: "Tor", value: 18 },
-          { label: "Fre", value: 14 },
-        ];
-      case "månad":
-        return [
-          { label: "Jan", value: 100 },
-          { label: "Feb", value: 120 },
-          { label: "Mar", value: 150 },
-          { label: "Apr", value: 110 },
-          { label: "Maj", value: 130 },
-        ];
-      case "vecka":
-      default:
-        return chartDataWeeks.map(d => ({ label: d.week, value: d.value })); // Convert week to label for consistency
-    }
-  };
-
-  const currentChartData = getChartDataForPeriod();
-
-  // Färger för cirkeldiagram - still useful if we re-introduce it or need for other charts
-  const pieColors = ["#17694c", "#4bbf73", "#e6a100", "#e64a19"];
-
-  // Summera total för procent
-  const total = currentChartData.reduce((sum, d) => sum + d.value, 0);
 
   // Exportfunktioner
   const handleExportPDF = () => {
@@ -229,8 +247,11 @@ export const MainContent = (): JSX.Element => {
     XLSX.writeFile(wb, 'statistik.xlsx');
   };
 
+  const getToday = () => new Date().toISOString().slice(0, 10);
+
   return (
     <div className="flex-1 flex flex-col items-center">
+      <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
       {/* Main Content Grid */}
       <div className="w-full max-w-7xl mx-auto px-8 flex flex-col gap-8">
         {/* Statistik-kort */}
@@ -269,7 +290,10 @@ export const MainContent = (): JSX.Element => {
             <Button
               variant="outline"
               className="rounded-lg border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-7 py-3 min-w-[180px]"
-              onClick={() => setOpenModal("tid")}
+              onClick={() => {
+                setOpenModal("tid");
+                setRegisterTime(rt => ({ ...rt, date: getToday() }));
+              }}
             >
               + Registrera tid
             </Button>
@@ -284,8 +308,8 @@ export const MainContent = (): JSX.Element => {
         </div>
         {/* Diagram */}
         <BarChartStatistik
-          data={currentChartData.map(d => ({ label: d.label, besok: d.value, kunder: 0 }))}
-          titel="Besöksstatistik (Mars)"
+          data={chartData}
+          titel={`Besöksstatistik (${new Date().toLocaleString('sv-SE', { month: 'long' })})`}
         />
       </div>
 
@@ -325,8 +349,8 @@ export const MainContent = (): JSX.Element => {
                 className={`border rounded-lg px-4 py-2 text-base bg-[#fafbfc] focus:outline-none focus:ring-2 ${errors.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
               >
                 <option value="">Välj kön</option>
-                <option value="Kvinna">Kvinna</option>
-                <option value="Man">Man</option>
+                <option value="Flicka">Flicka</option>
+                <option value="Pojke">Pojke</option>
                 <option value="Icke-binär">Icke-binär</option>
               </select>
               {errors.gender && <span className="text-red-500 text-sm mt-1">{errors.gender}</span>}
@@ -355,8 +379,8 @@ export const MainContent = (): JSX.Element => {
               <button
                 type="button"
                 onClick={handleCustomerSave}
-                className="px-7 py-3 rounded-full bg-[#17694c] text-white font-normal hover:bg-[#145c41] transition text-base min-w-[160px]"
-                disabled={!newCustomer.initials || !newCustomer.gender || !newCustomer.birthYear}
+                className={`px-7 py-3 rounded-full font-normal transition text-base min-w-[160px] ${Object.keys(errors).length > 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#17694c] text-white hover:bg-[#145c41]'}`}
+                disabled={Object.keys(errors).length > 0}
               >
                 Spara och fortsätt
               </button>
@@ -380,52 +404,36 @@ export const MainContent = (): JSX.Element => {
           <form className="pt-8 pb-10 px-8 flex flex-col gap-7" style={{borderRadius: '0 0 1rem 1rem'}}>
             <div className="flex flex-col gap-2">
               <label className="text-[#17694c] font-normal text-base">Kund</label>
-              <select
-                name="customer"
-                value={registerTime.customer}
-                onChange={handleRegisterTimeChange}
-                className="border border-gray-200 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#17694c] bg-[#fafbfc]"
-              >
-                <option value="">Välj kund</option>
-                <option value="Anna L">Anna L</option>
-                <option value="Jessica S">Jessica S</option>
-              </select>
+              <KundCombobox value={registerTime.customer} onChange={value => {
+                setRegisterTime(rt => ({ ...rt, customer: value }));
+                setRegisterTimeErrors(prev => ({ ...prev, customer: undefined }));
+              }} placeholder="Välj kund" />
+              {registerTimeErrors.customer && <span className="text-red-500 text-xs mt-1">{registerTimeErrors.customer}</span>}
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-[#17694c] font-normal text-base">Insats</label>
-              <select
-                name="effort"
-                value={registerTime.effort}
-                onChange={handleRegisterTimeChange}
-                className="border border-gray-200 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#17694c] bg-[#fafbfc]"
-              >
-                <option value="">Välj insats</option>
-                <option value="Samtal">Samtal</option>
-                <option value="Samverkan">Samverkan</option>
-              </select>
+              <InsatsCombobox value={registerTime.effort} onChange={value => {
+                setRegisterTime(rt => ({ ...rt, effort: value }));
+                setRegisterTimeErrors(prev => ({ ...prev, effort: undefined }));
+              }} placeholder="Välj insats" />
+              {registerTimeErrors.effort && <span className="text-red-500 text-xs mt-1">{registerTimeErrors.effort}</span>}
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-[#17694c] font-normal text-base">Behandlare</label>
-              <select
-                name="handler"
+              <BehandlareCombobox
                 value={registerTime.handler}
-                onChange={handleRegisterTimeChange}
-                className="border border-gray-200 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#17694c] bg-[#fafbfc]"
-              >
-                <option value="">Ansvarig behandlare</option>
-                <option value="Anna L">Anna L</option>
-                <option value="Jessica S">Jessica S</option>
-              </select>
+                onChange={value => {
+                  setRegisterTime(rt => ({ ...rt, handler: value }));
+                  setRegisterTimeErrors(prev => ({ ...prev, handler: undefined }));
+                }}
+              />
+              {registerTimeErrors.handler && <span className="text-red-500 text-xs mt-1">{registerTimeErrors.handler}</span>}
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-[#17694c] font-normal text-base">Sekundär (valfritt)</label>
-              <input
-                type="text"
-                name="secondary"
-                placeholder="Sekundär behandlare"
+              <BehandlareCombobox
                 value={registerTime.secondary}
-                onChange={handleRegisterTimeChange}
-                className="border border-gray-200 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#17694c] bg-[#fafbfc]"
+                onChange={value => setRegisterTime(rt => ({ ...rt, secondary: value }))}
               />
             </div>
             <div className="flex gap-4">
@@ -438,6 +446,7 @@ export const MainContent = (): JSX.Element => {
                   onChange={handleRegisterTimeChange}
                   className="border border-gray-200 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#17694c] bg-[#fafbfc]"
                 />
+                {registerTimeErrors.date && <span className="text-red-500 text-xs mt-1">{registerTimeErrors.date}</span>}
               </div>
               <div className="flex flex-col gap-2 w-1/2">
                 <label className="text-[#17694c] font-normal text-base">Timmar</label>
@@ -450,6 +459,7 @@ export const MainContent = (): JSX.Element => {
                   min={0}
                   placeholder="Antal timmar"
                 />
+                {registerTimeErrors.hours && <span className="text-red-500 text-xs mt-1">{registerTimeErrors.hours}</span>}
               </div>
             </div>
             <div className="flex gap-4 justify-center mt-8">
@@ -463,7 +473,8 @@ export const MainContent = (): JSX.Element => {
               <button
                 type="button"
                 onClick={handleRegisterTimeSave}
-                className="px-7 py-3 rounded-full bg-[#17694c] text-white font-normal hover:bg-[#145c41] transition text-base min-w-[160px]"
+                className={`px-7 py-3 rounded-full font-normal transition text-base min-w-[160px] ${Object.values(registerTimeErrors).some(Boolean) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#17694c] text-white hover:bg-[#145c41]'}`}
+                disabled={Object.values(registerTimeErrors).some(Boolean)}
               >
                 Spara och fortsätt
               </button>
@@ -567,7 +578,7 @@ export const MainContent = (): JSX.Element => {
                           cy="50%"
                           outerRadius={110}
                           fill="#17694c"
-                          label={({ name, value }) => `${value}`}
+                          label={({ value }) => `${value}`}
                           labelLine={true}
                         >
                           {[
@@ -591,15 +602,6 @@ export const MainContent = (): JSX.Element => {
           </div>
         </div>
       </Modal>
-      {/* Toast-meddelande */}
-      {toast && (
-        <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-8 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-fade-in">
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-          {toast}
-        </div>
-      )}
       <p className="text-center text-xs text-gray-500 py-4 mt-auto">
         © 2024 Vallentuna Biståndshandläggare
       </p>

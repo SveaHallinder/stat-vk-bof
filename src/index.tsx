@@ -8,9 +8,11 @@ import { RegisteraTidPage } from "./screens/RegisteraTidPage";
 import { ArendelistaPage } from "./screens/ArendelistaPage";
 import { StatistikPage } from "./screens/StatistikPage";
 import { AdminPage } from "./screens/AdminPage";
+import { Toaster } from "react-hot-toast";
 
 createRoot(document.getElementById("app") as HTMLElement).render(
   <StrictMode>
+    <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<DashboardRedesign />} />

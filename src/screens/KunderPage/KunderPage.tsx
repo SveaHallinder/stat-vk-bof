@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Layout } from "../../components/Layout";
 import { useNavigate } from "react-router-dom";
-import { XCircle, Plus } from "lucide-react";
+import { XCircle, Plus, ArrowUpDown, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
-import { createCustomer, getCustomers, deleteCustomer } from "../../lib/api";
+import { createCustomer, getCustomers, softDeleteCustomer, reactivateCustomer } from "../../lib/api";
+import toast from "react-hot-toast";
 
 interface Customer {
   id: string;
@@ -30,20 +31,43 @@ export const KunderPage = (): JSX.Element => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [newCustomers, setNewCustomers] = useState<NewCustomer[]>([]);
   const [errors, setErrors] = useState<{ [idx: number]: { initials?: string; gender?: string; birthYear?: string } }>({});
+  const [sortField, setSortField] = useState<string>("id");
+  const [sortAsc, setSortAsc] = useState<boolean>(true);
   const navigate = useNavigate();
+  const [savingNew, setSavingNew] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
 
   const handleRowClick = (customer: Customer) => {
     navigate(`/kunder/${customer.id}`);
   };
 
   const handleDelete = async (id: string) => {
+    setDeleting(true);
     try {
-      await deleteCustomer(id);
-      const updated = await getCustomers();
+      await softDeleteCustomer(id);
+      const updated = await getCustomers(true);
       setCustomers(updated);
       setDeleteId(null);
-    } catch (err) {
-      alert("Kunde inte radera kund");
+      toast.success("Kund avaktiverad!");
+    } catch (err: any) {
+      toast.error(err?.message || "Kunde inte avaktivera kund");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleReactivate = async (id: string) => {
+    setReactivating(true);
+    try {
+      await reactivateCustomer(id);
+      const updated = await getCustomers(true);
+      setCustomers(updated);
+      toast.success("Kund återaktiverad!");
+    } catch (err: any) {
+      toast.error(err?.message || "Kunde inte återaktivera kund");
+    } finally {
+      setReactivating(false);
     }
   };
 
@@ -61,7 +85,13 @@ export const KunderPage = (): JSX.Element => {
 
   const handleChangeNewCustomer = (idx: number, field: keyof Omit<Customer, "id">, value: string) => {
     setNewCustomers(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c));
-    setErrors(prev => ({ ...prev, [idx]: { ...prev[idx], [field]: undefined } }));
+    // Validera direkt när man skriver
+    setErrors(prev => {
+      const updated = { ...prev };
+      const updatedCustomer = { ...newCustomers[idx], [field]: value };
+      updated[idx] = validateCustomer(updatedCustomer);
+      return updated;
+    });
   };
 
   const handleCancelAdd = (idx: number) => {
@@ -73,6 +103,7 @@ export const KunderPage = (): JSX.Element => {
     if (!c.initials) err.initials = "Obligatoriskt fält";
     if (!c.gender) err.gender = "Obligatoriskt fält";
     if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
+    else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
     return err;
   };
 
@@ -89,6 +120,7 @@ export const KunderPage = (): JSX.Element => {
     });
     setErrors(newErrors);
     if (hasError) return;
+    setSavingNew(true);
     try {
       for (const c of newCustomers) {
         await createCustomer({
@@ -102,14 +134,36 @@ export const KunderPage = (): JSX.Element => {
       setCustomers(updated);
       setNewCustomers([]);
       setErrors({});
+      toast.success("Kund/kunder sparade!");
     } catch (err) {
-      // Visa toast eller annan feedback här om du vill
+      toast.error("Kunde inte spara kund/kunder");
+    } finally {
+      setSavingNew(false);
     }
   };
 
   useEffect(() => {
-    getCustomers().then(setCustomers).catch(console.error);
+    getCustomers(true).then(setCustomers).catch(console.error);
   }, []);
+
+  // Sortera kunder
+  const sortedCustomers = [...customers].sort((a, b) => {
+    let av = a[sortField];
+    let bv = b[sortField];
+    // Om det är datum, sortera som datum
+    if (sortField === "created_at" || sortField === "startDate") {
+      av = av ? new Date(av) : new Date(0);
+      bv = bv ? new Date(bv) : new Date(0);
+    }
+    // Om det är status, sortera på active-flaggan
+    if (sortField === "status") {
+      av = a.active ? 1 : 0;
+      bv = b.active ? 1 : 0;
+    }
+    if (av < bv) return sortAsc ? -1 : 1;
+    if (av > bv) return sortAsc ? 1 : -1;
+    return 0;
+  });
 
   return (
     <Layout activeItem="Kunder" title="Kunder">
@@ -127,9 +181,8 @@ export const KunderPage = (): JSX.Element => {
             variant="default"
             className="ml-4 px-6 py-3 rounded-lg text-lg font-semibold"
             onClick={handleSaveNewCustomers}
-            disabled={newCustomers.length === 0 || newCustomers.some((c) => !c.initials || !c.gender || !c.birthYear)}
-          >
-            Spara alla
+            disabled={savingNew || newCustomers.some((c, idx) => Object.keys(validateCustomer(c)).length > 0)}>
+            {savingNew ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Sparar...</> : "Spara alla"}
           </Button>
         )}
       </div>
@@ -139,12 +192,36 @@ export const KunderPage = (): JSX.Element => {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-center">Kund-ID</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-center">Initialer</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-center">Kön</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-center">Födelseår</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-center">Status</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-center">Startdatum</th>
+                  {[
+                    { label: "Kund-ID", field: "id" },
+                    { label: "Initialer", field: "initials" },
+                    { label: "Kön", field: "gender" },
+                    { label: "Födelseår", field: "birthYear" },
+                    { label: "Status", field: "status" },
+                    { label: "Startdatum", field: "created_at" },
+                  ].map(col => (
+                    <th
+                      key={col.field}
+                      className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-center cursor-pointer select-none group"
+                      onClick={() => {
+                        if (sortField === col.field) {
+                          setSortAsc(a => !a);
+                        } else {
+                          setSortField(col.field);
+                          setSortAsc(true);
+                        }
+                      }}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {col.label}
+                        {sortField === col.field ? (
+                          sortAsc ? <ArrowUp className="w-4 h-4 inline" /> : <ArrowDown className="w-4 h-4 inline" />
+                        ) : (
+                          <ArrowUpDown className="w-4 h-4 opacity-30 group-hover:opacity-60 inline" />
+                        )}
+                      </span>
+                    </th>
+                  ))}
                   <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-right">Åtgärder</th>
                 </tr>
               </thead>
@@ -205,12 +282,16 @@ export const KunderPage = (): JSX.Element => {
                     </td>
                   </tr>
                 ))}
-                {customers.map((customer, idx) => (
-                  <tr key={customer.id + idx} className="hover:bg-gray-50 cursor-pointer border-b border-gray-200" onClick={() => handleRowClick(customer)}>
-                    <td className="px-6 py-4 font-medium text-gray-800 text-center">{customer.id}</td>
-                    <td className="px-6 py-4 text-gray-600 text-center">{customer.initials}</td>
-                    <td className="px-6 py-4 text-gray-600 text-center">{customer.gender}</td>
-                    <td className="px-6 py-4 text-gray-600 text-center">{customer.birthYear}</td>
+                {sortedCustomers.map((customer) => (
+                  <tr
+                    key={customer.id}
+                    className={`hover:bg-gray-50 cursor-pointer border-b border-gray-200 ${!customer.active ? 'bg-gray-100 text-gray-400' : ''}`}
+                    onClick={() => handleRowClick(customer)}
+                  >
+                    <td className="px-6 py-4 font-medium text-center">{customer.id}</td>
+                    <td className="px-6 py-4 text-center">{customer.initials}</td>
+                    <td className="px-6 py-4 text-center">{customer.gender}</td>
+                    <td className="px-6 py-4 text-center">{customer.birthYear}</td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-block px-3 py-1 text-xs rounded-full font-semibold ${
                         customer.active
@@ -220,16 +301,27 @@ export const KunderPage = (): JSX.Element => {
                         {customer.active ? "Pågående" : "Avslutad"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-600 text-center">{customer.created_at?.slice(0, 10)}</td>
+                    <td className="px-6 py-4 text-center">{customer.created_at?.slice(0, 10)}</td>
                     <td className="px-6 py-4 text-right text-center">
                       <div className="flex gap-2 items-center justify-end" onClick={e => e.stopPropagation()}>
-                        <button
-                          className="p-2 hover:bg-gray-200 rounded-full"
-                          title="Radera kund"
-                          onClick={() => setDeleteId(customer.id)}
-                        >
-                          <XCircle className="w-5 h-5 text-red-500" />
-                        </button>
+                        {customer.active ? (
+                          <button
+                            className="p-2 hover:bg-gray-200 rounded-full"
+                            title="Avaktivera kund"
+                            onClick={() => setDeleteId(customer.id)}
+                          >
+                            <XCircle className="w-5 h-5 text-red-500" />
+                          </button>
+                        ) : (
+                          <button
+                            className="p-2 hover:bg-gray-200 rounded-full"
+                            title="Återaktivera kund"
+                            onClick={() => handleReactivate(customer.id)}
+                            disabled={reactivating}
+                          >
+                            {reactivating ? <Loader2 className="animate-spin w-4 h-4 inline"/> : <span className="text-green-600 font-semibold">Återaktivera</span>}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -254,8 +346,9 @@ export const KunderPage = (): JSX.Element => {
                     variant="destructive"
                     onClick={() => handleDelete(deleteId)}
                     className="min-w-[100px]"
+                    disabled={deleting}
                   >
-                    Radera
+                    {deleting ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Raderar...</> : "Radera"}
                   </Button>
                 </div>
               </div>

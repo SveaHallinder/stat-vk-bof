@@ -1,4 +1,3 @@
-import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Avatar,
@@ -7,13 +6,9 @@ import {
 } from "../../../components/ui/avatar";
 import { Button } from "../../../components/ui/button";
 
-interface SidebarProps {
-  activeItem?: string;
-}
-
-export const Sidebar = ({ activeItem }: SidebarProps): JSX.Element => {
+export const Sidebar = (): JSX.Element => {
   const location = useLocation();
-  
+
   const navItems = [
     { id: 1, name: "Startsida", path: "/", active: location.pathname === "/" },
     { id: 2, name: "Kunder", path: "/kunder", active: location.pathname === "/kunder" },

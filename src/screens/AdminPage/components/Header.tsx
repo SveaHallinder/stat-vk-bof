@@ -1,5 +1,4 @@
 import { SearchIcon, ShieldIcon } from "lucide-react";
-import React from "react";
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
 import { Input } from "../../../components/ui/input";
 

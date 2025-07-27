@@ -21,6 +21,7 @@ interface CustomerTableProps {
 export const CustomerTable = ({ searchTerm, selectedFilter }: CustomerTableProps): JSX.Element => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [reactivateId, setReactivateId] = useState<number | null>(null);
 
   useEffect(() => {
     getCustomers().then(setCustomers).catch(console.error);
@@ -61,7 +62,10 @@ export const CustomerTable = ({ searchTerm, selectedFilter }: CustomerTableProps
         {/* Table Body */}
         <div className="divide-y divide-gray-200">
           {filteredCustomers.map((customer) => (
-            <div key={customer.id} className="grid grid-cols-5 gap-4 p-4 hover:bg-gray-50 transition-colors">
+            <div
+              key={customer.id}
+              className={`grid grid-cols-5 gap-4 p-4 hover:bg-gray-50 transition-colors ${!customer.active ? 'bg-gray-100 text-gray-400' : ''}`}
+            >
               <div className="col-span-1">
                 <div className="w-8 h-8 bg-[#17694c] text-white rounded-full flex items-center justify-center text-sm font-bold">
                   {customer.id}
@@ -70,37 +74,46 @@ export const CustomerTable = ({ searchTerm, selectedFilter }: CustomerTableProps
               <div className="col-span-1 font-semibold text-[#333333]">{customer.initials}</div>
               <div className="col-span-1 text-[#666666]">{customer.gender}</div>
               <div className="col-span-1 text-[#666666]">{customer.birthYear}</div>
-              <div className="col-span-1">
+              <div className="col-span-1 flex gap-2 items-center">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(customer.active ? "Aktiv" : "Inaktiv")}`}>
                   {customer.active ? "Aktiv" : "Inaktiv"}
                 </span>
+                {!customer.active && (
+                  <button
+                    className="ml-2 text-green-600 underline text-xs"
+                    title="Återaktivera kund"
+                    onClick={() => setReactivateId(customer.id)}
+                  >
+                    Återaktivera
+                  </button>
+                )}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Popup för radering */}
-        {deleteId && (
+        {/* Popup för återaktivering */}
+        {reactivateId && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full flex flex-col items-center">
-              <div className="text-lg font-semibold mb-4">Är du säker att du vill radera denna kund?</div>
+              <div className="text-lg font-semibold mb-4">Vill du återaktivera denna kund?</div>
               <div className="flex gap-4 mt-2">
                 <Button
                   variant="outline"
-                  onClick={() => setDeleteId(null)}
+                  onClick={() => setReactivateId(null)}
                   className="min-w-[100px]"
                 >
                   Avbryt
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant="default"
                   onClick={() => {
-                    setCustomers(prev => prev.filter(c => c.id !== deleteId));
-                    setDeleteId(null);
+                    // Här ska du anropa reactivateCustomer och uppdatera listan, eller skicka upp event till parent
+                    setReactivateId(null);
                   }}
                   className="min-w-[100px]"
                 >
-                  Radera
+                  Återaktivera
                 </Button>
               </div>
             </div>

@@ -4,14 +4,13 @@ import { Header } from "../screens/DashboardRedesign/components/Header";
 
 interface LayoutProps {
   children: React.ReactNode;
-  activeItem: string;
   title: string;
 }
 
-export const Layout = ({ children, activeItem, title }: LayoutProps): JSX.Element => {
+export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
   return (
     <div className="min-h-screen bg-[#f5f7fa] flex">
-      <Sidebar activeItem={activeItem} />
+      <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header title={title} />
         <main className="flex-1 p-8">
@@ -20,4 +19,4 @@ export const Layout = ({ children, activeItem, title }: LayoutProps): JSX.Elemen
       </div>
     </div>
   );
-}; 
+};
