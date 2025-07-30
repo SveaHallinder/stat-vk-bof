@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { API_URL } from "../../lib/api";
 import { Layout } from "../../components/Layout";
 import { Edit2, FileText, XCircle, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/card";
@@ -39,7 +40,7 @@ export const ArendelistaPage = (): JSX.Element => {
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
-    fetch("http://localhost:4000/cases")
+    fetch(`${API_URL}/cases`)
       .then(res => res.json())
       .then(data => setCaseList(data));
   }, []);
@@ -48,7 +49,7 @@ export const ArendelistaPage = (): JSX.Element => {
   useEffect(() => {
     setStatusLoading(true);
     setStatusError(null);
-    fetch("http://localhost:4000/case-statuses")
+    fetch(`${API_URL}/case-statuses`)
       .then(res => {
         if (!res.ok) throw new Error("Kunde inte hämta statusar");
         return res.json();
@@ -284,8 +285,11 @@ export const ArendelistaPage = (): JSX.Element => {
                   </Button>
                   <Button
                     variant="destructive"
-                    onClick={() => {
-                      setCaseList(prev => prev.filter(c => c.id !== deleteId));
+                    onClick={async () => {
+                      if (deleteId) {
+                        await fetch(`${API_URL}/cases/${deleteId}`, { method: 'DELETE' });
+                        setCaseList(prev => prev.filter(c => c.id !== deleteId));
+                      }
                       setDeleteId(null);
                     }}
                     className="min-w-[100px]"
