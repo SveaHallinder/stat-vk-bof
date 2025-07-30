@@ -1,0 +1,9 @@
+CREATE TABLE visits (
+  id SERIAL PRIMARY KEY,
+  case_id INTEGER NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  hours NUMERIC,
+  status TEXT NOT NULL DEFAULT 'Utförd',
+  created_at TIMESTAMP DEFAULT now(),
+  active BOOLEAN DEFAULT true
+);
