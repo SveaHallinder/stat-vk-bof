@@ -7,6 +7,7 @@ import { InsatsCombobox } from "../../components/ui/insats-combobox";
 import { KundCombobox } from "../../components/ui/kund-combobox";
 import { BehandlareCombobox } from "../../components/ui/behandlare-combobox";
 import { API_URL, getCustomers, getEfforts } from "../../lib/api";
+import { Customer, Handler, Effort } from "@/types/types";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -32,13 +33,15 @@ function toSwedishDateString(dateStr: string) {
 }
 
 export const RegisteraTidPage = (): JSX.Element => {
+  type CustomerItem = Customer & { birthYear: number };
+
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [newEntries, setNewEntries] = useState<TimeEntry[]>([]);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
-  const [handlers, setHandlers] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [efforts, setEfforts] = useState<any[]>([]);
+  const [handlers, setHandlers] = useState<Handler[]>([]);
+  const [customers, setCustomers] = useState<CustomerItem[]>([]);
+  const [efforts, setEfforts] = useState<Effort[]>([]);
   const [newEntryErrors, setNewEntryErrors] = useState<{ [idx: number]: { customer?: string; handler1?: string; effort?: string; date?: string; hours?: string } }>({});
 
   const navigate = useNavigate();

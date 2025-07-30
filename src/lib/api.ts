@@ -1,17 +1,18 @@
 export const API_URL = import.meta.env.VITE_API_URL;
+import { Customer, Handler, Effort, Case } from "@/types/types";
 
-export async function getCustomers(all = false) {
+
+export async function getCustomers(all = false): Promise<Customer[]> {
   const res = await fetch(`${API_URL}/customers${all ? '?all=true' : ''}`);
   if (!res.ok) throw new Error("Kunde inte hämta kunder");
   const data = await res.json();
-  // Mappa om birth_year till birthYear
-  return data.map((c: any) => ({
+  return data.map((c: Customer) => ({
     ...c,
     birthYear: c.birth_year,
   }));
 }
 
-export async function createCustomer(data: { initials: string; gender: string; birthYear: number; startDate?: string }) {
+export async function createCustomer(data: { initials: string; gender: string; birthYear: number; startDate?: string }): Promise<Customer> {
   const res = await fetch(`${API_URL}/customers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -21,7 +22,7 @@ export async function createCustomer(data: { initials: string; gender: string; b
   return res.json();
 }
 
-export async function softDeleteCustomer(id: string) {
+export async function softDeleteCustomer(id: string): Promise<Customer> {
   const res = await fetch(`${API_URL}/customers/${id}/deactivate`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" }
@@ -37,7 +38,7 @@ export async function softDeleteCustomer(id: string) {
   return res.json();
 }
 
-export async function reactivateCustomer(id: string) {
+export async function reactivateCustomer(id: string): Promise<Customer> {
   const res = await fetch(`${API_URL}/customers/${id}/activate`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" }
@@ -53,18 +54,17 @@ export async function reactivateCustomer(id: string) {
   return res.json();
 }
 
-export async function getCustomer(id: string) {
+export async function getCustomer(id: string): Promise<Customer & { birthYear: number }> {
   const res = await fetch(`${API_URL}/customers/${id}`);
   if (!res.ok) throw new Error("Kunde inte hämta kund");
   const c = await res.json();
-  // Mappa om birth_year till birthYear
   return {
     ...c,
     birthYear: c.birth_year,
   };
 }
 
-export async function updateCustomer(id: string, data: { initials: string; gender: string; birthYear: number; active: boolean; startDate: string }) {
+export async function updateCustomer(id: string, data: { initials: string; gender: string; birthYear: number; active: boolean; startDate: string }): Promise<Customer> {
   const res = await fetch(`${API_URL}/customers/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -80,19 +80,19 @@ export async function updateCustomer(id: string, data: { initials: string; gende
   return res.json();
 }
 
-export async function getEfforts() {
+export async function getEfforts(): Promise<Effort[]> {
   const res = await fetch(`${API_URL}/efforts`);
   if (!res.ok) throw new Error("Kunde inte hämta insatser");
   return res.json();
 }
 
-export async function getCustomerEfforts(customerId: string) {
+export async function getCustomerEfforts(customerId: string): Promise<Case[]> {
   const res = await fetch(`${API_URL}/customers/${customerId}/efforts`);
   if (!res.ok) throw new Error("Kunde inte hämta insatser för kund");
   return res.json();
 }
 
-export async function getCasesForCustomerEffort(customerId: string, effortId: string) {
+export async function getCasesForCustomerEffort(customerId: string, effortId: string): Promise<Case[]> {
   const res = await fetch(`${API_URL}/customers/${customerId}/efforts/${effortId}/cases`);
   if (!res.ok) throw new Error("Kunde inte hämta ärenden för kund och insats");
   return res.json();
@@ -101,7 +101,7 @@ export async function getCasesForCustomerEffort(customerId: string, effortId: st
 export async function updateCase(
   id: string,
   data: { customer_id: string; effort_id: string; date: string; handler1_id: string; handler2_id?: string; hours: string; status: string }
-) {
+): Promise<Case> {
   const res = await fetch(`${API_URL}/cases/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -111,7 +111,7 @@ export async function updateCase(
   return res.json();
 }
 
-export async function getStatsSummary(params?: { from?: string; to?: string; insats?: string; gender?: string; birthYear?: string; handler?: string; customer?: string }) {
+export async function getStatsSummary(params?: { from?: string; to?: string; insats?: string; gender?: string; birthYear?: string; handler?: string; customer?: string }): Promise<any> {
   let url = `${API_URL}/stats/summary`;
   if (params) {
     const search = new URLSearchParams();
@@ -129,7 +129,7 @@ export async function getStatsSummary(params?: { from?: string; to?: string; ins
   return res.json();
 }
 
-export async function getStatsByEffort(params?: { from?: string; to?: string; insats?: string; gender?: string; birthYear?: string; handler?: string; customer?: string }) {
+export async function getStatsByEffort(params?: { from?: string; to?: string; insats?: string; gender?: string; birthYear?: string; handler?: string; customer?: string }): Promise<any> {
   let url = `${API_URL}/stats/by-effort`;
   if (params) {
     const search = new URLSearchParams();
@@ -147,7 +147,7 @@ export async function getStatsByEffort(params?: { from?: string; to?: string; in
   return res.json();
 }
 
-export async function getStatsByMonth(params?: { from?: string; to?: string; insats?: string }) {
+export async function getStatsByMonth(params?: { from?: string; to?: string; insats?: string }): Promise<any> {
   let url = `${API_URL}/stats/by-month`;
   if (params) {
     const search = new URLSearchParams();
@@ -161,7 +161,7 @@ export async function getStatsByMonth(params?: { from?: string; to?: string; ins
   return res.json();
 }
 
-export async function getStatsByHandler(params?: { from?: string; to?: string; insats?: string }) {
+export async function getStatsByHandler(params?: { from?: string; to?: string; insats?: string }): Promise<any> {
   let url = `${API_URL}/stats/by-handler`;
   if (params) {
     const search = new URLSearchParams();
@@ -175,7 +175,7 @@ export async function getStatsByHandler(params?: { from?: string; to?: string; i
   return res.json();
 }
 
-export async function getHandlers(all = false) {
+export async function getHandlers(all = false): Promise<Handler[]> {
   const res = await fetch(`${API_URL}/handlers${all ? '?all=true' : ''}`);
   if (!res.ok) throw new Error("Kunde inte hämta behandlare");
   return res.json();

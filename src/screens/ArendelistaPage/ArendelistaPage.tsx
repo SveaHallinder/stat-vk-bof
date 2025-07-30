@@ -22,7 +22,7 @@ interface CaseEntry {
 }
 
 export const ArendelistaPage = (): JSX.Element => {
-  const [caseList, setCaseList] = useState<any[]>([]);
+  const [caseList, setCaseList] = useState<CaseEntry[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
