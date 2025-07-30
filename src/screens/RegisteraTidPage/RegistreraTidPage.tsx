@@ -31,7 +31,7 @@ function toSwedishDateString(dateStr: string) {
   return `${year}-${month}-${day}`;
 }
 
-export const RegisteraTidPage = (): JSX.Element => {
+export const RegistreraTidPage = (): JSX.Element => {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [newEntries, setNewEntries] = useState<TimeEntry[]>([]);
   const [editIdx, setEditIdx] = useState<number | null>(null);

@@ -1,1 +1,1 @@
-export { RegisteraTidPage } from "./RegisteraTidPage";
+export { RegistreraTidPage } from "./RegistreraTidPage";
