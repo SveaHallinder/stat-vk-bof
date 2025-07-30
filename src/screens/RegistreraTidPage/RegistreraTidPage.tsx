@@ -9,7 +9,7 @@ import { BehandlareCombobox } from "../../components/ui/behandlare-combobox";
 import { getCustomers, getEfforts, getHandlers, getCases, createCase } from "../../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Customer } from "@/types/types";
+import { Customer, Effort, Handler } from "@/types/types";
 
 interface TimeEntry {
   id: string;
@@ -51,8 +51,19 @@ export const RegistreraTidPage = (): JSX.Element => {
 
   useEffect(() => {
     getHandlers().then(data => setHandlers(data));
-    // Hämta kunder
-    getCustomers().then(data => setCustomers(data));
+    // Hämta kunder och lägg till birthYear
+    getCustomers().then(data => {
+      // Antag att Customer har ett fält "personalNumber" i formatet YYYYMMDD-XXXX
+      // Om inte, byt ut logiken nedan mot korrekt sätt att få ut födelseår
+      const customersWithBirthYear = data.map((c: any) => {
+        let birthYear = 0;
+        if (c.personalNumber && typeof c.personalNumber === "string" && c.personalNumber.length >= 4) {
+          birthYear = parseInt(c.personalNumber.substring(0, 4), 10);
+        }
+        return { ...c, birthYear };
+      });
+      setCustomers(customersWithBirthYear);
+    });
     // Hämta insatser
     getEfforts().then(data => setEfforts(data));
     // Hämta dagens ärenden
