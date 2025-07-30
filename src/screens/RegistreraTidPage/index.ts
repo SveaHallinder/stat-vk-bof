@@ -1,0 +1,1 @@
+export { RegistreraTidPage } from "./RegistreraTidPage";

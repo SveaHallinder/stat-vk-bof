@@ -1,1 +1,0 @@
-export { RegisteraTidPage } from "./RegisteraTidPage";

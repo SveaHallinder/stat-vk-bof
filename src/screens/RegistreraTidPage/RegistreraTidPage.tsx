@@ -9,6 +9,7 @@ import { BehandlareCombobox } from "../../components/ui/behandlare-combobox";
 import { getCustomers, getEfforts, getHandlers, getCases, createCase } from "../../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import { Customer } from "@/types/types";
 
 interface TimeEntry {
   id: string;
@@ -31,7 +32,9 @@ function toSwedishDateString(dateStr: string) {
   return `${year}-${month}-${day}`;
 }
 
-export const RegisteraTidPage = (): JSX.Element => {
+export const RegistreraTidPage = (): JSX.Element => {
+  type CustomerItem = Customer & { birthYear: number };
+
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [newEntries, setNewEntries] = useState<TimeEntry[]>([]);
   const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -168,7 +171,7 @@ export const RegisteraTidPage = (): JSX.Element => {
 
 
   return (
-    <Layout activeItem="Registrera tid" title="Registrera tid">
+    <Layout title="Registrera tid">
       <div className="mb-4 text-gray-600 text-base">
         Här kan du registrera nya insatser och se dagens registrerade tider.
       </div>
@@ -185,7 +188,7 @@ export const RegisteraTidPage = (): JSX.Element => {
           <Button
             variant="default"
             className="px-6 py-3 rounded-lg text-lg font-semibold"
-            disabled={newEntries.some((entry, idx) => Object.keys(validateEntry(entry)).length > 0)}
+            disabled={newEntries.some((entry) => Object.keys(validateEntry(entry)).length > 0)}
             onClick={async () => {
               let hasError = false;
               const allErrors: typeof newEntryErrors = {};
