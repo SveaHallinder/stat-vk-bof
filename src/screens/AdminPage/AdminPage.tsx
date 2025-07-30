@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Modal } from "../../components/ui/modal";
 import { AuditLog } from "../AdminPage/components/AuditLog";
+<<<<<<< HEAD
 import {
   getEfforts,
   getHandlers,
@@ -18,6 +19,9 @@ import {
   activateHandler,
   deactivateHandler
 } from "../../lib/api";
+=======
+import { Effort, Handler } from "@/types/types";
+>>>>>>> main
 
 
 const TableHeader = ({ children }: { children: React.ReactNode }) => (
@@ -33,14 +37,14 @@ const TableCell = ({ children, className = "" }: { children: React.ReactNode, cl
 );
 
 export const AdminPage = (): JSX.Element => {
-  const [insatser, setInsatser] = React.useState<any[]>([]);
+  const [insatser, setInsatser] = React.useState<Effort[]>([]);
   const [openModal, setOpenModal] = React.useState(false);
   const [newInsats, setNewInsats] = React.useState({ name: "", for: "Biståndsbedömda" });
   const [editIdx, setEditIdx] = React.useState<number | null>(null);
   const [editInsats, setEditInsats] = React.useState<{ name: string; for: string }>({ name: "", for: "Biståndsbedömda" });
   const [openEditModal, setOpenEditModal] = React.useState(false);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
-  const [handlers, setHandlers] = React.useState<any[]>([]);
+  const [handlers, setHandlers] = React.useState<Handler[]>([]);
   const [inviteLink, setInviteLink] = React.useState<string | null>(null);
   const [editHandler, setEditHandler] = React.useState<{ id: number, name: string, email: string } | null>(null);
   const [openEditHandlerModal, setOpenEditHandlerModal] = React.useState(false);

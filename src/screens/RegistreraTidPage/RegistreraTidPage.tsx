@@ -39,9 +39,9 @@ export const RegistreraTidPage = (): JSX.Element => {
   const [newEntries, setNewEntries] = useState<TimeEntry[]>([]);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
-  const [handlers, setHandlers] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [efforts, setEfforts] = useState<any[]>([]);
+  const [handlers, setHandlers] = useState<Handler[]>([]);
+  const [customers, setCustomers] = useState<CustomerItem[]>([]);
+  const [efforts, setEfforts] = useState<Effort[]>([]);
   const [newEntryErrors, setNewEntryErrors] = useState<{ [idx: number]: { customer?: string; handler1?: string; effort?: string; date?: string; hours?: string } }>({});
 
   const navigate = useNavigate();

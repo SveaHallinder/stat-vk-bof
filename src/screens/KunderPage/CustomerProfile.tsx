@@ -7,6 +7,7 @@ import { ArrowLeft, Edit, Loader2 } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { Modal } from "../../components/ui/modal";
 import { getCustomer, updateCustomer, getCustomerEfforts, getCasesForCustomerEffort, updateCase } from "../../lib/api";
+import { Case } from "@/types/types";
 import { BehandlareCombobox } from "../../components/ui/behandlare-combobox";
 import toast from "react-hot-toast";
 
@@ -20,10 +21,25 @@ export const CustomerProfile = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [efforts, setEfforts] = useState<any[]>([]);
+  interface CustomerEffort {
+    effort_id: number;
+    effort_name: string;
+    start_date?: string;
+    handlers?: string[];
+  }
+
+  interface CaseWithNames extends Case {
+    date?: string;
+    hours?: number | null;
+    status?: string;
+    handler1_name?: string;
+    handler2_name?: string;
+  }
+
+  const [efforts, setEfforts] = useState<CustomerEffort[]>([]);
   const [loadingEfforts, setLoadingEfforts] = useState(true);
-  const [openEffort, setOpenEffort] = useState<any | null>(null);
-  const [cases, setCases] = useState<any[]>([]);
+  const [openEffort, setOpenEffort] = useState<CustomerEffort | null>(null);
+  const [cases, setCases] = useState<CaseWithNames[]>([]);
   const [loadingCases, setLoadingCases] = useState(false);
   const [editCase, setEditCase] = useState<any | null>(null);
   const [savingCase, setSavingCase] = useState(false);
