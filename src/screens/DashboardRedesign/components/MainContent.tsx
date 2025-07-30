@@ -7,7 +7,7 @@ import { PieChart as RePieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { createCustomer } from '../../../lib/api';
+import { API_URL, createCustomer } from '../../../lib/api';
 import { KundCombobox } from "../../../components/ui/kund-combobox";
 import { InsatsCombobox } from "../../../components/ui/insats-combobox";
 import { BehandlareCombobox } from "../../../components/ui/behandlare-combobox";
@@ -166,7 +166,7 @@ export const MainContent = (): JSX.Element => {
 
 
     try {
-      const res = await fetch("http://localhost:4000/cases", {
+      const res = await fetch(`${API_URL}/cases`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

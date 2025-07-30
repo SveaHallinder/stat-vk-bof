@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
 import { Pool } from "pg";
 
@@ -12,7 +13,9 @@ import stats from "./routes/stats";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+const allowedOrigin = process.env.CORS_ORIGIN || '*';
+app.use(cors({ origin: allowedOrigin }));
+app.use(helmet());
 app.use(express.json());
 
 const pool = new Pool({

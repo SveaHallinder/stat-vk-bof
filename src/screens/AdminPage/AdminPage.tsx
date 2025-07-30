@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { API_URL } from "../../lib/api";
 import { Layout } from "../../components/Layout";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/card";
@@ -42,7 +43,7 @@ export const AdminPage = (): JSX.Element => {
 
   async function fetchEfforts() {
     try {
-      const url = showInactiveEfforts ? "http://localhost:4000/efforts?all=true" : "http://localhost:4000/efforts";
+      const url = showInactiveEfforts ? `${API_URL}/efforts?all=true` : `${API_URL}/efforts`;
       const res = await fetch(url);
       const data = await res.json();
       setInsatser(data);
@@ -57,7 +58,7 @@ export const AdminPage = (): JSX.Element => {
 
   async function fetchHandlers() {
     try {
-      const url = showInactive ? "http://localhost:4000/handlers?all=true" : "http://localhost:4000/handlers";
+      const url = showInactive ? `${API_URL}/handlers?all=true` : `${API_URL}/handlers`;
       const res = await fetch(url);
       const data = await res.json();
       setHandlers(data);
@@ -69,7 +70,7 @@ export const AdminPage = (): JSX.Element => {
   // Lägg till insats
   const handleAddInsats = async () => {
     try {
-      const res = await fetch("http://localhost:4000/efforts", {
+      const res = await fetch(`${API_URL}/efforts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newInsats.name, available_for: newInsats.for })
@@ -88,7 +89,7 @@ export const AdminPage = (): JSX.Element => {
   const handleEditInsats = async () => {
     if (editIdx == null) return;
     try {
-      const res = await fetch(`http://localhost:4000/efforts/${insatser[editIdx].id}`, {
+      const res = await fetch(`${API_URL}/efforts/${insatser[editIdx].id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: editInsats.name, available_for: editInsats.for })
@@ -121,7 +122,7 @@ export const AdminPage = (): JSX.Element => {
     setHandlerErrors(errors);
     if (Object.keys(errors).length > 0) return;
     try {
-      const res = await fetch("http://localhost:4000/handlers", {
+      const res = await fetch(`${API_URL}/handlers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newHandler)
@@ -185,7 +186,7 @@ export const AdminPage = (): JSX.Element => {
                             </Button>
                           ) : (
                             <Button variant="outline" size="sm" onClick={async () => {
-                              await fetch(`http://localhost:4000/efforts/${i.id}/activate`, { method: "PUT" });
+                              await fetch(`${API_URL}/efforts/${i.id}/activate`, { method: "PUT" });
                               fetchEfforts();
                             }}>
                               Återaktivera
@@ -248,7 +249,7 @@ export const AdminPage = (): JSX.Element => {
                 <Button variant="outline" onClick={() => setShowDeleteModal(false)}>Avbryt</Button>
                 <Button variant="destructive" onClick={async () => {
                   if (editIdx != null) {
-                    await fetch(`http://localhost:4000/efforts/${insatser[editIdx].id}/deactivate`, { method: "PUT" });
+                    await fetch(`${API_URL}/efforts/${insatser[editIdx].id}/deactivate`, { method: "PUT" });
                     setShowDeleteModal(false);
                     setOpenEditModal(false);
                     fetchEfforts();
@@ -294,7 +295,7 @@ export const AdminPage = (): JSX.Element => {
                             </Button>
                           ) : (
                             <Button variant="outline" size="sm" onClick={async () => {
-                              await fetch(`http://localhost:4000/handlers/${h.id}/activate`, { method: "PUT" });
+                              await fetch(`${API_URL}/handlers/${h.id}/activate`, { method: "PUT" });
                               fetchHandlers();
                             }}>
                               Återaktivera
@@ -369,7 +370,7 @@ export const AdminPage = (): JSX.Element => {
                   variant="destructive"
                   onClick={async () => {
                     if (editHandler) {
-                      await fetch(`http://localhost:4000/handlers/${editHandler.id}/deactivate`, { method: "PUT" });
+                      await fetch(`${API_URL}/handlers/${editHandler.id}/deactivate`, { method: "PUT" });
                       setOpenEditHandlerModal(false);
                       fetchHandlers();
                     }
@@ -383,7 +384,7 @@ export const AdminPage = (): JSX.Element => {
                     variant="default"
                     onClick={async () => {
                       if (editHandler) {
-                        await fetch(`http://localhost:4000/handlers/${editHandler.id}`, {
+                        await fetch(`${API_URL}/handlers/${editHandler.id}`, {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ name: editHandler.name, email: editHandler.email })
