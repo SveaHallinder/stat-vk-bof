@@ -6,7 +6,7 @@ import { PlusCircle } from "lucide-react";
 import { InsatsCombobox } from "../../components/ui/insats-combobox";
 import { KundCombobox } from "../../components/ui/kund-combobox";
 import { BehandlareCombobox } from "../../components/ui/behandlare-combobox";
-import { getCustomers, getEfforts } from "../../lib/api";
+import { getCustomers, getEfforts, getHandlers, getCases, createCase } from "../../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -47,16 +47,13 @@ export const RegisteraTidPage = (): JSX.Element => {
   const prefillEffort = searchParams.get("effort") || "";
 
   useEffect(() => {
-    fetch("http://localhost:4000/handlers")
-      .then(res => res.json())
-      .then(data => setHandlers(data));
+    getHandlers().then(data => setHandlers(data));
     // Hämta kunder
     getCustomers().then(data => setCustomers(data));
     // Hämta insatser
     getEfforts().then(data => setEfforts(data));
     // Hämta dagens ärenden
-    fetch("http://localhost:4000/cases")
-      .then(res => res.json())
+    getCases()
       .then(data => {
         const now = new Date();
         const todayLocal = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
@@ -160,16 +157,7 @@ export const RegisteraTidPage = (): JSX.Element => {
     console.log("Sparar ärende med payload:", payload);
 
     try {
-      const res = await fetch("http://localhost:4000/cases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        toast.error("Kunde inte spara ärende: " + text);
-        return false;
-      }
+      await createCase(payload);
       toast.success("Tid registrerad!");
       return true;
     } catch (err) {

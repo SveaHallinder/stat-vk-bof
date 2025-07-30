@@ -79,10 +79,40 @@ export async function updateCustomer(id: string, data: { initials: string; gende
   return res.json();
 }
 
-export async function getEfforts(): Promise<Effort[]> {
-  const res = await fetch(`${API_URL}/efforts`);
+export async function getEfforts(all = false): Promise<Effort[]> {
+  const res = await fetch(`${API_URL}/efforts${all ? '?all=true' : ''}`);
   if (!res.ok) throw new Error("Kunde inte hämta insatser");
   return res.json();
+}
+
+export async function createEffort(data: { name: string; available_for: string }): Promise<Effort> {
+  const res = await fetch(`${API_URL}/efforts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: data.name, available_for: data.available_for })
+  });
+  if (!res.ok) throw new Error("Kunde inte skapa insats");
+  return res.json();
+}
+
+export async function updateEffort(id: string, data: { name: string; available_for: string }): Promise<Effort> {
+  const res = await fetch(`${API_URL}/efforts/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: data.name, available_for: data.available_for })
+  });
+  if (!res.ok) throw new Error("Kunde inte uppdatera insats");
+  return res.json();
+}
+
+export async function activateEffort(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/efforts/${id}/activate`, { method: "PUT" });
+  if (!res.ok) throw new Error("Kunde inte aktivera insats");
+}
+
+export async function deactivateEffort(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/efforts/${id}/deactivate`, { method: "PUT" });
+  if (!res.ok) throw new Error("Kunde inte avaktivera insats");
 }
 
 export async function getCustomerEfforts(customerId: string): Promise<Case[]> {
@@ -177,5 +207,57 @@ export async function getStatsByHandler(params?: { from?: string; to?: string; i
 export async function getHandlers(all = false): Promise<Handler[]> {
   const res = await fetch(`${API_URL}/handlers${all ? '?all=true' : ''}`);
   if (!res.ok) throw new Error("Kunde inte hämta behandlare");
+  return res.json();
+}
+
+export async function createHandler(data: { name: string; email: string }): Promise<Handler> {
+  const res = await fetch(`${API_URL}/handlers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error("Kunde inte skapa behandlare");
+  return res.json();
+}
+
+export async function updateHandler(id: string, data: { name: string; email: string }): Promise<Handler> {
+  const res = await fetch(`${API_URL}/handlers/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error("Kunde inte uppdatera behandlare");
+  return res.json();
+}
+
+export async function activateHandler(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/handlers/${id}/activate`, { method: "PUT" });
+  if (!res.ok) throw new Error("Kunde inte aktivera behandlare");
+}
+
+export async function deactivateHandler(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/handlers/${id}/deactivate`, { method: "PUT" });
+  if (!res.ok) throw new Error("Kunde inte avaktivera behandlare");
+}
+
+export async function getCases(): Promise<Case[]> {
+  const res = await fetch(`${API_URL}/cases`);
+  if (!res.ok) throw new Error("Kunde inte hämta ärenden");
+  return res.json();
+}
+
+export async function createCase(data: { customer_id: string; effort_id: string; handler1_id: string; handler2_id?: string | null; date: string; hours: string; status: string }): Promise<Case> {
+  const res = await fetch(`${API_URL}/cases`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error("Kunde inte skapa ärende");
+  return res.json();
+}
+
+export async function getCaseStatuses(): Promise<string[]> {
+  const res = await fetch(`${API_URL}/case-statuses`);
+  if (!res.ok) throw new Error("Kunde inte hämta statusar");
   return res.json();
 }

@@ -6,6 +6,18 @@ import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Modal } from "../../components/ui/modal";
 import { AuditLog } from "../AdminPage/components/AuditLog";
+import {
+  getEfforts,
+  getHandlers,
+  createEffort,
+  updateEffort,
+  activateEffort,
+  deactivateEffort,
+  createHandler,
+  updateHandler,
+  activateHandler,
+  deactivateHandler
+} from "../../lib/api";
 
 
 const TableHeader = ({ children }: { children: React.ReactNode }) => (
@@ -41,9 +53,7 @@ export const AdminPage = (): JSX.Element => {
 
   async function fetchEfforts() {
     try {
-      const url = showInactiveEfforts ? "http://localhost:4000/efforts?all=true" : "http://localhost:4000/efforts";
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await getEfforts(showInactiveEfforts);
       setInsatser(data);
     } catch {
       setInsatser([]);
@@ -56,9 +66,7 @@ export const AdminPage = (): JSX.Element => {
 
   async function fetchHandlers() {
     try {
-      const url = showInactive ? "http://localhost:4000/handlers?all=true" : "http://localhost:4000/handlers";
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await getHandlers(showInactive);
       setHandlers(data);
     } catch {
       setHandlers([]);
@@ -68,13 +76,7 @@ export const AdminPage = (): JSX.Element => {
   // Lägg till insats
   const handleAddInsats = async () => {
     try {
-      const res = await fetch("http://localhost:4000/efforts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newInsats.name, available_for: newInsats.for })
-      });
-      if (!res.ok) throw new Error();
-      const created = await res.json();
+      const created = await createEffort({ name: newInsats.name, available_for: newInsats.for });
       setInsatser(prev => [...prev, created]);
       setNewInsats({ name: "", for: "Biståndsbedömda" });
       setOpenModal(false);
@@ -87,13 +89,7 @@ export const AdminPage = (): JSX.Element => {
   const handleEditInsats = async () => {
     if (editIdx == null) return;
     try {
-      const res = await fetch(`http://localhost:4000/efforts/${insatser[editIdx].id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editInsats.name, available_for: editInsats.for })
-      });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
+      const updated = await updateEffort(insatser[editIdx].id.toString(), { name: editInsats.name, available_for: editInsats.for });
       setInsatser(prev => prev.map(i => i.id === insatser[editIdx].id ? updated : i));
       setOpenEditModal(false);
     } catch {
@@ -120,13 +116,7 @@ export const AdminPage = (): JSX.Element => {
     setHandlerErrors(errors);
     if (Object.keys(errors).length > 0) return;
     try {
-      const res = await fetch("http://localhost:4000/handlers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newHandler)
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
+      const data = await createHandler(newHandler);
       setNewHandler({ name: "", email: "" });
       setHandlerErrors({});
       setOpenHandlerModal(false);
@@ -184,7 +174,7 @@ export const AdminPage = (): JSX.Element => {
                             </Button>
                           ) : (
                             <Button variant="outline" size="sm" onClick={async () => {
-                              await fetch(`http://localhost:4000/efforts/${i.id}/activate`, { method: "PUT" });
+                              await activateEffort(i.id.toString());
                               fetchEfforts();
                             }}>
                               Återaktivera
@@ -247,7 +237,7 @@ export const AdminPage = (): JSX.Element => {
                 <Button variant="outline" onClick={() => setShowDeleteModal(false)}>Avbryt</Button>
                 <Button variant="destructive" onClick={async () => {
                   if (editIdx != null) {
-                    await fetch(`http://localhost:4000/efforts/${insatser[editIdx].id}/deactivate`, { method: "PUT" });
+                    await deactivateEffort(insatser[editIdx].id.toString());
                     setShowDeleteModal(false);
                     setOpenEditModal(false);
                     fetchEfforts();
@@ -293,7 +283,7 @@ export const AdminPage = (): JSX.Element => {
                             </Button>
                           ) : (
                             <Button variant="outline" size="sm" onClick={async () => {
-                              await fetch(`http://localhost:4000/handlers/${h.id}/activate`, { method: "PUT" });
+                              await activateHandler(h.id.toString());
                               fetchHandlers();
                             }}>
                               Återaktivera
@@ -368,7 +358,7 @@ export const AdminPage = (): JSX.Element => {
                   variant="destructive"
                   onClick={async () => {
                     if (editHandler) {
-                      await fetch(`http://localhost:4000/handlers/${editHandler.id}/deactivate`, { method: "PUT" });
+                      await deactivateHandler(editHandler.id.toString());
                       setOpenEditHandlerModal(false);
                       fetchHandlers();
                     }
@@ -382,11 +372,7 @@ export const AdminPage = (): JSX.Element => {
                     variant="default"
                     onClick={async () => {
                       if (editHandler) {
-                        await fetch(`http://localhost:4000/handlers/${editHandler.id}`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ name: editHandler.name, email: editHandler.email })
-                        });
+                        await updateHandler(editHandler.id.toString(), { name: editHandler.name, email: editHandler.email });
                         setOpenEditHandlerModal(false);
                         fetchHandlers();
                       }

@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Calendar } from '../../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { format } from 'date-fns';
+import { getCases, getCaseStatuses } from "../../lib/api";
 
 interface CaseEntry {
   id: string;
@@ -39,22 +40,16 @@ export const ArendelistaPage = (): JSX.Element => {
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
-    fetch("http://localhost:4000/cases")
-      .then(res => res.json())
-      .then(data => setCaseList(data));
+    getCases().then(data => setCaseList(data));
   }, []);
 
   // Hämta statusar från backend
   useEffect(() => {
     setStatusLoading(true);
     setStatusError(null);
-    fetch("http://localhost:4000/case-statuses")
-      .then(res => {
-        if (!res.ok) throw new Error("Kunde inte hämta statusar");
-        return res.json();
-      })
+    getCaseStatuses()
       .then(data => setStatusOptions(data))
-      .catch(err => setStatusError("Kunde inte hämta statusar"))
+      .catch(() => setStatusError("Kunde inte hämta statusar"))
       .finally(() => setStatusLoading(false));
   }, []);
 
