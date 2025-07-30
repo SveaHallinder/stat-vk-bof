@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./globals.css";
 import { DashboardRedesign } from "./screens/DashboardRedesign";
 import { KunderPage, CustomerProfile } from "./screens/KunderPage";
-import { RegisteraTidPage } from "./screens/RegisteraTidPage";
+import { RegisteraTidPage } from "./screens/RegistreraTidPage";
 import { ArendelistaPage } from "./screens/ArendelistaPage";
 import { StatistikPage } from "./screens/StatistikPage";
 import { AdminPage } from "./screens/AdminPage";

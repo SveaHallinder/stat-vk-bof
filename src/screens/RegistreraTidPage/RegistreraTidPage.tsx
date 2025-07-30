@@ -53,12 +53,19 @@ export const RegisteraTidPage = (): JSX.Element => {
     fetch("http://localhost:4000/handlers")
       .then(res => res.json())
       .then(data => setHandlers(data));
-    // Hämta kunder
-    getCustomers().then(data => setCustomers(data));
-    // Hämta insatser
-    getEfforts().then(data => setEfforts(data));
-    // Hämta dagens ärenden
-    fetch("http://localhost:4000/cases")
+      // Hämta kunder
+      getCustomers().then(data => {
+        // Lägg till birthYear om det saknas (dummyvärde eller beräkning om möjligt)
+        const customersWithBirthYear = data.map((c: Customer) => ({
+          ...c,
+          birthYear: (c as any).birthYear ?? 0 // Sätt till 0 eller beräkna om möjligt
+        }));
+        setCustomers(customersWithBirthYear);
+      });
+      // Hämta insatser
+      getEfforts().then(data => setEfforts(data));
+      // Hämta dagens ärenden
+      fetch("http://localhost:4000/cases")
       .then(res => res.json())
       .then(data => {
         const now = new Date();
@@ -183,7 +190,7 @@ export const RegisteraTidPage = (): JSX.Element => {
 
 
   return (
-    <Layout activeItem="Registrera tid" title="Registrera tid">
+    <Layout title="Registrera tid">
       <div className="mb-4 text-gray-600 text-base">
         Här kan du registrera nya insatser och se dagens registrerade tider.
       </div>
@@ -200,7 +207,7 @@ export const RegisteraTidPage = (): JSX.Element => {
           <Button
             variant="default"
             className="px-6 py-3 rounded-lg text-lg font-semibold"
-            disabled={newEntries.some((entry, idx) => Object.keys(validateEntry(entry)).length > 0)}
+            disabled={newEntries.some((entry) => Object.keys(validateEntry(entry)).length > 0)}
             onClick={async () => {
               let hasError = false;
               const allErrors: typeof newEntryErrors = {};
