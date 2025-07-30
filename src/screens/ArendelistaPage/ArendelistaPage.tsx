@@ -6,6 +6,7 @@ import { Input } from "../../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Button } from "../../components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../../lib/api";
 import { Calendar } from '../../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { format } from 'date-fns';
@@ -39,7 +40,7 @@ export const ArendelistaPage = (): JSX.Element => {
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
-    fetch("http://localhost:4000/cases")
+    fetch(`${API_URL}/cases`)
       .then(res => res.json())
       .then(data => setCaseList(data));
   }, []);
@@ -48,7 +49,7 @@ export const ArendelistaPage = (): JSX.Element => {
   useEffect(() => {
     setStatusLoading(true);
     setStatusError(null);
-    fetch("http://localhost:4000/case-statuses")
+    fetch(`${API_URL}/case-statuses`)
       .then(res => {
         if (!res.ok) throw new Error("Kunde inte hämta statusar");
         return res.json();

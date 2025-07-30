@@ -6,7 +6,7 @@ import { PlusCircle } from "lucide-react";
 import { InsatsCombobox } from "../../components/ui/insats-combobox";
 import { KundCombobox } from "../../components/ui/kund-combobox";
 import { BehandlareCombobox } from "../../components/ui/behandlare-combobox";
-import { getCustomers, getEfforts } from "../../lib/api";
+import { API_URL, getCustomers, getEfforts } from "../../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -47,7 +47,7 @@ export const RegisteraTidPage = (): JSX.Element => {
   const prefillEffort = searchParams.get("effort") || "";
 
   useEffect(() => {
-    fetch("http://localhost:4000/handlers")
+    fetch(`${API_URL}/handlers`)
       .then(res => res.json())
       .then(data => setHandlers(data));
     // Hämta kunder
@@ -55,7 +55,7 @@ export const RegisteraTidPage = (): JSX.Element => {
     // Hämta insatser
     getEfforts().then(data => setEfforts(data));
     // Hämta dagens ärenden
-    fetch("http://localhost:4000/cases")
+    fetch(`${API_URL}/cases`)
       .then(res => res.json())
       .then(data => {
         const now = new Date();
@@ -160,7 +160,7 @@ export const RegisteraTidPage = (): JSX.Element => {
     console.log("Sparar ärende med payload:", payload);
 
     try {
-      const res = await fetch("http://localhost:4000/cases", {
+      const res = await fetch(`${API_URL}/cases`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
