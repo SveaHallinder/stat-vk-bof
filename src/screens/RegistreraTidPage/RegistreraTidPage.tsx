@@ -7,6 +7,7 @@ import { InsatsCombobox } from "../../components/ui/insats-combobox";
 import { KundCombobox } from "../../components/ui/kund-combobox";
 import { BehandlareCombobox } from "../../components/ui/behandlare-combobox";
 import { getCustomers, getEfforts } from "../../lib/api";
+import { Customer, Handler, Effort } from "@/types/types";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -31,14 +32,16 @@ function toSwedishDateString(dateStr: string) {
   return `${year}-${month}-${day}`;
 }
 
-export const RegistreraTidPage = (): JSX.Element => {
+export const RegisteraTidPage = (): JSX.Element => {
+  type CustomerItem = Customer & { birthYear: number };
+
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [newEntries, setNewEntries] = useState<TimeEntry[]>([]);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
-  const [handlers, setHandlers] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [efforts, setEfforts] = useState<any[]>([]);
+  const [handlers, setHandlers] = useState<Handler[]>([]);
+  const [customers, setCustomers] = useState<CustomerItem[]>([]);
+  const [efforts, setEfforts] = useState<Effort[]>([]);
   const [newEntryErrors, setNewEntryErrors] = useState<{ [idx: number]: { customer?: string; handler1?: string; effort?: string; date?: string; hours?: string } }>({});
 
   const navigate = useNavigate();
@@ -50,12 +53,19 @@ export const RegistreraTidPage = (): JSX.Element => {
     fetch("http://localhost:4000/handlers")
       .then(res => res.json())
       .then(data => setHandlers(data));
-    // Hämta kunder
-    getCustomers().then(data => setCustomers(data));
-    // Hämta insatser
-    getEfforts().then(data => setEfforts(data));
-    // Hämta dagens ärenden
-    fetch("http://localhost:4000/cases")
+      // Hämta kunder
+      getCustomers().then(data => {
+        // Lägg till birthYear om det saknas (dummyvärde eller beräkning om möjligt)
+        const customersWithBirthYear = data.map((c: Customer) => ({
+          ...c,
+          birthYear: (c as any).birthYear ?? 0 // Sätt till 0 eller beräkna om möjligt
+        }));
+        setCustomers(customersWithBirthYear);
+      });
+      // Hämta insatser
+      getEfforts().then(data => setEfforts(data));
+      // Hämta dagens ärenden
+      fetch("http://localhost:4000/cases")
       .then(res => res.json())
       .then(data => {
         const now = new Date();
@@ -180,7 +190,7 @@ export const RegistreraTidPage = (): JSX.Element => {
 
 
   return (
-    <Layout activeItem="Registrera tid" title="Registrera tid">
+    <Layout title="Registrera tid">
       <div className="mb-4 text-gray-600 text-base">
         Här kan du registrera nya insatser och se dagens registrerade tider.
       </div>
@@ -197,7 +207,7 @@ export const RegistreraTidPage = (): JSX.Element => {
           <Button
             variant="default"
             className="px-6 py-3 rounded-lg text-lg font-semibold"
-            disabled={newEntries.some((entry, idx) => Object.keys(validateEntry(entry)).length > 0)}
+            disabled={newEntries.some((entry) => Object.keys(validateEntry(entry)).length > 0)}
             onClick={async () => {
               let hasError = false;
               const allErrors: typeof newEntryErrors = {};

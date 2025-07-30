@@ -8,6 +8,7 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { getEfforts, getHandlers, getCustomers } from "../../lib/api";
+import { Customer, Handler, Effort } from "@/types/types";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 
@@ -30,9 +31,11 @@ export const StatistikPage = (): JSX.Element => {
   const [selectedHandlers, setSelectedHandlers] = useState<string[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   // Valbara alternativ
-  const [effortOptions, setEffortOptions] = useState<any[]>([]);
-  const [handlerOptions, setHandlerOptions] = useState<any[]>([]);
-  const [customerOptions, setCustomerOptions] = useState<any[]>([]);
+  type CustomerItem = Customer & { birthYear: number };
+
+  const [effortOptions, setEffortOptions] = useState<Effort[]>([]);
+  const [handlerOptions, setHandlerOptions] = useState<Handler[]>([]);
+  const [customerOptions, setCustomerOptions] = useState<CustomerItem[]>([]);
   // Födelseårsalternativ (hårdkodat för demo, kan hämtas från kunder)
   const [yearOptions, setYearOptions] = useState<{ label: string; value: string }[]>([]);
 
