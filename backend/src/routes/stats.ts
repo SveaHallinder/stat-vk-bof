@@ -10,12 +10,12 @@ export default function stats(pool: Pool) {
     let where = "WHERE cases.active = TRUE";
     const params: any[] = [];
     if (from) {
-      params.push(from);
-      where += ` AND cases.date >= $${params.length}`;
+      params.push(String(from));
+      where += ` AND cases.date >= $${params.length}::date`;
     }
     if (to) {
-      params.push(to);
-      where += ` AND cases.date <= $${params.length}`;
+      params.push(String(to));
+      where += ` AND cases.date <= $${params.length}::date`;
     }
     if (insats && insats !== "alla") {
       params.push(insats);
@@ -69,12 +69,12 @@ export default function stats(pool: Pool) {
     let where = "WHERE cases.active = TRUE";
     const params: any[] = [];
     if (from) {
-      params.push(from);
-      where += ` AND cases.date >= $${params.length}`;
+      params.push(String(from));
+      where += ` AND cases.date >= $${params.length}::date`;
     }
     if (to) {
-      params.push(to);
-      where += ` AND cases.date <= $${params.length}`;
+      params.push(String(to));
+      where += ` AND cases.date <= $${params.length}::date`;
     }
     if (insats && insats !== "alla") {
       params.push(insats);
