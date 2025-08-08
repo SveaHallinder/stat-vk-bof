@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { getShifts } from "../../lib/api";
 import { ShiftEntry } from "@/types/types";
+import toast from "react-hot-toast";
 
 export const ArendelistaPage = (): JSX.Element => {
   const [shifts, setShifts] = useState<ShiftEntry[]>([]);
@@ -15,7 +16,15 @@ export const ArendelistaPage = (): JSX.Element => {
   const [sortAsc, setSortAsc] = useState(false);
 
   useEffect(() => {
-    getShifts().then(setShifts);
+    async function load() {
+      try {
+        const data = await getShifts();
+        setShifts(data);
+      } catch {
+        toast.error("Kunde inte hämta besök");
+      }
+    }
+    load();
   }, []);
 
   const statusOptions = Array.from(new Set(shifts.map(s => s.status))).filter(Boolean);
