@@ -37,7 +37,7 @@ export const ArendelistaPage = (): JSX.Element => {
   });
 
   return (
-    <Layout activeItem="Ärendelista" title="Ärendelista">
+    <Layout title="Ärendelista">
       <Card className="flex-1 bg-white border border-gray-200 rounded-xl">
         <CardContent className="p-6">
           <div className="flex gap-4 mb-4">
