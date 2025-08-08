@@ -11,6 +11,9 @@ export async function getCustomers(all = false): Promise<Customer[]> {
   }));
 }
 
+console.log("API_URL:", API_URL);
+console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
+
 export async function createCustomer(data: { initials: string; gender: string; birthYear: number; startDate?: string }): Promise<Customer> {
   const res = await fetch(`${API_URL}/customers`, {
     method: "POST",

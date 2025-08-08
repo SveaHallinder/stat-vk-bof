@@ -43,10 +43,21 @@ export const StatistikPage = (): JSX.Element => {
   useEffect(() => {
     getEfforts().then(setEffortOptions);
     getHandlers(true).then(setHandlerOptions);
-    getCustomers(true).then(data => {
-      setCustomerOptions(data);
+    getCustomers(true).then((data) => {
+      // Konvertera Customer[] till CustomerItem[] genom att säkerställa att birthYear finns
+      const customerItems: CustomerItem[] = data
+        .filter((c: any) => typeof c.birthYear === "number")
+        .map((c: any) => ({
+          ...c,
+          birthYear: c.birthYear,
+        }));
+      setCustomerOptions(customerItems);
+
       // Unika födelseår som string
-      const years = Array.from(new Set(data.map((c: any) => c.birthYear))).filter(Boolean).map(String).sort((a, b) => Number(b) - Number(a));
+      const years = Array.from(new Set(customerItems.map((c) => c.birthYear)))
+        .filter(Boolean)
+        .map(String)
+        .sort((a, b) => Number(b) - Number(a));
       setYearOptions(years.map((y: string) => ({ label: y, value: y })));
     });
   }, []);
@@ -72,8 +83,8 @@ export const StatistikPage = (): JSX.Element => {
     debounceRef.current = setTimeout(() => {
       const params = buildParams();
       Promise.all([
-        getStatsSummary(params).catch(err => { toast.error("Kunde inte hämta statistik"); return null; }),
-        getStatsByEffort(params).catch(err => { toast.error("Kunde inte hämta diagramdata"); return null; })
+        getStatsSummary(params).catch(_err => { toast.error("Kunde inte hämta statistik"); return null; }),
+        getStatsByEffort(params).catch(_err => { toast.error("Kunde inte hämta diagramdata"); return null; })
       ]).then(([statsData, effortData]) => {
         setStats(statsData);
         setEffortData(effortData);
@@ -187,7 +198,7 @@ export const StatistikPage = (): JSX.Element => {
   };
 
   return (
-    <Layout activeItem="Statistik" title="Statistik">
+    <Layout title="Statistik">
       <div className="space-y-8">
         {/* Filterrad */}
         <div className="bg-white rounded-xl p-6 flex flex-col gap-6">

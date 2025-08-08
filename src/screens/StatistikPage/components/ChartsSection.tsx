@@ -1,4 +1,3 @@
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/toggle-group";
 
@@ -8,7 +7,7 @@ interface ChartsSectionProps {
   selectedCategory: string;
 }
 
-export const ChartsSection = ({ selectedPeriod, selectedUnit, selectedCategory }: ChartsSectionProps): JSX.Element => {
+export const ChartsSection = ({  }: ChartsSectionProps): JSX.Element => {
   // Sample chart data
   const monthlyData = [
     { month: "Jan", cases: 45, customers: 180, hours: 320 },

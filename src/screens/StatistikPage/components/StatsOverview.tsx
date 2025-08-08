@@ -1,4 +1,3 @@
-import React from "react";
 import { Card, CardContent } from "../../../components/ui/card";
 import { UsersIcon, ClockIcon, TrendingUpIcon, FileTextIcon, AlertCircleIcon, CheckCircleIcon } from "lucide-react";
 
@@ -8,7 +7,7 @@ interface StatsOverviewProps {
   selectedCategory: string;
 }
 
-export const StatsOverview = ({ selectedPeriod, selectedUnit, selectedCategory }: StatsOverviewProps): JSX.Element => {
+export const StatsOverview = ({  }: StatsOverviewProps): JSX.Element => {
   // Sample stats data that would change based on filters
   const stats = [
     {
