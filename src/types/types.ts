@@ -49,4 +49,24 @@ export interface Customer {
     created_at: string;
     active: boolean;
   }
+
+  export interface Shift {
+    id: number;
+    case_id: number;
+    date: string;
+    hours: number;
+    status: string;
+    active: boolean;
+  }
+
+  export interface ShiftEntry {
+    id: number;
+    date: string;
+    hours: number;
+    status: string;
+    customer_name: string;
+    effort_name: string;
+    handler1_name: string;
+    handler2_name: string;
+  }
   

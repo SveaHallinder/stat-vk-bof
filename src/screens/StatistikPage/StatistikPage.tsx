@@ -128,23 +128,27 @@ export const StatistikPage = (): JSX.Element => {
       pdf.setFontSize(12);
       pdf.text("Insats", 14, y);
       pdf.text("Antal besök", 64, y);
-      pdf.text("Antal kunder", 114, y);
+      pdf.text("Antal timmar", 114, y);
+      pdf.text("Antal kunder", 164, y);
       y += 7;
       pdf.setFontSize(10);
       // Tabellrader
       (effortData || []).forEach(d => {
         pdf.text(String(d.effort_name), 14, y);
         pdf.text(String(d.antal_besok), 64, y);
-        pdf.text(String(d.antal_kunder), 114, y);
+        pdf.text(String(d.antal_timmar || 0), 114, y);
+        pdf.text(String(d.antal_kunder), 164, y);
         y += 6;
       });
       // Summering
       const totalBesok = (effortData || []).reduce((sum, d) => sum + Number(d.antal_besok), 0);
+      const totalTimmar = (effortData || []).reduce((sum, d) => sum + Number(d.antal_timmar || 0), 0);
       const totalKunder = (effortData || []).reduce((sum, d) => sum + Number(d.antal_kunder), 0);
       pdf.setFontSize(11);
       pdf.text("SUMMA", 14, y);
       pdf.text(String(totalBesok), 64, y);
-      pdf.text(String(totalKunder), 114, y);
+      pdf.text(String(totalTimmar), 114, y);
+      pdf.text(String(totalKunder), 164, y);
       pdf.save('statistik.pdf');
       toast.success("PDF exporterad!");
     }).catch(() => toast.error("Kunde inte exportera PDF"));
@@ -167,18 +171,21 @@ export const StatistikPage = (): JSX.Element => {
       const tableHeader = [
         "Insats",
         "Antal besök",
+        "Antal timmar",
         "Antal kunder"
       ];
       // Tabellrader
       const tableRows = (effortData || []).map(d => [
         d.effort_name,
         d.antal_besok,
+        d.antal_timmar || 0,
         d.antal_kunder
       ]);
       // Summering
       const totalBesok = (effortData || []).reduce((sum, d) => sum + Number(d.antal_besok), 0);
+      const totalTimmar = (effortData || []).reduce((sum, d) => sum + Number(d.antal_timmar || 0), 0);
       const totalKunder = (effortData || []).reduce((sum, d) => sum + Number(d.antal_kunder), 0);
-      const summaryRow = ["SUMMA", totalBesok, totalKunder];
+      const summaryRow = ["SUMMA", totalBesok, totalTimmar, totalKunder];
       // Bygg hela arket
       const data = [
         ["Statistikrapport"],
