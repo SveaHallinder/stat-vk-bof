@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "../../components/Layout";
 import { getStatsSummary, getStatsByEffort } from "../../lib/api";
 import { Button } from "../../components/ui/button";
@@ -75,24 +75,20 @@ export const StatistikPage = (): JSX.Element => {
     return params;
   }
 
-  // Hämta statistik och diagramdata när filter ändras
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+  function loadStats() {
     setLoading(true);
-    debounceRef.current = setTimeout(() => {
-      const params = buildParams();
-      Promise.all([
-        getStatsSummary(params).catch(_err => { toast.error("Kunde inte hämta statistik"); return null; }),
-        getStatsByEffort(params).catch(_err => { toast.error("Kunde inte hämta diagramdata"); return null; })
-      ]).then(([statsData, effortData]) => {
-        setStats(statsData);
-        setEffortData(effortData);
-      }).finally(() => setLoading(false));
-    }, 300);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    const params = buildParams();
+    Promise.all([
+      getStatsSummary(params).catch(_err => { toast.error("Kunde inte hämta statistik"); return null; }),
+      getStatsByEffort(params).catch(_err => { toast.error("Kunde inte hämta diagramdata"); return null; })
+    ]).then(([statsData, effortData]) => {
+      setStats(statsData);
+      setEffortData(effortData);
+    }).finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadStats();
   }, [dateRange, selectedEfforts, selectedGenders, selectedYears, selectedHandlers, selectedCustomers]);
 
   // Exportfunktioner
