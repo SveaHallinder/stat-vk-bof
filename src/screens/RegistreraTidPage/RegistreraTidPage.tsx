@@ -6,7 +6,7 @@ import { PlusCircle } from "lucide-react";
 import { InsatsCombobox } from "../../components/ui/insats-combobox";
 import { KundCombobox } from "../../components/ui/kund-combobox";
 import { BehandlareCombobox } from "../../components/ui/behandlare-combobox";
-import { API_URL, getCustomers, getEfforts } from "../../lib/api";
+import { API_URL, getCustomers, getEfforts, addShift } from "../../lib/api";
 import { Customer, Handler, Effort } from "@/types/types";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -147,8 +147,7 @@ export const RegisteraTidPage = (): JSX.Element => {
     return errors;
   }
 
-  async function saveCase(entry: TimeEntry, idx?: number) {
-    // Validera innan vi skickar
+  async function saveShift(entry: TimeEntry, idx?: number) {
     const errors = validateEntry(entry);
     if (Object.keys(errors).length > 0) {
       if (typeof idx === "number") setNewEntryErrors(prev => ({ ...prev, [idx]: errors }));
@@ -157,33 +156,18 @@ export const RegisteraTidPage = (): JSX.Element => {
       setNewEntryErrors(prev => ({ ...prev, [idx]: {} }));
     }
 
-    const payload = {
-      customer_id: entry.customer,
-      handler1_id: entry.handler1,
-      handler2_id: entry.handler2 && entry.handler2 !== "" ? entry.handler2 : null,
-      effort_id: entry.effort,
-      date: entry.date,
-      hours: entry.hours,
-      status: entry.status
-    };
-
-    console.log("Sparar ärende med payload:", payload);
-
     try {
-      const res = await fetch(`${API_URL}/cases`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+      await addShift({
+        customer_id: entry.customer,
+        effort_id: entry.effort,
+        date: entry.date,
+        hours: Number(entry.hours),
+        status: entry.status,
       });
-      if (!res.ok) {
-        const text = await res.text();
-        toast.error("Kunde inte spara ärende: " + text);
-        return false;
-      }
       toast.success("Tid registrerad!");
       return true;
     } catch (err) {
-      toast.error("Nätverksfel: " + err);
+      toast.error("Kunde inte spara besök: " + err);
       return false;
     }
   }
@@ -213,7 +197,7 @@ export const RegisteraTidPage = (): JSX.Element => {
               const allErrors: typeof newEntryErrors = {};
               for (let i = 0; i < newEntries.length; i++) {
                 const entry = newEntries[i];
-                const ok = await saveCase(entry, i);
+                const ok = await saveShift(entry, i);
                 if (!ok) hasError = true;
                 allErrors[i] = validateEntry(entry);
               }

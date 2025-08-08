@@ -1,5 +1,5 @@
 export const API_URL = import.meta.env.VITE_API_URL;
-import { Customer, Handler, Effort, Case } from "@/types/types";
+import { Customer, Handler, Effort, Case, ShiftEntry } from "@/types/types";
 
 export async function getCustomers(all = false): Promise<Customer[]> {
   const res = await fetch(`${API_URL}/customers${all ? '?all=true' : ''}`);
@@ -10,9 +10,6 @@ export async function getCustomers(all = false): Promise<Customer[]> {
     birthYear: c.birth_year,
   }));
 }
-
-console.log("API_URL:", API_URL);
-console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
 
 export async function createCustomer(data: { initials: string; gender: string; birthYear: number; startDate?: string }): Promise<Customer> {
   const res = await fetch(`${API_URL}/customers`, {
@@ -110,6 +107,22 @@ export async function updateCase(
     body: JSON.stringify(data)
   });
   if (!res.ok) throw new Error("Kunde inte uppdatera ärende");
+  return res.json();
+}
+
+export async function addShift(data: { customer_id: string; effort_id: string; date: string; hours: number; status: string }): Promise<any> {
+  const res = await fetch(`${API_URL}/shifts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error("Kunde inte skapa besök");
+  return res.json();
+}
+
+export async function getShifts(): Promise<ShiftEntry[]> {
+  const res = await fetch(`${API_URL}/shifts`);
+  if (!res.ok) throw new Error("Kunde inte hämta besök");
   return res.json();
 }
 
