@@ -9,6 +9,7 @@ import efforts from "./routes/efforts";
 import handlers from "./routes/handlers";
 import cases from "./routes/cases";
 import stats from "./routes/stats";
+import shifts from "./routes/shifts";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use(efforts(pool));
 app.use(handlers(pool));
 app.use(cases(pool));
 app.use(stats(pool));
+app.use(shifts(pool));
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

@@ -10,6 +10,7 @@ import { API_URL, getCustomers, getEfforts } from "../../lib/api";
 import { Customer, Handler, Effort } from "@/types/types";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import { ShiftForm } from "./components/ShiftForm";
 
 interface TimeEntry {
   id: string;
@@ -194,6 +195,7 @@ export const RegisteraTidPage = (): JSX.Element => {
       <div className="mb-4 text-gray-600 text-base">
         Här kan du registrera nya insatser och se dagens registrerade tider.
       </div>
+      <ShiftForm />
       <div className="flex items-center justify-between mb-8">
         <Button
           variant="outline"
