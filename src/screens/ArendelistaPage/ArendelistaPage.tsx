@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 export const ArendelistaPage = (): JSX.Element => {
   const [shifts, setShifts] = useState<ShiftEntry[]>([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortField, setSortField] = useState<keyof ShiftEntry>("date");
   const [sortAsc, setSortAsc] = useState(false);
@@ -27,13 +28,18 @@ export const ArendelistaPage = (): JSX.Element => {
     load();
   }, []);
 
-  const statusOptions = Array.from(new Set(shifts.map(s => s.status))).filter(Boolean);
+  const statusOptions = Array.from(new Set(shifts.map(s => s.status || "Okänd"))).filter(Boolean);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const filtered = shifts.filter(s => {
-    const term = search.toLowerCase();
+    const term = debouncedSearch.toLowerCase();
     const matchesSearch =
       !term || s.customer_name.toLowerCase().includes(term) || s.effort_name.toLowerCase().includes(term);
-    const matchesStatus = statusFilter === "all" || s.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || (s.status || "Okänd") === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -106,9 +112,9 @@ export const ArendelistaPage = (): JSX.Element => {
                   <tr key={s.id} className="border-b hover:bg-gray-50">
                     <td className="py-2 px-4">{s.customer_name}</td>
                     <td className="py-2 px-4">{s.effort_name}</td>
-                    <td className="py-2 px-4">{s.date?.slice(0,10) ?? "-"}</td>
+                    <td className="py-2 px-4">{s.date ? s.date.slice(0,10) : "-"}</td>
                     <td className="py-2 px-4">{s.hours}</td>
-                    <td className="py-2 px-4">{s.status}</td>
+                    <td className="py-2 px-4">{s.status || "Okänd"}</td>
                     <td className="py-2 px-4">{s.handler1_name}</td>
                     <td className="py-2 px-4">{s.handler2_name}</td>
                   </tr>

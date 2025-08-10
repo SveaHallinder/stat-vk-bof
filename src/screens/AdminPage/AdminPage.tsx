@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/ta
 import { Modal } from "../../components/ui/modal";
 import { AuditLog } from "../AdminPage/components/AuditLog";
 import { Effort, Handler } from "@/types/types";
+import toast from "react-hot-toast";
 
 
 const TableHeader = ({ children }: { children: React.ReactNode }) => (
@@ -45,9 +46,11 @@ export const AdminPage = (): JSX.Element => {
     try {
       const url = showInactiveEfforts ? `${API_URL}/efforts?all=true` : `${API_URL}/efforts`;
       const res = await fetch(url);
+      if (!res.ok) throw new Error();
       const data = await res.json();
       setInsatser(data);
     } catch {
+      toast.error("Kunde inte hämta insatser");
       setInsatser([]);
     }
   }
@@ -60,47 +63,49 @@ export const AdminPage = (): JSX.Element => {
     try {
       const url = showInactive ? `${API_URL}/handlers?all=true` : `${API_URL}/handlers`;
       const res = await fetch(url);
+      if (!res.ok) throw new Error();
       const data = await res.json();
       setHandlers(data);
     } catch {
+      toast.error("Kunde inte hämta behandlare");
       setHandlers([]);
     }
   }
 
   // Lägg till insats
   const handleAddInsats = async () => {
-    try {
-      const res = await fetch(`${API_URL}/efforts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newInsats.name, available_for: newInsats.for })
-      });
-      if (!res.ok) throw new Error();
-      const created = await res.json();
-      setInsatser(prev => [...prev, created]);
-      setNewInsats({ name: "", for: "Biståndsbedömda" });
-      setOpenModal(false);
-    } catch {
-      alert("Kunde inte spara insats");
-    }
+      try {
+        const res = await fetch(`${API_URL}/efforts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newInsats.name, available_for: newInsats.for })
+        });
+        if (!res.ok) throw new Error();
+        const created = await res.json();
+        setInsatser(prev => [...prev, created]);
+        setNewInsats({ name: "", for: "Biståndsbedömda" });
+        setOpenModal(false);
+      } catch {
+        toast.error("Kunde inte spara insats");
+      }
   };
 
   // Redigera insats
   const handleEditInsats = async () => {
     if (editIdx == null) return;
-    try {
-      const res = await fetch(`${API_URL}/efforts/${insatser[editIdx].id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editInsats.name, available_for: editInsats.for })
-      });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      setInsatser(prev => prev.map(i => i.id === insatser[editIdx].id ? updated : i));
-      setOpenEditModal(false);
-    } catch {
-      alert("Kunde inte uppdatera insats");
-    }
+      try {
+        const res = await fetch(`${API_URL}/efforts/${insatser[editIdx].id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: editInsats.name, available_for: editInsats.for })
+        });
+        if (!res.ok) throw new Error();
+        const updated = await res.json();
+        setInsatser(prev => prev.map(i => i.id === insatser[editIdx].id ? updated : i));
+        setOpenEditModal(false);
+      } catch {
+        toast.error("Kunde inte uppdatera insats");
+      }
   };
 
   // Radera insats
@@ -136,7 +141,7 @@ export const AdminPage = (): JSX.Element => {
       // Spara inbjudningslänk
       setInviteLink(`http://localhost:5173/invite/${data.inviteToken}`);
     } catch {
-      alert("Kunde inte spara behandlare");
+      toast.error("Kunde inte spara behandlare");
     }
   }
 
@@ -185,10 +190,19 @@ export const AdminPage = (): JSX.Element => {
                               <MoreHorizontal className="w-5 h-5" />
                             </Button>
                           ) : (
-                            <Button variant="outline" size="sm" onClick={async () => {
-                              await fetch(`${API_URL}/efforts/${i.id}/activate`, { method: "PUT" });
-                              fetchEfforts();
-                            }}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`${API_URL}/efforts/${i.id}/activate`, { method: "PUT" });
+                                  if (!res.ok) throw new Error();
+                                  fetchEfforts();
+                                } catch {
+                                  toast.error("Kunde inte aktivera insats");
+                                }
+                              }}
+                            >
                               Återaktivera
                             </Button>
                           )}
@@ -247,14 +261,24 @@ export const AdminPage = (): JSX.Element => {
               <p>Är du säker på att du vill avaktivera insatsen?</p>
               <div className="flex gap-4 justify-end mt-6">
                 <Button variant="outline" onClick={() => setShowDeleteModal(false)}>Avbryt</Button>
-                <Button variant="destructive" onClick={async () => {
-                  if (editIdx != null) {
-                    await fetch(`${API_URL}/efforts/${insatser[editIdx].id}/deactivate`, { method: "PUT" });
-                    setShowDeleteModal(false);
-                    setOpenEditModal(false);
-                    fetchEfforts();
-                  }
-                }}>Avaktivera</Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (editIdx != null) {
+                      try {
+                        const res = await fetch(`${API_URL}/efforts/${insatser[editIdx].id}/deactivate`, { method: "PUT" });
+                        if (!res.ok) throw new Error();
+                        setShowDeleteModal(false);
+                        setOpenEditModal(false);
+                        fetchEfforts();
+                      } catch {
+                        toast.error("Kunde inte avaktivera insats");
+                      }
+                    }
+                  }}
+                >
+                  Avaktivera
+                </Button>
               </div>
             </div>
           </Modal>
@@ -294,10 +318,19 @@ export const AdminPage = (): JSX.Element => {
                               <MoreHorizontal className="w-5 h-5" />
                             </Button>
                           ) : (
-                            <Button variant="outline" size="sm" onClick={async () => {
-                              await fetch(`${API_URL}/handlers/${h.id}/activate`, { method: "PUT" });
-                              fetchHandlers();
-                            }}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`${API_URL}/handlers/${h.id}/activate`, { method: "PUT" });
+                                  if (!res.ok) throw new Error();
+                                  fetchHandlers();
+                                } catch {
+                                  toast.error("Kunde inte aktivera behandlare");
+                                }
+                              }}
+                            >
                               Återaktivera
                             </Button>
                           )}
@@ -370,9 +403,14 @@ export const AdminPage = (): JSX.Element => {
                   variant="destructive"
                   onClick={async () => {
                     if (editHandler) {
-                      await fetch(`${API_URL}/handlers/${editHandler.id}/deactivate`, { method: "PUT" });
-                      setOpenEditHandlerModal(false);
-                      fetchHandlers();
+                      try {
+                        const res = await fetch(`${API_URL}/handlers/${editHandler.id}/deactivate`, { method: "PUT" });
+                        if (!res.ok) throw new Error();
+                        setOpenEditHandlerModal(false);
+                        fetchHandlers();
+                      } catch {
+                        toast.error("Kunde inte avaktivera behandlare");
+                      }
                     }
                   }}
                 >
@@ -384,13 +422,18 @@ export const AdminPage = (): JSX.Element => {
                     variant="default"
                     onClick={async () => {
                       if (editHandler) {
-                        await fetch(`${API_URL}/handlers/${editHandler.id}`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ name: editHandler.name, email: editHandler.email })
-                        });
-                        setOpenEditHandlerModal(false);
-                        fetchHandlers();
+                        try {
+                          const res = await fetch(`${API_URL}/handlers/${editHandler.id}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ name: editHandler.name, email: editHandler.email })
+                          });
+                          if (!res.ok) throw new Error();
+                          setOpenEditHandlerModal(false);
+                          fetchHandlers();
+                        } catch {
+                          toast.error("Kunde inte spara behandlare");
+                        }
                       }
                     }}
                   >

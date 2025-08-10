@@ -122,14 +122,16 @@ export const KunderPage = (): JSX.Element => {
     if (hasError) return;
     setSavingNew(true);
     try {
-      for (const c of newCustomers) {
-        await createCustomer({
-          initials: c.initials,
-          gender: c.gender,
-          birthYear: Number(c.birthYear),
-          startDate: c.startDate
-        });
-      }
+      await Promise.all(
+        newCustomers.map(c =>
+          createCustomer({
+            initials: c.initials,
+            gender: c.gender,
+            birthYear: Number(c.birthYear),
+            startDate: c.startDate
+          })
+        )
+      );
       const updated = await getCustomers();
       setCustomers(updated);
       setNewCustomers([]);
@@ -143,7 +145,9 @@ export const KunderPage = (): JSX.Element => {
   };
 
   useEffect(() => {
-    getCustomers(true).then(setCustomers).catch(console.error);
+    getCustomers(true)
+      .then(setCustomers)
+      .catch(() => toast.error("Kunde inte hämta kunder"));
   }, []);
 
   // Sortera kunder

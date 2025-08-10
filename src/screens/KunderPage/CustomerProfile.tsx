@@ -163,7 +163,10 @@ export const CustomerProfile = () => {
     setEditCase(null);
   };
   const handleSaveEditCase = async () => {
-    if (!editCase) return;
+    if (!editCase || !openEffort) {
+      toast.error("Ingen insats vald");
+      return;
+    }
     setSavingCase(true);
     try {
       await updateCase(editCase.id, {

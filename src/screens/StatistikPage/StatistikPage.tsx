@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "../../components/Layout";
 import { getStatsSummary, getStatsByEffort } from "../../lib/api";
 import { Button } from "../../components/ui/button";
@@ -23,6 +23,7 @@ export const StatistikPage = (): JSX.Element => {
 
   // Stapeldiagram-data
   const [effortData, setEffortData] = useState<any[] | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   // Filter state
   const [selectedGenders, setSelectedGenders] = useState<string[]>([]);
@@ -38,11 +39,19 @@ export const StatistikPage = (): JSX.Element => {
   const [customerOptions, setCustomerOptions] = useState<CustomerItem[]>([]);
   // Födelseårsalternativ (hårdkodat för demo, kan hämtas från kunder)
   const [yearOptions, setYearOptions] = useState<{ label: string; value: string }[]>([]);
+  const yearLabel = (() => {
+    if (dateRange.from && dateRange.to) {
+      const fy = dateRange.from.getFullYear();
+      const ty = dateRange.to.getFullYear();
+      return fy === ty ? fy : `${fy}-${ty}`;
+    }
+    return new Date().getFullYear();
+  })();
 
   // Hämta filteralternativ vid mount
   useEffect(() => {
-    getEfforts().then(setEffortOptions);
-    getHandlers(true).then(setHandlerOptions);
+    getEfforts().then(setEffortOptions).catch(() => toast.error("Kunde inte hämta insatser"));
+    getHandlers(true).then(setHandlerOptions).catch(() => toast.error("Kunde inte hämta behandlare"));
     getCustomers(true).then((data) => {
       // Konvertera Customer[] till CustomerItem[] genom att säkerställa att birthYear finns
       const customerItems: CustomerItem[] = data
@@ -59,7 +68,7 @@ export const StatistikPage = (): JSX.Element => {
         .map(String)
         .sort((a, b) => Number(b) - Number(a));
       setYearOptions(years.map((y: string) => ({ label: y, value: y })));
-    });
+    }).catch(() => toast.error("Kunde inte hämta kunder"));
   }, []);
 
   // Bygg query params från filter
@@ -93,9 +102,9 @@ export const StatistikPage = (): JSX.Element => {
 
   // Exportfunktioner
   const handleExportPDF = () => {
-    const input = document.querySelector('.bg-white.rounded-xl.p-8'); // diagramkortet
+    const input = chartRef.current; // diagramkortet
     if (!input) return toast.error("Kunde inte hitta diagrammet för export");
-    html2canvas(input as HTMLElement).then(canvas => {
+    html2canvas(input).then(canvas => {
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({ orientation: 'landscape' });
       // Rubrik och datum
@@ -304,8 +313,8 @@ export const StatistikPage = (): JSX.Element => {
         )}
 
         {/* Diagramkort */}
-        <div className="bg-white rounded-xl p-8 flex flex-col items-center relative">
-          <div className="text-base font-medium text-gray-800 mb-6">Besök och kunder per insatstyp (2025)</div>
+        <div ref={chartRef} className="bg-white rounded-xl p-8 flex flex-col items-center relative">
+          <div className="text-base font-medium text-gray-800 mb-6">Besök och kunder per insatstyp ({yearLabel})</div>
           {effortData && effortData.length > 0 && (
             <div className="flex w-full h-64 mb-6">
               {/* Y-axel */}

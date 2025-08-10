@@ -100,6 +100,12 @@ export async function getCasesForCustomerEffort(customerId: string, effortId: st
   return res.json();
 }
 
+export async function getCases(all = false): Promise<any[]> {
+  const res = await fetch(`${API_URL}/cases${all ? '?all=true' : ''}`);
+  if (!res.ok) throw new Error("Kunde inte hämta ärenden");
+  return res.json();
+}
+
 export async function updateCase(
   id: string,
   data: { customer_id: string; effort_id: string; date: string; handler1_id: string; handler2_id?: string; hours: string; status: string }
@@ -113,7 +119,7 @@ export async function updateCase(
   return res.json();
 }
 
-export async function addShift(data: { customer_id: string; effort_id: string; date: string; hours: number; status: string }): Promise<any> {
+export async function addShift(data: { case_id?: string; customer_id?: string; effort_id?: string; handler1_id?: string; handler2_id?: string | null; date: string; hours: number; status: string }): Promise<any> {
   const res = await fetch(`${API_URL}/shifts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

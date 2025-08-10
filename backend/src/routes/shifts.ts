@@ -30,27 +30,28 @@ export default function shifts(pool: Pool) {
 
   // Skapa ny shift och säkerställ att ett case finns
   router.post("/shifts", async (req, res) => {
-    const { customer_id, effort_id, date, hours, status } = req.body;
-    if (!customer_id || !effort_id || !date || hours === undefined) {
+    const { case_id, customer_id, effort_id, handler1_id, handler2_id, date, hours, status } = req.body;
+    if ((!case_id && (!customer_id || !effort_id || !handler1_id)) || !date || hours === undefined) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });
     }
     try {
-      // Hitta eller skapa case för kund + insats
-      let caseId: number;
-      const existing = await pool.query(
-        `SELECT id FROM cases WHERE customer_id = $1 AND effort_id = $2 LIMIT 1`,
-        [customer_id, effort_id]
-      );
-      if (existing.rows.length > 0) {
-        caseId = existing.rows[0].id;
-      } else {
-        const caseResult = await pool.query(
-          `INSERT INTO cases (customer_id, effort_id, handler1_id, handler2_id, date, hours, status, active)
-           VALUES ($1, $2, 1, NULL, $3, $4, $5, TRUE)
-           RETURNING id`,
-          [customer_id, effort_id, date, hours, status || 'Utförd']
+      let caseId: number = case_id;
+      if (!caseId) {
+        const existing = await pool.query(
+          `SELECT id FROM cases WHERE customer_id = $1 AND effort_id = $2 AND handler1_id = $3 AND (handler2_id = $4 OR (handler2_id IS NULL AND $4 IS NULL)) LIMIT 1`,
+          [customer_id, effort_id, handler1_id, handler2_id || null]
         );
-        caseId = caseResult.rows[0].id;
+        if (existing.rows.length > 0) {
+          caseId = existing.rows[0].id;
+        } else {
+          const caseResult = await pool.query(
+            `INSERT INTO cases (customer_id, effort_id, handler1_id, handler2_id, date, hours, status, active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
+             RETURNING id`,
+            [customer_id, effort_id, handler1_id, handler2_id || null, date, hours, status || 'Utförd']
+          );
+          caseId = caseResult.rows[0].id;
+        }
       }
 
       const result = await pool.query(
