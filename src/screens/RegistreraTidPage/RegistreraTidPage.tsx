@@ -99,7 +99,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                   <tr key={s.id} className="border-b hover:bg-gray-50">
                     <td className="px-6 py-2">{s.customer_name}</td>
                     <td className="px-6 py-2">{s.effort_name}</td>
-                    <td className="px-6 py-2">{s.date.slice(0, 10)}</td>
+                    <td className="px-6 py-2">{s.date?.slice(0,10) ?? "-"}</td>
                     <td className="px-6 py-2">{s.hours}</td>
                     <td className="px-6 py-2">{s.status}</td>
                   </tr>

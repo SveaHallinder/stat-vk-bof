@@ -106,7 +106,7 @@ export const ArendelistaPage = (): JSX.Element => {
                   <tr key={s.id} className="border-b hover:bg-gray-50">
                     <td className="py-2 px-4">{s.customer_name}</td>
                     <td className="py-2 px-4">{s.effort_name}</td>
-                    <td className="py-2 px-4">{s.date.slice(0,10)}</td>
+                    <td className="py-2 px-4">{s.date?.slice(0,10) ?? "-"}</td>
                     <td className="py-2 px-4">{s.hours}</td>
                     <td className="py-2 px-4">{s.status}</td>
                     <td className="py-2 px-4">{s.handler1_name}</td>
