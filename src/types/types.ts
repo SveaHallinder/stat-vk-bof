@@ -39,6 +39,13 @@ export interface Customer {
     created_at: string;
     active: boolean;
   }
+
+  export interface CaseWithNames extends Case {
+    customer_name: string;
+    handler1_name: string;
+    handler2_name: string | null;
+    effort_name: string;
+  }
   
   export interface Visit {
     id: number;

@@ -21,9 +21,17 @@ export const BehandlareCombobox: React.FC<BehandlareComboboxProps> = ({ value, o
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/handlers`)
-      .then(res => res.json())
-      .then(data => setHandlers(data.filter((h: any) => h.active !== false)));
+    async function load() {
+      try {
+        const res = await fetch(`${API_URL}/handlers`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setHandlers(data.filter((h: any) => h.active !== false));
+      } catch {
+        setHandlers([]);
+      }
+    }
+    load();
   }, []);
 
   useEffect(() => {
