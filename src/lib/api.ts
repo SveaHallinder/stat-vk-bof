@@ -1,5 +1,5 @@
 export const API_URL = import.meta.env.VITE_API_URL;
-import { Customer, Handler, Effort, Case, ShiftEntry } from "@/types/types";
+import { Customer, Handler, Effort, CaseWithNames, ShiftEntry } from "@/types/types";
 
 export async function getCustomers(all = false): Promise<Customer[]> {
   const res = await fetch(`${API_URL}/customers${all ? '?all=true' : ''}`);
@@ -67,7 +67,7 @@ export async function getCustomer(id: string): Promise<Customer & { birthYear: n
 }
 
 export async function updateCustomer(id: string, data: { initials: string; gender: string; birthYear: number; active: boolean; startDate: string }): Promise<Customer> {
-  const res = await fetch(`${API_URL}/customers/${id}`, {
+  const res = await fetch(`${API_URL}/customers`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -88,50 +88,122 @@ export async function getEfforts(): Promise<Effort[]> {
   return res.json();
 }
 
-export async function getCustomerEfforts(customerId: string): Promise<Case[]> {
-  const res = await fetch(`${API_URL}/customers/${customerId}/efforts`);
-  if (!res.ok) throw new Error("Kunde inte hämta insatser för kund");
+export async function getCustomerEfforts(customerId: number) {
+  const res = await fetch(`${API_URL}/cases?customer_id=${customerId}`);
+  if (!res.ok) {
+    throw new Error(`Kunde inte hämta insatser för kund ${customerId}`);
+  }
   return res.json();
 }
 
-export async function getCasesForCustomerEffort(customerId: string, effortId: string): Promise<Case[]> {
-  const res = await fetch(`${API_URL}/customers/${customerId}/efforts/${effortId}/cases`);
+export async function getCustomerCases(customerId: number) {
+  const res = await fetch(`${API_URL}/cases?customer_id=${customerId}`);
+  if (!res.ok) {
+    throw new Error(`Kunde inte hämta ärenden för kund ${customerId}`);
+  }
+  return res.json();
+}
+
+export async function getCasesForCustomerEffort(customerId: string, effortId: string): Promise<CaseWithNames[]> {
+  const res = await fetch(`${API_URL}/cases?customer_id=${customerId}&effort_id=${effortId}`);
   if (!res.ok) throw new Error("Kunde inte hämta ärenden för kund och insats");
   return res.json();
 }
 
-export async function getCases(all = false): Promise<any[]> {
+export async function getCases(all = false): Promise<CaseWithNames[]> {
   const res = await fetch(`${API_URL}/cases${all ? '?all=true' : ''}`);
   if (!res.ok) throw new Error("Kunde inte hämta ärenden");
   return res.json();
 }
 
+// Ny funktion för att hämta aktiva ärenden för en specifik kund
+export async function getActiveCasesByCustomer(customerId: number): Promise<CaseWithNames[]> {
+  const res = await fetch(`${API_URL}/cases?customer_id=${customerId}&active=true`);
+  if (!res.ok) throw new Error("Kunde inte hämta ärenden för kund");
+  return res.json();
+}
+
+// Ny funktion för att skapa nytt ärende
+export async function createCase(data: { customer_id: number; effort_id: number; handler1_id: number; handler2_id?: number | null; active?: boolean }): Promise<CaseWithNames> {
+  const res = await fetch(`${API_URL}/cases`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Kunde inte skapa ärende");
+  }
+  return res.json();
+}
+
 export async function updateCase(
   id: string,
-  data: { customer_id: string; effort_id: string; date: string; handler1_id: string; handler2_id?: string; hours: string; status: string }
-): Promise<Case> {
+  data: { customer_id: string; effort_id: string; handler1_id: string; handler2_id?: string | null; active?: boolean }
+): Promise<CaseWithNames> {
   const res = await fetch(`${API_URL}/cases/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
   });
-  if (!res.ok) throw new Error("Kunde inte uppdatera ärende");
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Kunde inte uppdatera ärende");
+  }
   return res.json();
 }
 
-export async function addShift(data: { case_id?: string; customer_id?: string; effort_id?: string; handler1_id?: string; handler2_id?: string | null; date: string; hours: number; status: string }): Promise<any> {
+// Uppdaterad addShift - case-centrerad och strikt
+export async function addShift(data: { case_id: number; date: string; hours: number; status: "Utförd"|"Avbokad" }): Promise<ShiftEntry> {
+  if (!data.case_id) throw new Error("case_id krävs");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data.date)) throw new Error("Ogiltigt datumformat");
+  if (!(data.hours > 0)) throw new Error("Timmar måste vara > 0");
+  if (data.status !== "Utförd" && data.status !== "Avbokad") throw new Error("Ogiltig status");
+  
   const res = await fetch(`${API_URL}/shifts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error("Kunde inte skapa besök");
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Kunde inte skapa besök: ${errorText}`);
+  }
   return res.json();
 }
 
 export async function getShifts(): Promise<ShiftEntry[]> {
   const res = await fetch(`${API_URL}/shifts`);
   if (!res.ok) throw new Error("Kunde inte hämta besök");
+  return res.json();
+}
+
+export async function getShiftsForCase(caseId: string): Promise<ShiftEntry[]> {
+  const res = await fetch(`${API_URL}/shifts?case_id=${caseId}`);
+  if (!res.ok) throw new Error("Kunde inte hämta besök för ärendet");
+  return res.json();
+}
+
+export async function updateShift(id: string, data: { date: string; hours: number; status: string }): Promise<ShiftEntry> {
+  // Validera att hours är positivt
+  if (data.hours <= 0 || isNaN(data.hours)) {
+    throw new Error("Timmar måste vara ett positivt nummer");
+  }
+  
+  // Validera datum-format
+  if (!data.date || !/^\d{4}-\d{2}-\d{2}$/.test(data.date)) {
+    throw new Error("Ogiltigt datum-format. Använd YYYY-MM-DD");
+  }
+  
+  const res = await fetch(`${API_URL}/shifts/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Kunde inte uppdatera besök: ${errorText}`);
+  }
   return res.json();
 }
 

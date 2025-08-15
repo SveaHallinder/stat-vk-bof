@@ -1,294 +1,431 @@
 import { useEffect, useState } from "react";
-import { Layout } from "../../components/Layout";
-import { Card, CardContent } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Plus } from "lucide-react";
-import { KundCombobox } from "../../components/ui/kund-combobox";
-import { BehandlareCombobox } from "../../components/ui/behandlare-combobox";
-import { InsatsCombobox } from "../../components/ui/insats-combobox";
-import { addShift, getShifts, getCases } from "../../lib/api";
-import { ShiftEntry, CaseWithNames } from "@/types/types";
+import { Layout } from "@/components/Layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Plus, Trash2, Save, FileText } from "lucide-react";
+import { addShift, getShifts, getCases, getEfforts, getHandlers, createCase } from "@/lib/api";
+import { KundCombobox } from "@/components/ui/kund-combobox";
+import { ShiftEntry, CaseWithNames, Effort, Handler } from "@/types/types";
 import toast from "react-hot-toast";
 
-type NewEntry = {
-  id: string;
-  caseId: string;
-  customer: string;
-  handler1: string;
-  handler2: string;
-  effort: string;
-  date: string;
-  hours: string;
-  status: string;
-};
+// Hjälpfunktion för att få dagens datum
+function today(): string {
+  return new Date().toISOString().split('T')[0];
+}
 
-type EntryErrors = {
-  customer?: string;
-  handler1?: string;
-  effort?: string;
-  date?: string;
-  hours?: string;
-};
+interface TimeEntry {
+  id: string;
+  caseId: number | null;
+  date: string;
+  hours: number;
+  status: "Utförd" | "Avbokad";
+}
 
 export const RegisteraTidPage = (): JSX.Element => {
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([
+    {
+      id: "1",
+      caseId: null,
+      date: today(),
+      hours: 1,
+      status: "Utförd"
+    }
+  ]);
+  
+  const [activeCases, setActiveCases] = useState<CaseWithNames[]>([]);
+  const [efforts, setEfforts] = useState<Effort[]>([]);
+  const [handlers, setHandlers] = useState<Handler[]>([]);
   const [shifts, setShifts] = useState<ShiftEntry[]>([]);
-  const [cases, setCases] = useState<CaseWithNames[]>([]);
-  const [newEntries, setNewEntries] = useState<NewEntry[]>([]);
-  const [errors, setErrors] = useState<{ [idx: number]: EntryErrors }>({});
+  
+  // State för att registrera ärende
+  const [showCreateCase, setShowCreateCase] = useState(false);
+  const [newCaseCustomerId, setNewCaseCustomerId] = useState<string>("");
+  const [newCaseEffortId, setNewCaseEffortId] = useState<string>("");
+  const [newCaseHandler1Id, setNewCaseHandler1Id] = useState<string>("");
+  const [newCaseHandler2Id, setNewCaseHandler2Id] = useState<string>("");
 
-  function getToday() {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
-  }
-
+  // Ladda data vid mount
   useEffect(() => {
-    async function load() {
+    async function loadData() {
       try {
-        const [s, c] = await Promise.all([getShifts(), getCases()]);
-        setShifts(s);
-        setCases(c);
-      } catch {
+        const [activeCasesData, effortsData, handlersData, shiftsData] = await Promise.all([
+          getCases(false), // false = endast aktiva ärenden
+          getEfforts(),
+          getHandlers(true),
+          getShifts()
+        ]);
+        setActiveCases(activeCasesData);
+        setEfforts(effortsData);
+        setHandlers(handlersData);
+        setShifts(shiftsData);
+      } catch (error) {
         toast.error("Kunde inte hämta data");
       }
     }
-    load();
+    loadData();
   }, []);
 
-  function handleAddRow() {
-    setNewEntries(prev => [{
-      id: (Date.now() + Math.random()).toString(),
-      caseId: "",
-      customer: "",
-      handler1: "",
-      handler2: "",
-      effort: "",
-      date: getToday(),
-      hours: "",
+  // Lägg till ny tidsregistrering
+  const addTimeEntry = () => {
+    const newEntry: TimeEntry = {
+      id: Date.now().toString(),
+      caseId: null,
+      date: today(),
+      hours: 1,
       status: "Utförd"
-    }, ...prev]);
-  }
+    };
+    setTimeEntries([...timeEntries, newEntry]);
+  };
 
-  function handleCancelNew(idx: number) {
-    setNewEntries(prev => prev.filter((_, i) => i !== idx));
-    setErrors(prev => {
-      const copy = { ...prev };
-      delete copy[idx];
-      return copy;
-    });
-  }
-
-  function handleChange(idx: number, field: keyof NewEntry, value: string) {
-    setNewEntries(prev => prev.map((e, i) => i === idx ? { ...e, [field]: value } : e));
-  }
-
-  function handleCaseSelect(idx: number, caseId: string) {
-    const selected = cases.find(c => c.id.toString() === caseId);
-    setNewEntries(prev => prev.map((e, i) => i === idx ? {
-      ...e,
-      caseId,
-      customer: selected ? selected.customer_id.toString() : "",
-      handler1: selected ? selected.handler1_id.toString() : "",
-      handler2: selected && selected.handler2_id ? selected.handler2_id.toString() : "",
-      effort: selected ? selected.effort_id.toString() : ""
-    } : e));
-  }
-
-  function validateEntry(entry: NewEntry): EntryErrors {
-    const err: EntryErrors = {};
-    if (!entry.caseId) {
-      if (!entry.customer) err.customer = "Kund måste väljas";
-      if (!entry.handler1) err.handler1 = "Behandlare 1 måste väljas";
-      if (!entry.effort) err.effort = "Insats måste väljas";
+  // Ta bort tidsregistrering
+  const removeTimeEntry = (id: string) => {
+    if (timeEntries.length > 1) {
+      setTimeEntries(timeEntries.filter(entry => entry.id !== id));
     }
-    if (!entry.date) err.date = "Datum måste anges";
-    if (!entry.hours || isNaN(Number(entry.hours)) || Number(entry.hours) <= 0) err.hours = "Timmar måste vara > 0";
-    return err;
-  }
+  };
 
-  async function saveEntry(entry: NewEntry, idx: number) {
-    const err = validateEntry(entry);
-    if (Object.keys(err).length > 0) {
-      setErrors(prev => ({ ...prev, [idx]: err }));
-      return false;
+  // Uppdatera tidsregistrering
+  const updateTimeEntry = (id: string, field: keyof TimeEntry, value: any) => {
+    setTimeEntries(prev => prev.map(entry => 
+      entry.id === id ? { ...entry, [field]: value } : entry
+    ));
+  };
+
+  // Registrera ärende
+  const handleCreateCase = async () => {
+    if (!newCaseCustomerId || !newCaseEffortId || !newCaseHandler1Id) {
+      toast.error("Fyll i alla obligatoriska fält");
+      return;
     }
+    
+    // Validera att värdena är giltiga nummer
+    if (isNaN(Number(newCaseCustomerId)) || isNaN(Number(newCaseEffortId)) || isNaN(Number(newCaseHandler1Id))) {
+      toast.error("Ogiltiga nummervärden i formuläret");
+      return;
+    }
+    
+    if (newCaseHandler2Id && (isNaN(Number(newCaseHandler2Id)) || Number(newCaseHandler2Id) === 0)) {
+      toast.error("Ogiltigt värde för andra behandlare");
+      return;
+    }
+
     try {
-      if (entry.caseId) {
-        await addShift({ case_id: entry.caseId, date: entry.date, hours: Number(entry.hours), status: entry.status });
+      const newCase = await createCase({
+        customer_id: Number(newCaseCustomerId),
+        effort_id: Number(newCaseEffortId),
+        handler1_id: Number(newCaseHandler1Id),
+        handler2_id: newCaseHandler2Id && newCaseHandler2Id !== "" ? Number(newCaseHandler2Id) : null,
+        active: true
+      });
+      
+      // Uppdatera aktiva ärenden
+      setActiveCases(prev => [newCase, ...prev]);
+      setShowCreateCase(false);
+      
+      // Återställ formuläret
+      setNewCaseCustomerId("");
+      setNewCaseEffortId("");
+      setNewCaseHandler1Id("");
+      setNewCaseHandler2Id("");
+      
+      toast.success("Ärende registrerat");
+    } catch (error: any) {
+      console.log("RegistreraTidPage Debug - Fel från API:", error);
+      console.log("RegistreraTidPage Debug - error.message:", error.message);
+      console.log("RegistreraTidPage Debug - error.error:", error.error);
+      
+      if (error.error && error.error.includes('samma kombination finns redan')) {
+        toast.error(error.error, { duration: 8000 }); // 8 sekunder
+      } else if (error.message && error.message.includes('samma kombination finns redan')) {
+        toast.error('Ett aktivt ärende med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska ärenden.', { duration: 8000 }); // 8 sekunder
       } else {
+        toast.error("Kunde inte skapa ärende");
+      }
+    }
+  };
+
+  // Spara alla tidsregistreringar
+  const saveAllEntries = async () => {
+    const validEntries = timeEntries.filter(entry => 
+      entry.caseId && entry.date && entry.hours > 0
+    );
+
+    if (validEntries.length === 0) {
+      toast.error("Inga giltiga tidsregistreringar att spara");
+      return;
+    }
+
+    try {
+      for (const entry of validEntries) {
         await addShift({
-          customer_id: entry.customer,
-          effort_id: entry.effort,
-          handler1_id: entry.handler1,
-          handler2_id: entry.handler2 || null,
+          case_id: entry.caseId!,
           date: entry.date,
-          hours: Number(entry.hours),
+          hours: entry.hours,
           status: entry.status
         });
       }
-      return true;
-    } catch {
-      toast.error("Kunde inte spara tid");
-      return false;
-    }
-  }
 
-  async function handleSaveAll() {
-    let okAll = true;
-    for (let i = 0; i < newEntries.length; i++) {
-      const ok = await saveEntry(newEntries[i], i);
-      if (!ok) okAll = false;
+      toast.success(`${validEntries.length} tidsregistreringar sparade`);
+      
+      // Ladda om shifts
+      const updatedShifts = await getShifts();
+      setShifts(updatedShifts);
+      
+      // Återställ formuläret
+      setTimeEntries([{
+        id: "1",
+        caseId: null,
+        date: today(),
+        hours: 1,
+        status: "Utförd"
+      }]);
+    } catch (error) {
+      toast.error("Kunde inte spara alla tidsregistreringar");
     }
-    if (!okAll) return;
-    toast.success("Tid registrerad");
-    try {
-      const [s, c] = await Promise.all([getShifts(), getCases()]);
-      setShifts(s);
-      setCases(c);
-    } catch {
-      toast.error("Kunde inte hämta uppdaterad data");
-    }
-    setNewEntries([]);
-    setErrors({});
-  }
+  };
 
   return (
     <Layout title="Registrera tid">
-      <div className="mb-4 text-gray-600 text-base">
-        Här kan du registrera nya insatser och se registrerade tider.
+      <div className="mb-6 text-gray-600 text-base">
+        Registrera tid för befintliga aktiva ärenden. Välj ärende, datum, timmar och status.
       </div>
-      <div className="flex items-center justify-between mb-8">
-        <Button
-          variant="outline"
-          className="flex items-center gap-2 px-6 py-3 rounded-lg border border-gray-300 text-lg text-[#17694c] font-semibold bg-white hover:bg-[#eaf6f1] transition shadow-sm"
-          onClick={handleAddRow}
-        >
-          <Plus className="w-5 h-5" />
-          Lägg till tid
-        </Button>
-        {newEntries.length > 0 && (
-          <Button
-            variant="default"
-            className="px-6 py-3 rounded-lg text-lg font-semibold"
-            onClick={handleSaveAll}
-            disabled={newEntries.some(e => Object.keys(validateEntry(e)).length > 0)}
-          >
-            Spara alla
-          </Button>
-        )}
-      </div>
-      <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Tidsregistreringar</span>
+            <div className="flex gap-3">
+              <Button onClick={addTimeEntry} variant="outline" size="sm" className="bg-white hover:bg-gray-50">
+                <Plus className="w-4 h-4 mr-2" />
+                Lägg till rad
+              </Button>
+              <Button 
+                onClick={() => setShowCreateCase(!showCreateCase)} 
+                variant={showCreateCase ? "outline" : "default"}
+                size="sm"
+                className={`${showCreateCase ? 'bg-white hover:bg-gray-50' : 'bg-[#17694c] hover:bg-[#145c41] text-white'} transition-colors`}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                {showCreateCase ? 'Avbryt' : 'Registrera ärende'}
+              </Button>
+              <Button onClick={saveAllEntries} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Save className="w-4 h-4 mr-2" />
+                Spara alla
+              </Button>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Formulär för att registrera ärende */}
+          {showCreateCase && (
+            <div className="mb-8 p-6 border-2 border-[#17694c] rounded-xl bg-gradient-to-br from-green-50 to-blue-50 shadow-lg">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-[#17694c] rounded-full flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-[#17694c]">Registrera nytt ärende</h3>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="customer" className="text-sm font-medium text-gray-700">Kund *</Label>
+                  <KundCombobox 
+                    value={newCaseCustomerId} 
+                    onChange={setNewCaseCustomerId}
+                    placeholder="Välj kund"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="effort" className="text-sm font-medium text-gray-700">Insats *</Label>
+                  <Select value={newCaseEffortId} onValueChange={setNewCaseEffortId}>
+                    <SelectTrigger className="border-gray-300 focus:border-[#17694c] focus:ring-[#17694c]">
+                      <SelectValue placeholder="Välj insats" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {efforts.map((effort) => (
+                        <SelectItem key={effort.id} value={effort.id.toString()}>
+                          {effort.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="handler1" className="text-sm font-medium text-gray-700">Behandlare 1 *</Label>
+                  <Select value={newCaseHandler1Id} onValueChange={setNewCaseHandler1Id}>
+                    <SelectTrigger className="border-gray-300 focus:border-[#17694c] focus:ring-[#17694c]">
+                      <SelectValue placeholder="Välj behandlare" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {handlers.map((handler) => (
+                        <SelectItem key={handler.id} value={handler.id.toString()}>
+                          {handler.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="handler2" className="text-sm font-medium text-gray-700">Behandlare 2 (valfritt)</Label>
+                  <Select value={newCaseHandler2Id} onValueChange={setNewCaseHandler2Id}>
+                    <SelectTrigger className="border-gray-300 focus:border-[#17694c] focus:ring-[#17694c]">
+                      <SelectValue placeholder="Välj behandlare" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Ingen</SelectItem>
+                      {handlers.map((handler) => (
+                        <SelectItem key={handler.id} value={handler.id.toString()}>
+                          {handler.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+                <Button 
+                  onClick={handleCreateCase} 
+                  className="bg-[#17694c] hover:bg-[#145c41] text-white px-6 py-2"
+                >
+                  Skapa ärende
+                </Button>
+                <Button 
+                  onClick={() => setShowCreateCase(false)} 
+                  variant="outline" 
+                  className="px-6 py-2"
+                >
+                  Avbryt
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Tidsregistreringar */}
+          <div className="space-y-4">
+            {timeEntries.map((entry) => (
+              <div key={entry.id} className="grid grid-cols-5 gap-4 p-6 border-2 border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Ärende *</Label>
+                  <Select 
+                    value={entry.caseId?.toString() || ""} 
+                    onValueChange={(value) => updateTimeEntry(entry.id, 'caseId', Number(value))}
+                  >
+                    <SelectTrigger className="border-gray-300 focus:border-[#17694c] focus:ring-[#17694c]">
+                      <SelectValue placeholder="Välj ärende" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeCases.map((caseItem) => (
+                        <SelectItem key={caseItem.id} value={caseItem.id.toString()}>
+                          {caseItem.customer_name} - {caseItem.effort_name} ({caseItem.handler1_name})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Datum *</Label>
+                  <Input
+                    type="date"
+                    value={entry.date}
+                    onChange={(e) => updateTimeEntry(entry.id, 'date', e.target.value)}
+                    className="border-gray-300 focus:border-[#17694c] focus:ring-[#17694c]"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Timmar *</Label>
+                  <Input
+                    type="number"
+                    min="0.5"
+                    step="0.5"
+                    value={entry.hours}
+                    onChange={(e) => updateTimeEntry(entry.id, 'hours', Number(e.target.value))}
+                    className="border-gray-300 focus:border-[#17694c] focus:ring-[#17694c]"
+                    placeholder="0.5"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Status</Label>
+                  <Select 
+                    value={entry.status} 
+                    onValueChange={(value) => updateTimeEntry(entry.id, 'status', value)}
+                  >
+                    <SelectTrigger className="border-gray-300 focus:border-[#17694c] focus:ring-[#17694c]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Utförd">Utförd</SelectItem>
+                      <SelectItem value="Avbokad">Avbokad</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-end">
+                  {timeEntries.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeTimeEntry(entry.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Befintliga shifts */}
+      <Card className="mt-8">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+          <CardTitle className="flex items-center gap-3 text-blue-900">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <FileText className="w-4 h-4 text-white" />
+            </div>
+            Registrerade tider
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[900px]">
+            <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Kund</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Behandlare 1</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Behandlare 2</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Insats</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Datum</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Timmar</th>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Kund</th>
+                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Behandlare 1</th>
+                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Behandlare 2</th>
+                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Insats</th>
+                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Datum</th>
+                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Timmar</th>
                   <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Status</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-right">Åtgärder</th>
                 </tr>
               </thead>
               <tbody>
-                {newEntries.map((entry, idx) => {
-                  const selectedCase = cases.find(c => c.id.toString() === entry.caseId);
-                  return (
-                    <tr className="bg-gray-50" key={entry.id}>
-                      <td className="px-3 py-1 align-middle">
-                        <div className="flex flex-col gap-1">
-                          <select
-                            className="border rounded px-2 py-1 w-full"
-                            value={entry.caseId}
-                            onChange={e => handleCaseSelect(idx, e.target.value)}
-                          >
-                            <option value="">Ny kombination</option>
-                            {cases.map(c => (
-                              <option key={c.id} value={c.id}>
-                                {c.customer_name} - {c.effort_name} - {c.handler1_name}{c.handler2_name ? ` & ${c.handler2_name}` : ""}
-                              </option>
-                            ))}
-                          </select>
-                          {entry.caseId ? (
-                            <div className="px-2 py-1 text-center">{selectedCase?.customer_name}</div>
-                          ) : (
-                            <KundCombobox value={entry.customer} onChange={v => handleChange(idx, "customer", v)} />
-                          )}
-                          {errors[idx]?.customer && <div className="text-red-500 text-xs mt-1">{errors[idx].customer}</div>}
-                        </div>
-                      </td>
-                      <td className="px-3 py-1 align-middle">
-                        {entry.caseId ? (
-                          <div className="px-2 py-1 text-center">{selectedCase?.handler1_name}</div>
-                        ) : (
-                          <BehandlareCombobox value={entry.handler1} onChange={v => handleChange(idx, "handler1", v)} />
-                        )}
-                        {errors[idx]?.handler1 && <div className="text-red-500 text-xs mt-1">{errors[idx].handler1}</div>}
-                      </td>
-                      <td className="px-3 py-1 align-middle">
-                        {entry.caseId ? (
-                          <div className="px-2 py-1 text-center">{selectedCase?.handler2_name || "-"}</div>
-                        ) : (
-                          <BehandlareCombobox value={entry.handler2} onChange={v => handleChange(idx, "handler2", v)} />
-                        )}
-                      </td>
-                      <td className="px-3 py-1 align-middle">
-                        {entry.caseId ? (
-                          <div className="px-2 py-1 text-center">{selectedCase?.effort_name}</div>
-                        ) : (
-                          <InsatsCombobox value={entry.effort} onChange={v => handleChange(idx, "effort", v)} />
-                        )}
-                        {errors[idx]?.effort && <div className="text-red-500 text-xs mt-1">{errors[idx].effort}</div>}
-                      </td>
-                      <td className="px-3 py-1 align-middle">
-                        <input
-                          type="date"
-                          className="border rounded px-2 py-1 w-full"
-                          value={entry.date}
-                          onChange={e => handleChange(idx, "date", e.target.value)}
-                        />
-                        {errors[idx]?.date && <div className="text-red-500 text-xs mt-1">{errors[idx].date}</div>}
-                      </td>
-                      <td className="px-3 py-1 align-middle">
-                        <input
-                          type="number"
-                          className="border rounded px-2 py-1 w-full"
-                          value={entry.hours}
-                          onChange={e => handleChange(idx, "hours", e.target.value)}
-                          placeholder="Timmar"
-                        />
-                        {errors[idx]?.hours && <div className="text-red-500 text-xs mt-1">{errors[idx].hours}</div>}
-                      </td>
-                      <td className="px-3 py-1 align-middle">
-                        <select
-                          className="border rounded px-2 py-1 w-full"
-                          value={entry.status}
-                          onChange={e => handleChange(idx, "status", e.target.value)}
-                        >
-                          <option value="Utförd">Utförd</option>
-                          <option value="Avbokad">Avbokad</option>
-                        </select>
-                      </td>
-                      <td className="px-3 py-1 align-middle text-right">
-                        <Button size="sm" variant="outline" onClick={() => handleCancelNew(idx)}>
-                          Avbryt
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {shifts.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-50 border-b border-gray-200">
-                    <td className="px-6 py-4 font-medium text-gray-800">{s.customer_name}</td>
-                    <td className="px-6 py-4 text-gray-600">{s.handler1_name}</td>
-                    <td className="px-6 py-4 text-gray-600">{s.handler2_name}</td>
-                    <td className="px-6 py-4 text-gray-600">{s.effort_name}</td>
-                    <td className="px-6 py-4 text-gray-600">{s.date ? s.date.slice(0,10) : "-"}</td>
-                    <td className="px-6 py-4 text-gray-600">{s.hours}</td>
-                    <td className="px-6 py-4">{s.status}</td>
-                    <td className="px-6 py-4 text-right"></td>
+                {shifts.map((shift, index) => (
+                  <tr key={shift.id} className={`hover:bg-blue-50 border-b border-gray-200 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                    <td className="px-6 py-4 font-medium text-gray-800">{shift.customer_name}</td>
+                    <td className="px-6 py-4 text-gray-600">{shift.handler1_name}</td>
+                    <td className="px-6 py-4 text-gray-600">{shift.handler2_name || "-"}</td>
+                    <td className="px-6 py-4 text-gray-600">{shift.effort_name}</td>
+                    <td className="px-6 py-4 text-gray-600">{shift.date ? shift.date.slice(0,10) : "-"}</td>
+                    <td className="px-6 py-4 text-gray-600 font-medium">{shift.hours}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        shift.status === 'Utförd' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {shift.status}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

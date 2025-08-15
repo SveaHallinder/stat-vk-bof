@@ -183,7 +183,7 @@ export default function customers(pool: Pool) {
         WHERE cases.customer_id = $1
           AND cases.effort_id = $2
           AND cases.active = TRUE
-        ORDER BY cases.date DESC, cases.id DESC`,
+        ORDER BY cases.id DESC`,
         [customerId, effortId]
       );
       res.json(result.rows);

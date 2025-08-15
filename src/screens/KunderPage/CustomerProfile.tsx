@@ -6,8 +6,8 @@ import { Button } from "../../components/ui/button";
 import { ArrowLeft, Edit, Loader2 } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { Modal } from "../../components/ui/modal";
-import { getCustomer, updateCustomer, getCustomerEfforts, getCasesForCustomerEffort, updateCase } from "../../lib/api";
-import { Case } from "@/types/types";
+import { getCustomer, updateCustomer, getCustomerEfforts, getShiftsForCase, updateCase, updateShift } from "../../lib/api";
+import type { CaseWithNames, ShiftEntry, ShiftStatus } from "../../types/types";
 import { BehandlareCombobox } from "../../components/ui/behandlare-combobox";
 import toast from "react-hot-toast";
 
@@ -21,51 +21,42 @@ export const CustomerProfile = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  interface CustomerEffort {
-    effort_id: number;
-    effort_name: string;
-    start_date?: string;
-    handlers?: string[];
-  }
-
-  interface CaseWithNames extends Case {
-    date?: string;
-    hours?: number | null;
-    status?: string;
-    handler1_name?: string;
-    handler2_name?: string;
-  }
-
-  const [efforts, setEfforts] = useState<CustomerEffort[]>([]);
-  const [loadingEfforts, setLoadingEfforts] = useState(true);
-  const [openEffort, setOpenEffort] = useState<CustomerEffort | null>(null);
   const [cases, setCases] = useState<CaseWithNames[]>([]);
-  const [loadingCases, setLoadingCases] = useState(false);
-  const [editCase, setEditCase] = useState<any | null>(null);
-  const [savingCase, setSavingCase] = useState(false);
+  const [loadingCases, setLoadingCases] = useState(true);
+  const [openCaseId, setOpenCaseId] = useState<number | null>(null);
+  const [shiftsByCase, setShiftsByCase] = useState<Record<number, ShiftEntry[]>>({});
+  // case‑edit modal:
+  const [editingCase, setEditingCase] = useState<CaseWithNames | null>(null);
+  const [editEffortId, setEditEffortId] = useState<string>("");
+  const [editHandler1Id, setEditHandler1Id] = useState<string>("");
+  const [editHandler2Id, setEditHandler2Id] = useState<string | null>(null);
+  const [editActive, setEditActive] = useState<boolean>(true);
+  // shift editing
+  const [editingShift, setEditingShift] = useState<{ id: string; date: string; hours: number; status: string } | null>(null);
+  const [savingShift, setSavingShift] = useState(false);
 
   useEffect(() => {
     if (id) {
       getCustomer(id).then(setCustomer).catch(() => setCustomer(null));
-      setLoadingEfforts(true);
-      getCustomerEfforts(id)
-        .then(data => setEfforts(data))
-        .catch(() => setEfforts([]))
-        .finally(() => setLoadingEfforts(false));
+      setLoadingCases(true);
+      getCustomerEfforts(Number(id))
+        .then((data: CaseWithNames[]) => setCases(data))
+        .catch(() => setCases([]))
+        .finally(() => setLoadingCases(false));
     }
   }, [id]);
 
   // Öppna rätt insats automatiskt om state.openEffort finns
   useEffect(() => {
-    if (!efforts || !Array.isArray(efforts) || !location.state || !location.state.openEffort) return;
-    const match = efforts.find(eff =>
-      eff.effort_name === location.state.openEffort ||
-      eff.effort_id === location.state.openEffort
+    if (!cases || !Array.isArray(cases) || !location.state || !location.state.openEffort) return;
+    const match = cases.find(caseItem =>
+      caseItem.effort_name === location.state.openEffort ||
+      caseItem.effort_id === location.state.openEffort
     );
     if (match) {
-      handleOpenEffort(match);
+      handleToggleCase(match);
     }
-  }, [efforts, location.state]);
+  }, [cases, location.state]);
 
   if (!customer) {
     return <div className="p-8 text-center text-gray-500">Laddar kunddata...</div>;
@@ -132,63 +123,95 @@ export const CustomerProfile = () => {
     }
   };
 
-  const handleOpenEffort = async (effort: any) => {
-    setOpenEffort(effort);
-    setLoadingCases(true);
-    try {
-      const data = await getCasesForCustomerEffort(customer.id.toString(), effort.effort_id.toString());
-      setCases(data);
-    } catch {
-      setCases([]);
-    } finally {
-      setLoadingCases(false);
-    }
-  };
-  const handleCloseEffort = () => {
-    setOpenEffort(null);
-    setCases([]);
-  };
+  // Case editing functions
+  function openEditCase(c: CaseWithNames) {
+    setEditingCase(c);
+    setEditEffortId(String(c.effort_id));
+    setEditHandler1Id(String(c.handler1_id));
+    setEditHandler2Id(c.handler2_id ? String(c.handler2_id) : null);
+    setEditActive(Boolean(c.active));
+  }
 
-  const handleEditCase = (c: any) => {
-    setEditCase({
-      ...c,
-      handler1_id: c.handler1_id !== undefined && c.handler1_id !== null ? String(c.handler1_id) : "",
-      handler2_id: c.handler2_id !== undefined && c.handler2_id !== null ? String(c.handler2_id) : "",
-      hours: c.hours || "",
-      status: c.status || "Utförd",
-      date: c.date ? c.date.slice(0, 10) : ""
-    });
-  };
-  const handleCloseEditCase = () => {
-    setEditCase(null);
-  };
-  const handleSaveEditCase = async () => {
-    if (!editCase || !openEffort) {
-      toast.error("Ingen insats vald");
+  async function saveCase() {
+    if (!editingCase) return;
+    try {
+      const updated = await updateCase(String(editingCase.id), {
+        customer_id: String(editingCase.customer_id),
+        effort_id: editEffortId,
+        handler1_id: editHandler1Id,
+        handler2_id: (editHandler2Id === "" || editHandler2Id === null) ? null : editHandler2Id,
+        active: editActive,
+      });
+      setCases(prev => prev.map(x => x.id === updated.id ? updated : x));
+      setEditingCase(null);
+      toast.success("Ärende uppdaterat!");
+    } catch (e) {
+      toast.error("Kunde inte uppdatera ärende");
+    }
+  }
+
+  // Shift handling
+  async function handleToggleCase(c: CaseWithNames) {
+    const isOpen = openCaseId === c.id;
+    if (isOpen) {
+      setOpenCaseId(null);
       return;
     }
-    setSavingCase(true);
-    try {
-      await updateCase(editCase.id, {
-        customer_id: customer.id,
-        effort_id: openEffort.effort_id,
-        date: editCase.date,
-        handler1_id: editCase.handler1_id,
-        handler2_id: editCase.handler2_id,
-        hours: editCase.hours,
-        status: editCase.status
-      });
-      toast.success("Ärendet uppdaterat!");
-      // Uppdatera listan
-      if (openEffort) {
-        const data = await getCasesForCustomerEffort(customer.id.toString(), openEffort.effort_id.toString());
-        setCases(data);
+    setOpenCaseId(c.id);
+    if (!shiftsByCase[c.id]) {
+      try {
+        const rows = await getShiftsForCase(c.id.toString());
+        setShiftsByCase(prev => ({ ...prev, [c.id]: rows }));
+      } catch {
+        toast.error("Kunde inte hämta besök");
       }
-      setEditCase(null);
+    }
+  }
+
+  const handleEditShift = (shift: ShiftEntry) => {
+    setEditingShift({
+      id: shift.id.toString(),
+      date: shift.date || "",
+      hours: shift.hours,
+      status: shift.status
+    });
+  };
+
+  const handleSaveShift = async () => {
+    if (!editingShift) return;
+    
+    if (!editingShift.date || editingShift.hours <= 0) {
+      toast.error("Datum och timmar måste anges");
+      return;
+    }
+    
+    setSavingShift(true);
+    try {
+      await updateShift(editingShift.id, {
+        date: editingShift.date,
+        hours: editingShift.hours,
+        status: editingShift.status
+      });
+      
+      // Uppdatera lokalt state
+      setShiftsByCase(prev => {
+        const newState = { ...prev };
+        Object.keys(newState).forEach(caseId => {
+          newState[Number(caseId)] = newState[Number(caseId)].map(s => 
+            s.id.toString() === editingShift.id 
+              ? { ...s, date: editingShift.date, hours: editingShift.hours, status: editingShift.status }
+              : s
+          );
+        });
+        return newState;
+      });
+      
+      setEditingShift(null);
+      toast.success("Uppdaterat!");
     } catch {
       toast.error("Kunde inte spara ändringar");
     } finally {
-      setSavingCase(false);
+      setSavingShift(false);
     }
   };
 
@@ -244,23 +267,135 @@ export const CustomerProfile = () => {
               <CardTitle>Insatser</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {loadingEfforts ? (
+              {loadingCases ? (
                 <div className="text-gray-500 text-center py-8">Laddar insatser...</div>
-              ) : efforts.length === 0 ? (
+              ) : cases.length === 0 ? (
                 <div className="text-gray-500 text-center py-8">Inga insatser registrerade för denna kund ännu.</div>
               ) : (
-                efforts.map((eff, idx) => (
+                cases.map((caseItem, idx) => (
                   <Card key={idx} className="bg-gray-50 hover:bg-green-50 transition">
                     <CardContent className="p-4 flex flex-col gap-2 relative">
-                      <div className="font-bold text-lg text-[#17694c]">{eff.effort_name}</div>
-                      <div className="text-sm text-gray-600">Start: {eff.start_date?.slice(0, 10) || '-'}</div>
-                      <div className="text-sm text-gray-600 mb-2">Behandlare: {eff.handlers && eff.handlers.filter(Boolean).length > 0 ? eff.handlers.filter(Boolean).join(", ") : '-'}</div>
-                      <div className="flex justify-end mt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold text-lg text-[#17694c]">{caseItem.effort_name}</div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full px-4 py-1 text-xs font-medium shadow-sm border-gray-300 hover:bg-[#eaf6f1] transition"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditCase(caseItem);
+                            }}
+                          >
+                            Redigera ärende
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full px-4 py-1 text-xs font-medium shadow-sm border-gray-300 hover:bg-[#eaf6f1] transition"
+                            onClick={() => handleToggleCase(caseItem)}
+                          >
+                            {openCaseId === caseItem.id ? "Dölj besök" : "Visa besök"}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-2">
+                        Behandlare: {caseItem.handler1_name}{caseItem.handler2_name ? ' & ' + caseItem.handler2_name : ''}
+                        <span className={`ml-2 inline-block text-xs px-2 py-0.5 rounded ${caseItem.active ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                          {caseItem.active ? "Pågående" : "Avslutad"}
+                        </span>
+                      </div>
+                      
+                      {/* Visa shifts om insatsen är öppen */}
+                      {openCaseId === caseItem.id && (
+                        <div className="mt-4 border-t pt-4">
+                          {(shiftsByCase[caseItem.id] ?? []).length === 0 ? (
+                            <div className="text-gray-400 text-sm">Inga besök registrerade.</div>
+                          ) : (
+                            <div className="space-y-2">
+                              {(shiftsByCase[caseItem.id] ?? []).map(s => (
+                                <div key={s.id} className="bg-white p-3 rounded border">
+                                  {editingShift?.id === s.id.toString() ? (
+                                    <div className="space-y-2">
+                                      <div className="grid grid-cols-3 gap-2">
+                                        <input
+                                          type="date"
+                                          className="border rounded px-2 py-1 text-sm"
+                                          value={editingShift.date}
+                                          onChange={(e) => setEditingShift({...editingShift, date: e.target.value})}
+                                        />
+                                        <input
+                                          type="number"
+                                          min="0.25"
+                                          step="0.25"
+                                          className="border rounded px-2 py-1 text-sm"
+                                          value={editingShift.hours}
+                                          onChange={(e) => setEditingShift({...editingShift, hours: Number(e.target.value)})}
+                                        />
+                                        <select
+                                          className="border rounded px-2 py-1 text-sm"
+                                          value={editingShift.status}
+                                          onChange={(e) => setEditingShift({...editingShift, status: e.target.value as ShiftStatus})}
+                                        >
+                                          <option value="Utförd">Utförd</option>
+                                          <option value="Avbokad">Avbokad</option>
+                                          <option value="Planerad">Planerad</option>
+                                          <option value="Ombokat">Ombokat</option>
+                                        </select>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          onClick={handleSaveShift}
+                                          disabled={savingShift}
+                                          className="text-xs"
+                                        >
+                                          {savingShift ? 'Sparar...' : 'Spara'}
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => setEditingShift(null)}
+                                          className="text-xs"
+                                        >
+                                          Avbryt
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="grid grid-cols-4 gap-4 items-center">
+                                      <div className="text-sm">{s.date?.slice(0, 10) || '-'}</div>
+                                      <div className="text-sm">{s.hours}h</div>
+                                      <div className="text-sm">{s.status}</div>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditShift(s);
+                                        }}
+                                        className="text-xs"
+                                      >
+                                        Redigera
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2 justify-end mt-2">
                         <Button
                           variant="outline"
                           size="sm"
                           className="rounded-full px-4 py-1 text-xs font-medium shadow-sm border-gray-300 hover:bg-[#eaf6f1] transition"
-                          onClick={() => navigate(`/registrera-tid?customer=${customer.id}&effort=${eff.effort_id}`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/registrera-tid?customer=${customer.id}&effort=${caseItem.effort_id}`);
+                          }}
                         >
                           Registrera tid
                         </Button>
@@ -273,6 +408,7 @@ export const CustomerProfile = () => {
           </Card>
         </div>
       </div>
+      
       {/* Modal för Redigera kund */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)}>
         <div className="p-8 max-w-lg w-full" style={{ minWidth: 500 }}>
@@ -337,93 +473,44 @@ export const CustomerProfile = () => {
           </div>
         </div>
       </Modal>
-      {/* Modal för ärenden kopplade till insats */}
-      <Modal open={!!openEffort} onClose={handleCloseEffort}>
-        <div className="p-8 max-w-xl w-full" style={{ minWidth: 800 }}>
-          <h2 className="text-xl font-bold mb-4 text-[#17694c]">
-            Ärenden för insats: {openEffort?.effort_name}
-          </h2>
-          {loadingCases ? (
-            <div className="text-gray-500 text-center py-8">Laddar ärenden...</div>
-          ) : cases.length === 0 ? (
-            <div className="text-gray-500 text-center py-8">Inga ärenden registrerade för denna insats.</div>
-          ) : (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="px-4 py-2 font-semibold text-gray-500 uppercase tracking-wider text-xs">Datum</th>
-                  <th className="px-4 py-2 font-semibold text-gray-500 uppercase tracking-wider text-xs">Behandlare 1</th>
-                  <th className="px-4 py-2 font-semibold text-gray-500 uppercase tracking-wider text-xs">Behandlare 2</th>
-                  <th className="px-4 py-2 font-semibold text-gray-500 uppercase tracking-wider text-xs">Timmar</th>
-                  <th className="px-4 py-2 font-semibold text-gray-500 uppercase tracking-wider text-xs">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cases.map((c, idx) => (
-                  <tr key={c.id || idx} className="border-b border-gray-100 hover:bg-green-50 cursor-pointer" onClick={() => handleEditCase(c)}>
-                    <td className="px-4 py-2">{c.date?.slice(0, 10) || '-'}</td>
-                    <td className="px-4 py-2">{c.handler1_name || '-'}</td>
-                    <td className="px-4 py-2">{c.handler2_name || '-'}</td>
-                    <td className="px-4 py-2">{c.hours || '-'}</td>
-                    <td className="px-4 py-2">
-                      <span className={`inline-block px-2 py-1 text-xs rounded-full font-semibold ${c.status === "Utförd" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                        {c.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </Modal>
-      {/* Modal för redigering av ärende */}
-      <Modal open={!!editCase} onClose={handleCloseEditCase}>
-        <div className="p-8 max-w-md w-full" style={{ minWidth: 600 }}>
-          <h2 className="text-lg font-bold mb-4 text-[#17694c]">Redigera ärende</h2>
-          {editCase && (
-            <form className="flex flex-col gap-4">
-              <label className="text-sm font-medium text-gray-700">Datum</label>
-              <input
-                type="date"
-                className="border rounded px-3 py-2"
-                value={editCase.date?.slice(0, 10) || ""}
-                onChange={e => setEditCase({ ...editCase, date: e.target.value })}
-              />
+
+      {/* Modal för Redigera ärende */}
+      <Modal open={!!editingCase} onClose={() => setEditingCase(null)}>
+        <div className="p-8 max-w-lg w-full" style={{ minWidth: 500 }}>
+          <h2 className="text-xl font-semibold mb-4">Redigera ärende</h2>
+          {editingCase && (
+            <div className="flex flex-col gap-4">
+              <label className="text-sm font-medium text-gray-700">Insats</label>
+              <div className="text-gray-600">{editingCase.effort_name}</div>
+              
               <label className="text-sm font-medium text-gray-700">Behandlare 1</label>
               <BehandlareCombobox
-                value={editCase.handler1_id || ""}
-                onChange={value => setEditCase({ ...editCase, handler1_id: value })}
+                value={editHandler1Id}
+                onChange={value => setEditHandler1Id(value)}
               />
-              <label className="text-sm font-medium text-gray-700">Behandlare 2</label>
+              
+              <label className="text-sm font-medium text-gray-700">Behandlare 2 (valfritt)</label>
               <BehandlareCombobox
-                value={editCase.handler2_id || ""}
-                onChange={value => setEditCase({ ...editCase, handler2_id: value })}
+                value={editHandler2Id || ""}
+                onChange={value => setEditHandler2Id(value ? value : null)}
               />
-              <label className="text-sm font-medium text-gray-700">Timmar</label>
-              <input
-                type="number"
-                className="border rounded px-3 py-2"
-                value={editCase.hours || ""}
-                onChange={e => setEditCase({ ...editCase, hours: e.target.value })}
-              />
-              <label className="text-sm font-medium text-gray-700">Status</label>
-              <select
-                className="border rounded px-3 py-2"
-                value={editCase.status}
-                onChange={e => setEditCase({ ...editCase, status: e.target.value })}
-              >
-                <option value="Utförd">Utförd</option>
-                <option value="Avbokad">Avbokad</option>
-              </select>
-              <div className="flex gap-4 justify-end mt-6">
-                <Button variant="outline" onClick={handleCloseEditCase} disabled={savingCase}>Avbryt</Button>
-                <Button variant="default" onClick={handleSaveEditCase} disabled={savingCase}>
-                  {savingCase ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Sparar...</> : "Spara"}
-                </Button>
-              </div>
-            </form>
+              
+              <label className="flex items-center gap-2 text-sm">
+                <input 
+                  type="checkbox" 
+                  checked={editActive} 
+                  onChange={e => setEditActive(e.target.checked)} 
+                />
+                Aktivt ärende
+              </label>
+            </div>
           )}
+          <div className="flex gap-4 justify-end mt-6">
+            <Button variant="outline" onClick={() => setEditingCase(null)}>Avbryt</Button>
+            <Button variant="default" onClick={saveCase}>
+              Spara
+            </Button>
+          </div>
         </div>
       </Modal>
     </Layout>

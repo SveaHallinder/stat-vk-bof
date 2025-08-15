@@ -4,141 +4,213 @@ import { Pool } from "pg";
 export default function cases(pool: Pool) {
   const router = Router();
 
-  // Hämta alla unika statusar för ärenden
-  router.get("/case-statuses", async (_req, res) => {
-    try {
-      const result = await pool.query("SELECT DISTINCT status FROM cases ORDER BY status ASC");
-      const statuses = result.rows.map(r => r.status).filter(Boolean);
-      res.json(statuses);
-    } catch {
-      res.status(500).json({ error: "Kunde inte hämta statusar" });
-    }
-  });
-
   // Skapa nytt ärende
   router.post("/cases", async (req, res) => {
-    const { customer_id, handler1_id, handler2_id, effort_id, date, hours, status } = req.body;
-    if (!customer_id || !handler1_id || !effort_id || !date) {
+    const { customer_id, handler1_id, handler2_id, effort_id, active } = req.body;
+    if (!customer_id || !handler1_id || !effort_id) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });
     }
+    
+    // Validera att värdena är giltiga nummer
+    if (isNaN(Number(customer_id)) || isNaN(Number(handler1_id)) || isNaN(Number(effort_id))) {
+      return res.status(400).json({ error: "Ogiltiga nummervärden" });
+    }
+    
+    if (handler2_id && (isNaN(Number(handler2_id)) || Number(handler2_id) === 0)) {
+      return res.status(400).json({ error: "Ogiltigt handler2_id värde" });
+    }
+
+    // Kontrollera om det redan finns ett aktivt ärende med samma kombination
     try {
-      const result = await pool.query(
-        `INSERT INTO cases (customer_id, handler1_id, handler2_id, effort_id, date, hours, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING *`,
-        [customer_id, handler1_id, handler2_id || null, effort_id, date, hours, status || 'Utförd']
+      const existingCase = await pool.query(
+        `SELECT id FROM cases 
+         WHERE customer_id = $1 
+         AND effort_id = $2 
+         AND handler1_id = $3 
+         AND (handler2_id = $4 OR (handler2_id IS NULL AND $4 IS NULL))
+         AND active = TRUE`,
+        [Number(customer_id), Number(effort_id), Number(handler1_id), handler2_id === "" || handler2_id === "0" || !handler2_id ? null : Number(handler2_id)]
       );
-      res.status(201).json(result.rows[0]);
-    } catch {
+
+      if (existingCase.rows.length > 0) {
+        return res.status(400).json({ 
+          error: "Ett aktivt ärende med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska ärenden." 
+        });
+      }
+    } catch (checkError) {
+      console.error("Error checking for duplicate case:", checkError);
+      // Fortsätt med att skapa ärendet om kontrollen misslyckas
+    }
+
+    try {
+      const r = await pool.query(
+        `INSERT INTO cases (customer_id, handler1_id, handler2_id, effort_id, active)
+         VALUES ($1,$2,$3,$4,$5)
+         RETURNING *`,
+        [Number(customer_id), Number(handler1_id), handler2_id === "" || handler2_id === "0" || !handler2_id ? null : Number(handler2_id), Number(effort_id), active !== false]
+      );
+      res.status(201).json(r.rows[0]);
+    } catch (e) {
+      console.error("Error creating case:", e);
       res.status(500).json({ error: "Kunde inte skapa ärende" });
     }
   });
 
-  // Hämta alla ärenden med namn (med stöd för all=true)
+  // Hämta ärenden (med namn) + FILTER: all, customer_id, effort_id, active
   router.get("/cases", async (req, res) => {
     try {
-      let result;
-      if (req.query.all === "true") {
-        result = await pool.query(`
-          SELECT
-            cases.*,
-            customers.initials AS customer_name,
-            h1.name AS handler1_name,
-            h2.name AS handler2_name,
-            efforts.name AS effort_name
-          FROM cases
-          LEFT JOIN customers ON cases.customer_id = customers.id
-          LEFT JOIN handlers h1 ON cases.handler1_id = h1.id
-          LEFT JOIN handlers h2 ON cases.handler2_id = h2.id
-          LEFT JOIN efforts ON cases.effort_id = efforts.id
-          ORDER BY cases.date DESC, cases.id DESC
-        `);
-      } else {
-        result = await pool.query(`
-          SELECT
-            cases.*,
-            customers.initials AS customer_name,
-            h1.name AS handler1_name,
-            h2.name AS handler2_name,
-            efforts.name AS effort_name
-          FROM cases
-          LEFT JOIN customers ON cases.customer_id = customers.id
-          LEFT JOIN handlers h1 ON cases.handler1_id = h1.id
-          LEFT JOIN handlers h2 ON cases.handler2_id = h2.id
-          LEFT JOIN efforts ON cases.effort_id = efforts.id
-          WHERE cases.active = TRUE
-          ORDER BY cases.date DESC, cases.id DESC
-        `);
+      const { all, customer_id, effort_id, active } = req.query as {
+        all?: string; customer_id?: string; effort_id?: string; active?: string;
+      };
+
+      const where: string[] = [];
+      const params: any[] = [];
+
+      // default: visa bara aktiva om inte all=true
+      if (all !== "true") where.push("cases.active = TRUE");
+
+      if (typeof active === "string") {
+        // active= true|false (överstyr default)
+        where.push(`cases.active = $${params.length + 1}`);
+        params.push(active === "true");
       }
-      res.json(result.rows);
-    } catch {
+
+      if (customer_id) {
+        params.push(Number(customer_id));
+        where.push(`cases.customer_id = $${params.length}`);
+      }
+
+      if (effort_id) {
+        params.push(Number(effort_id));
+        where.push(`cases.effort_id = $${params.length}`);
+      }
+
+      const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+      const sql = `
+        SELECT
+          cases.id,
+          cases.customer_id,
+          cases.effort_id,
+          cases.handler1_id,
+          cases.handler2_id,
+          cases.active,
+          customers.initials AS customer_name,
+          efforts.name       AS effort_name,
+          h1.name            AS handler1_name,
+          h2.name            AS handler2_name
+        FROM cases
+        LEFT JOIN customers   ON cases.customer_id  = customers.id
+        LEFT JOIN efforts     ON cases.effort_id    = efforts.id
+        LEFT JOIN handlers h1 ON cases.handler1_id  = h1.id
+        LEFT JOIN handlers h2 ON cases.handler2_id  = h2.id
+        ${whereSql}
+        ORDER BY cases.id DESC`;
+
+      const r = await pool.query(sql, params);
+      res.json(r.rows);
+    } catch (e) {
+      console.error("Error fetching cases:", e);
       res.status(500).json({ error: "Kunde inte hämta ärenden" });
     }
   });
 
-  // Avaktivera ärende
+  // Av/på-aktivera
   router.put("/cases/:id/deactivate", async (req, res) => {
-    const { id } = req.params;
     try {
-      const result = await pool.query(
-        "UPDATE cases SET active = FALSE WHERE id = $1 RETURNING *",
-        [id]
-      );
-      res.json(result.rows[0]);
-    } catch {
+      const r = await pool.query("UPDATE cases SET active = FALSE WHERE id = $1 RETURNING *", [req.params.id]);
+      if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
+      res.json(r.rows[0]);
+    } catch (e) {
+      console.error("Error deactivating case:", e);
       res.status(500).json({ error: "Kunde inte avaktivera ärende" });
     }
   });
 
-  // Återaktivera ärende
   router.put("/cases/:id/activate", async (req, res) => {
-    const { id } = req.params;
     try {
-      const result = await pool.query(
-        "UPDATE cases SET active = TRUE WHERE id = $1 RETURNING *",
-        [id]
-      );
-      res.json(result.rows[0]);
-    } catch {
+      const r = await pool.query("UPDATE cases SET active = TRUE WHERE id = $1 RETURNING *", [req.params.id]);
+      if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
+      res.json(r.rows[0]);
+    } catch (e) {
+      console.error("Error activating case:", e);
       res.status(500).json({ error: "Kunde inte återaktivera ärende" });
     }
   });
 
   // Uppdatera ärende
   router.put("/cases/:id", async (req, res) => {
-    const { id } = req.params;
-    const { customer_id, handler1_id, handler2_id, effort_id, date, hours, status } = req.body;
-    if (!customer_id || !handler1_id || !effort_id || !date) {
+    const { customer_id, handler1_id, handler2_id, effort_id, active } = req.body;
+    if (!customer_id || !handler1_id || !effort_id) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });
     }
+    
+    // Validera att värdena är giltiga nummer
+    if (isNaN(Number(customer_id)) || isNaN(Number(handler1_id)) || isNaN(Number(effort_id))) {
+      return res.status(400).json({ error: "Ogiltiga nummervärden" });
+    }
+    
+    if (handler2_id && (isNaN(Number(handler2_id)) || Number(handler2_id) === 0)) {
+      return res.status(400).json({ error: "Ogiltigt handler2_id värde" });
+    }
+
+    // Kontrollera om det redan finns ett aktivt ärende med samma kombination (exkludera aktuellt ärende)
     try {
-      const result = await pool.query(
-        `UPDATE cases SET customer_id = $1, handler1_id = $2, handler2_id = $3, effort_id = $4, date = $5, hours = $6, status = $7 WHERE id = $8 RETURNING *`,
-        [customer_id, handler1_id, handler2_id || null, effort_id, date, hours, status || 'Utförd', id]
+      const existingCase = await pool.query(
+        `SELECT id FROM cases 
+         WHERE customer_id = $1 
+         AND effort_id = $2 
+         AND handler1_id = $3 
+         AND (handler2_id = $4 OR (handler2_id IS NULL AND $4 IS NULL))
+         AND active = TRUE
+         AND id != $5`,
+        [Number(customer_id), Number(effort_id), Number(handler1_id), handler2_id === "" || handler2_id === "0" || !handler2_id ? null : Number(handler2_id), req.params.id]
       );
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Ärende hittades inte" });
+
+      if (existingCase.rows.length > 0) {
+        return res.status(400).json({ 
+          error: "Ett aktivt ärende med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska ärenden." 
+        });
       }
-      res.json(result.rows[0]);
-    } catch {
+    } catch (checkError) {
+      console.error("Error checking for duplicate case:", checkError);
+      // Fortsätt med att uppdatera ärendet om kontrollen misslyckas
+    }
+
+    try {
+      const r = await pool.query(
+        `UPDATE cases
+           SET customer_id=$1, handler1_id=$2, handler2_id=$3, effort_id=$4, active=$5
+         WHERE id=$6
+         RETURNING *`,
+        [
+          Number(customer_id), 
+          Number(handler1_id), 
+          handler2_id === "" || handler2_id === "0" || !handler2_id ? null : Number(handler2_id), 
+          Number(effort_id), 
+          active !== false,
+          req.params.id
+        ]
+      );
+      if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
+      res.json(r.rows[0]);
+    } catch (e) {
+      console.error("Error updating case:", e);
       res.status(500).json({ error: "Kunde inte uppdatera ärende" });
     }
   });
 
-  // Radera ärende
+  // Radera
   router.delete("/cases/:id", async (req, res) => {
-    const { id } = req.params;
     try {
-      const result = await pool.query("DELETE FROM cases WHERE id = $1 RETURNING *", [id]);
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Ärende hittades inte" });
-      }
-      res.json({ message: "Ärende raderat", case: result.rows[0] });
-    } catch {
+      const r = await pool.query("DELETE FROM cases WHERE id = $1 RETURNING *", [req.params.id]);
+      if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
+      res.json({ message: "Ärende raderat", case: r.rows[0] });
+    } catch (e) {
+      console.error("Error deleting case:", e);
       res.status(500).json({ error: "Kunde inte radera ärende" });
     }
   });
 
   return router;
 }
-

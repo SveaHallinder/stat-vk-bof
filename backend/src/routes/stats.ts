@@ -46,9 +46,16 @@ export default function stats(pool: Pool) {
         ${where}
       `;
 
+      // Antal besök i valt filter
       const besokRes = await pool.query(`SELECT COUNT(*) ${baseQuery}`, params);
-      const kunderRes = await pool.query(`SELECT COUNT(DISTINCT cases.customer_id) ${baseQuery}`, params);
+
+      // Antal kunder totalt i systemet (oavsett filter)
+      const kunderRes = await pool.query(`SELECT COUNT(*) FROM customers WHERE active = TRUE`);
+
+      // Genomsnittlig tid
       const tidRes = await pool.query(`SELECT AVG(shifts.hours) ${baseQuery}`, params);
+
+      // Avbokningsgrad
       const avbokRes = await pool.query(
         `SELECT COUNT(*) FILTER (WHERE shifts.status = 'Avbokad') AS avbok,
                 COUNT(*) AS total ${baseQuery}`,
@@ -198,4 +205,3 @@ export default function stats(pool: Pool) {
 
   return router;
 }
-

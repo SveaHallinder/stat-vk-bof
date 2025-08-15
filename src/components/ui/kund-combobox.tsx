@@ -67,7 +67,6 @@ export const KundCombobox = ({ value, onChange, placeholder }: KundComboboxProps
         onChange={e => {
           setSearch(e.target.value);
           setOpen(true);
-          onChange("");
         }}
         placeholder={placeholder || "Välj kund..."}
         autoComplete="off"

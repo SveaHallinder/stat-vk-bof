@@ -7,13 +7,15 @@ import { PieChart as RePieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { API_URL, createCustomer } from '../../../lib/api';
+import { API_URL, createCustomer, createCase, getCases } from '../../../lib/api';
+import { addShift } from '../../../lib/api';
 import { KundCombobox } from "../../../components/ui/kund-combobox";
 import { InsatsCombobox } from "../../../components/ui/insats-combobox";
 import { BehandlareCombobox } from "../../../components/ui/behandlare-combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import { getStatsSummary, getStatsByEffort } from "../../../lib/api";
+import { getStatsSummary, getStatsByEffort, getEfforts, getHandlers } from "../../../lib/api";
 
 export const MainContent = (): JSX.Element => {
   // Dynamisk statistik
@@ -54,7 +56,7 @@ export const MainContent = (): JSX.Element => {
       }))
     : [];
 
-  const [openModal, setOpenModal] = useState<null | "kund" | "tid" | "statistik">(null);
+  const [openModal, setOpenModal] = useState<null | "kund" | "tid" | "statistik" | "ny-insats">(null);
 
   // Form state för Lägg till kund
   const [newCustomer, setNewCustomer] = useState({
@@ -102,6 +104,92 @@ export const MainContent = (): JSX.Element => {
       setErrors({});
     } catch (err) {
       toast.error('Kunde inte spara kund');
+    }
+  };
+
+  // Form state för Registrera ärende
+  const [newCase, setNewCase] = useState({
+    customerId: "",
+    effortId: "",
+    handler1Id: "",
+    handler2Id: "",
+  });
+
+  const [newCaseErrors, setNewCaseErrors] = useState<{ customerId?: string; effortId?: string; handler1Id?: string }>({});
+  const [efforts, setEfforts] = useState<any[]>([]);
+  const [handlers, setHandlers] = useState<any[]>([]);
+  const [activeCases, setActiveCases] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Ladda efforts och handlers när modalen öppnas
+    if (openModal === "ny-insats") {
+      getEfforts().then(setEfforts);
+      getHandlers(true).then(setHandlers);
+    }
+    // Ladda aktiva ärenden när tid-modalen öppnas
+    if (openModal === "tid") {
+      getCases(false).then(setActiveCases); // false = endast aktiva ärenden
+    }
+  }, [openModal]);
+
+  function validateNewCase(c: typeof newCase) {
+    const err: { customerId?: string; effortId?: string; handler1Id?: string } = {};
+    if (!c.customerId) err.customerId = "Du måste välja kund";
+    if (!c.effortId) err.effortId = "Du måste välja insats";
+    if (!c.handler1Id) err.handler1Id = "Du måste välja behandlare";
+    return err;
+  }
+
+  // Hjälpfunktion för att räkna faktiska fel (inte undefined värden)
+  function getActualErrorCount(errors: typeof newCaseErrors): number {
+    return Object.keys(errors).filter(key => errors[key as keyof typeof errors]).length;
+  }
+
+  const handleNewCaseChange = (field: string, value: string) => {
+    const updated = { ...newCase, [field]: value };
+    setNewCase(updated);
+    setNewCaseErrors(prev => ({ ...prev, [field]: undefined }));
+  };
+
+  const handleNewCaseCancel = () => {
+    setOpenModal(null);
+    setNewCase({ customerId: "", effortId: "", handler1Id: "", handler2Id: "" });
+    setNewCaseErrors({});
+  };
+
+  const handleNewCaseSave = async () => {
+    const newErrors = validateNewCase(newCase);
+    setNewCaseErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
+    try {
+      await createCase({
+        customer_id: Number(newCase.customerId),
+        effort_id: Number(newCase.effortId),
+        handler1_id: Number(newCase.handler1Id),
+        handler2_id: newCase.handler2Id ? Number(newCase.handler2Id) : null,
+        active: true
+      });
+      
+      setOpenModal(null);
+      setNewCase({ customerId: "", effortId: "", handler1Id: "", handler2Id: "" });
+      toast.success('Ärende registrerat!');
+      setNewCaseErrors({});
+    } catch (err: any) {
+      console.log("Dashboard Debug - Fel från API:", err);
+      console.log("Dashboard Debug - err.message:", err.message);
+      console.log("Dashboard Debug - err.error:", err.error);
+      
+      if (err.error && err.error.includes('samma kombination finns redan')) {
+        toast.error(err.error, { duration: 8000 }); // 8 sekunder
+      } else if (err.message && err.message.includes('samma kombination finns redan')) {
+        toast.error('Ett aktivt ärende med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska ärenden.', { duration: 8000 }); // 8 sekunder
+      } else {
+        toast.error('Kunde inte skapa ärende');
+      }
     }
   };
 
@@ -153,29 +241,16 @@ export const MainContent = (): JSX.Element => {
     setRegisterTimeErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    // Bygg payload med ID:n
-    const payload = {
-      customer_id: registerTime.customer,           // ID (sträng/siffra)
-      effort_id: registerTime.effort,               // ID
-      handler1_id: registerTime.handler,            // ID
-      handler2_id: registerTime.secondary || null,  // ID eller null
-      date: registerTime.date,
-      hours: registerTime.hours,
-      status: "Utförd" // eller vad du vill sätta
-    };
-
-
     try {
-      const res = await fetch(`${API_URL}/cases`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+      await addShift({
+        customer_id: registerTime.customer,
+        effort_id: registerTime.effort,
+        handler1_id: registerTime.handler,
+        handler2_id: registerTime.secondary || null,
+        date: registerTime.date,
+        hours: Number(registerTime.hours),
+        status: "Utförd"
       });
-      if (!res.ok) {
-        const text = await res.text();
-        toast.error("Kunde inte spara ärende: " + text);
-        return;
-      }
       // Nollställ formuläret eller visa feedback
       setRegisterTime({
         customer: "",
@@ -187,7 +262,7 @@ export const MainContent = (): JSX.Element => {
       });
       toast.success("Tid registrerad!");
     } catch (err) {
-      toast.error("Nätverksfel: " + err);
+      toast.error("Kunde inte spara tid");
     }
   };
 
@@ -290,6 +365,13 @@ export const MainContent = (): JSX.Element => {
             <Button
               variant="outline"
               className="rounded-lg border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-7 py-3 min-w-[180px]"
+              onClick={() => setOpenModal("ny-insats")}
+            >
+              + Registrera ärende
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-lg border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-7 py-3 min-w-[180px]"
               onClick={() => {
                 setOpenModal("tid");
                 setRegisterTime(rt => ({ ...rt, date: getToday() }));
@@ -388,10 +470,83 @@ export const MainContent = (): JSX.Element => {
           </form>
         </div>
       </Modal>
+
+      {/* Registrera ärende modal */}
+      <Modal open={openModal === "ny-insats"} onClose={handleNewCaseCancel}>
+        <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-0">
+          <div className="bg-[#17694c] rounded-t-2xl px-8 pt-7 pb-5 flex items-center justify-between">
+            <h2 className="text-xl font-light text-white tracking-tight">Registrera ärende</h2>
+            <button
+              type="button"
+              onClick={handleNewCaseCancel}
+              className="text-white hover:bg-[#145c41] rounded-full p-1.5 transition focus:outline-none focus:ring-2 focus:ring-white"
+              aria-label="Stäng"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <form className="pt-8 pb-10 px-8 flex flex-col gap-7" style={{borderRadius: '0 0 1rem 1rem'}}>
+            <div className="flex flex-col gap-2">
+              <label className="text-[#17694c] font-normal text-base">Kund</label>
+              <KundCombobox 
+                value={newCase.customerId} 
+                onChange={(value) => handleNewCaseChange('customerId', value)} 
+                placeholder="Välj kund" 
+              />
+              {newCaseErrors.customerId && <span className="text-red-500 text-sm mt-1">{newCaseErrors.customerId}</span>}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-[#17694c] font-normal text-base">Insats</label>
+              <InsatsCombobox 
+                value={newCase.effortId} 
+                onChange={(value) => handleNewCaseChange('effortId', value)} 
+                placeholder="Välj insats" 
+              />
+              {newCaseErrors.effortId && <span className="text-red-500 text-sm mt-1">{newCaseErrors.effortId}</span>}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-[#17694c] font-normal text-base">Behandlare 1</label>
+              <BehandlareCombobox
+                value={newCase.handler1Id}
+                onChange={(value) => handleNewCaseChange('handler1Id', value)}
+              />
+              {newCaseErrors.handler1Id && <span className="text-red-500 text-sm mt-1">{newCaseErrors.handler1Id}</span>}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-[#17694c] font-normal text-base">Behandlare 2 (valfritt)</label>
+              <BehandlareCombobox
+                value={newCase.handler2Id}
+                onChange={(value) => handleNewCaseChange('handler2Id', value)}
+              />
+            </div>
+            <div className="flex gap-4 justify-center mt-8">
+              <button
+                type="button"
+                onClick={handleNewCaseCancel}
+                className="px-7 py-3 rounded-full border border-gray-300 text-[#17694c] bg-white font-normal hover:bg-gray-50 transition text-base min-w-[120px]"
+              >
+                Avbryt
+              </button>
+              <button
+                type="button"
+                onClick={handleNewCaseSave}
+                className={`px-7 py-3 rounded-full font-normal transition text-base min-w-[160px] ${getActualErrorCount(newCaseErrors) > 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#17694c] text-white hover:bg-[#145c41]'}`}
+                disabled={getActualErrorCount(newCaseErrors) > 0}
+              >
+                Spara och fortsätt
+                {getActualErrorCount(newCaseErrors) > 0 && (
+                  <span className="ml-2 text-xs">({getActualErrorCount(newCaseErrors)} fel)</span>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
       <Modal open={openModal === "tid"} onClose={handleRegisterTimeCancel}>
         <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-0">
           <div className="bg-[#17694c] rounded-t-2xl px-8 pt-7 pb-5 flex items-center justify-between">
-            <h2 className="text-xl font-light text-white tracking-tight">Registrera tid</h2>
+            <h2 className="text-xl font-light text-white tracking-tight">Registrera tid på ärende</h2>
             <button
               type="button"
               onClick={handleRegisterTimeCancel}
@@ -403,42 +558,27 @@ export const MainContent = (): JSX.Element => {
           </div>
           <form className="pt-8 pb-10 px-8 flex flex-col gap-7" style={{borderRadius: '0 0 1rem 1rem'}}>
             <div className="flex flex-col gap-2">
-              <label className="text-[#17694c] font-normal text-base">Kund</label>
-              <KundCombobox value={registerTime.customer} onChange={value => {
+              <label className="text-[#17694c] font-normal text-base">Välj ärende *</label>
+              <Select value={registerTime.customer} onValueChange={value => {
                 setRegisterTime(rt => ({ ...rt, customer: value }));
                 setRegisterTimeErrors(prev => ({ ...prev, customer: undefined }));
-              }} placeholder="Välj kund" />
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Välj ärende" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeCases.map((caseItem) => (
+                    <SelectItem key={caseItem.id} value={caseItem.id.toString()}>
+                      {caseItem.customer_name} - {caseItem.effort_name} ({caseItem.handler1_name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {registerTimeErrors.customer && <span className="text-red-500 text-xs mt-1">{registerTimeErrors.customer}</span>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[#17694c] font-normal text-base">Insats</label>
-              <InsatsCombobox value={registerTime.effort} onChange={value => {
-                setRegisterTime(rt => ({ ...rt, effort: value }));
-                setRegisterTimeErrors(prev => ({ ...prev, effort: undefined }));
-              }} placeholder="Välj insats" />
-              {registerTimeErrors.effort && <span className="text-red-500 text-xs mt-1">{registerTimeErrors.effort}</span>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[#17694c] font-normal text-base">Behandlare</label>
-              <BehandlareCombobox
-                value={registerTime.handler}
-                onChange={value => {
-                  setRegisterTime(rt => ({ ...rt, handler: value }));
-                  setRegisterTimeErrors(prev => ({ ...prev, handler: undefined }));
-                }}
-              />
-              {registerTimeErrors.handler && <span className="text-red-500 text-xs mt-1">{registerTimeErrors.handler}</span>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[#17694c] font-normal text-base">Sekundär (valfritt)</label>
-              <BehandlareCombobox
-                value={registerTime.secondary}
-                onChange={value => setRegisterTime(rt => ({ ...rt, secondary: value }))}
-              />
             </div>
             <div className="flex gap-4">
               <div className="flex flex-col gap-2 w-1/2">
-                <label className="text-[#17694c] font-normal text-base">Datum</label>
+                <label className="text-[#17694c] font-normal text-base">Datum *</label>
                 <input
                   type="date"
                   name="date"
@@ -449,14 +589,15 @@ export const MainContent = (): JSX.Element => {
                 {registerTimeErrors.date && <span className="text-red-500 text-xs mt-1">{registerTimeErrors.date}</span>}
               </div>
               <div className="flex flex-col gap-2 w-1/2">
-                <label className="text-[#17694c] font-normal text-base">Timmar</label>
+                <label className="text-[#17694c] font-normal text-base">Timmar *</label>
                 <input
                   type="number"
                   name="hours"
                   value={registerTime.hours}
                   onChange={handleRegisterTimeChange}
                   className="w-full border rounded px-3 py-2 mt-1"
-                  min={0}
+                  min={0.5}
+                  step={0.5}
                   placeholder="Antal timmar"
                 />
                 {registerTimeErrors.hours && <span className="text-red-500 text-xs mt-1">{registerTimeErrors.hours}</span>}
@@ -476,7 +617,7 @@ export const MainContent = (): JSX.Element => {
                 className={`px-7 py-3 rounded-full font-normal transition text-base min-w-[160px] ${Object.values(registerTimeErrors).some(Boolean) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#17694c] text-white hover:bg-[#145c41]'}`}
                 disabled={Object.values(registerTimeErrors).some(Boolean)}
               >
-                Spara och fortsätt
+                Spara tid
               </button>
             </div>
           </form>
@@ -576,6 +717,7 @@ export const MainContent = (): JSX.Element => {
                           nameKey="name"
                           cx="50%"
                           cy="50%"
+                          innerRadius={60}
                           outerRadius={110}
                           fill="#17694c"
                           label={({ value }) => `${value}`}

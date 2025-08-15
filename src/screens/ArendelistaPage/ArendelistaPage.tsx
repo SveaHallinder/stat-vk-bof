@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Layout } from "../../components/Layout";
 import { Card, CardContent } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { getShifts } from "../../lib/api";
-import { ShiftEntry } from "@/types/types";
+import { ShiftEntry } from "../../types/types";
 import toast from "react-hot-toast";
 
 export const ArendelistaPage = (): JSX.Element => {
@@ -38,7 +38,7 @@ export const ArendelistaPage = (): JSX.Element => {
   const filtered = shifts.filter(s => {
     const term = debouncedSearch.toLowerCase();
     const matchesSearch =
-      !term || s.customer_name.toLowerCase().includes(term) || s.effort_name.toLowerCase().includes(term);
+      !term || (s.customer_name || "").toLowerCase().includes(term) || (s.effort_name || "").toLowerCase().includes(term);
     const matchesStatus = statusFilter === "all" || (s.status || "Okänd") === statusFilter;
     return matchesSearch && matchesStatus;
   });
