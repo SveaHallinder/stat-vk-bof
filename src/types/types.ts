@@ -37,6 +37,7 @@ export interface CaseBase {
   handler1_id: number;
   handler2_id: number | null;
   active: boolean;
+  created_at: string;
 }
 
 export interface CaseWithNames extends CaseBase {

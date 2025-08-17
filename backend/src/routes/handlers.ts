@@ -6,7 +6,7 @@ export default function handlers(pool: Pool) {
   const router = Router();
 
   // Hämta alla behandlare (med stöd för all=true)
-  router.get("/handlers", async (req, res) => {
+  router.get("/", async (req, res) => {
     try {
       let result;
       if (req.query.all === "true") {
@@ -21,7 +21,7 @@ export default function handlers(pool: Pool) {
   });
 
   // Återaktivera behandlare
-  router.put("/handlers/:id/activate", async (req, res) => {
+  router.put("/:id/activate", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
@@ -35,7 +35,7 @@ export default function handlers(pool: Pool) {
   });
 
   // Avaktivera behandlare
-  router.put("/handlers/:id/deactivate", async (req, res) => {
+  router.put("/:id/deactivate", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
@@ -49,7 +49,7 @@ export default function handlers(pool: Pool) {
   });
 
   // Skapa behandlare
-  router.post("/handlers", async (req, res) => {
+  router.post("/", async (req, res) => {
     const { name, email } = req.body;
     if (!name || !email) {
       return res.status(400).json({ error: "Namn och mail krävs" });
@@ -72,7 +72,7 @@ export default function handlers(pool: Pool) {
   });
 
   // Uppdatera behandlare
-  router.put("/handlers/:id", async (req, res) => {
+  router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { name, email } = req.body;
     if (!name || !email) {
@@ -93,7 +93,7 @@ export default function handlers(pool: Pool) {
   });
 
   // Radera behandlare
-  router.delete("/handlers/:id", async (req, res) => {
+  router.delete("/:id", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query("DELETE FROM handlers WHERE id = $1 RETURNING *", [id]);

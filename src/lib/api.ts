@@ -1,8 +1,19 @@
 export const API_URL = import.meta.env.VITE_API_URL;
 import { Customer, Handler, Effort, CaseWithNames, ShiftEntry } from "@/types/types";
 
+// Helper function för att hämta auth headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('authToken');
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
+
 export async function getCustomers(all = false): Promise<Customer[]> {
-  const res = await fetch(`${API_URL}/customers${all ? '?all=true' : ''}`);
+  const res = await fetch(`${API_URL}/customers${all ? '?all=true' : ''}`, {
+    headers: getAuthHeaders()
+  });
   if (!res.ok) throw new Error("Kunde inte hämta kunder");
   const data = await res.json();
   return data.map((c: Customer) => ({
@@ -17,7 +28,7 @@ console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
 export async function createCustomer(data: { initials: string; gender: string; birthYear: number; startDate?: string }): Promise<Customer> {
   const res = await fetch(`${API_URL}/customers`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Kunde inte skapa kund");
@@ -27,7 +38,7 @@ export async function createCustomer(data: { initials: string; gender: string; b
 export async function softDeleteCustomer(id: string): Promise<Customer> {
   const res = await fetch(`${API_URL}/customers/${id}/deactivate`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" }
+    headers: getAuthHeaders()
   });
   if (!res.ok) {
     let msg = "Kunde inte avaktivera kund";
@@ -43,7 +54,7 @@ export async function softDeleteCustomer(id: string): Promise<Customer> {
 export async function reactivateCustomer(id: string): Promise<Customer> {
   const res = await fetch(`${API_URL}/customers/${id}/activate`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" }
+    headers: getAuthHeaders()
   });
   if (!res.ok) {
     let msg = "Kunde inte återaktivera kund";
@@ -67,7 +78,7 @@ export async function getCustomer(id: string): Promise<Customer & { birthYear: n
 }
 
 export async function updateCustomer(id: string, data: { initials: string; gender: string; birthYear: number; active: boolean; startDate: string }): Promise<Customer> {
-  const res = await fetch(`${API_URL}/customers`, {
+  const res = await fetch(`${API_URL}/customers/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -93,7 +104,8 @@ export async function getCustomerEfforts(customerId: number) {
   if (!res.ok) {
     throw new Error(`Kunde inte hämta insatser för kund ${customerId}`);
   }
-  return res.json();
+  const data = await res.json();
+  return data;
 }
 
 export async function getCustomerCases(customerId: number) {
@@ -113,7 +125,8 @@ export async function getCasesForCustomerEffort(customerId: string, effortId: st
 export async function getCases(all = false): Promise<CaseWithNames[]> {
   const res = await fetch(`${API_URL}/cases${all ? '?all=true' : ''}`);
   if (!res.ok) throw new Error("Kunde inte hämta ärenden");
-  return res.json();
+  const data = await res.json();
+  return data;
 }
 
 // Ny funktion för att hämta aktiva ärenden för en specifik kund
@@ -204,6 +217,15 @@ export async function updateShift(id: string, data: { date: string; hours: numbe
     const errorText = await res.text();
     throw new Error(`Kunde inte uppdatera besök: ${errorText}`);
   }
+  return res.json();
+}
+
+// Inaktivera alla shifts som tillhör ett specifikt case (soft delete - INGEN permanent radering!)
+export async function deactivateShiftsForCase(caseId: string): Promise<{ message: string; deactivatedCount: number }> {
+  const res = await fetch(`${API_URL}/shifts/case/${caseId}/deactivate`, {
+    method: "PUT"
+  });
+  if (!res.ok) throw new Error("Kunde inte inaktivera shifts för case");
   return res.json();
 }
 

@@ -1,4 +1,4 @@
-import { Card, CardContent } from "../../../components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { UsersIcon, ClockIcon, TrendingUpIcon, FileTextIcon, AlertCircleIcon, CheckCircleIcon } from "lucide-react";
 
 interface StatsOverviewProps {

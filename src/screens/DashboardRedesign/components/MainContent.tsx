@@ -1,23 +1,27 @@
 import { X } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { Button } from "../../../components/ui/button";
-import { Modal } from "../../../components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { BarChartStatistik } from "./BarChartStatistik";
 import { PieChart as RePieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { API_URL, createCustomer, createCase, getCases } from '../../../lib/api';
-import { addShift } from '../../../lib/api';
-import { KundCombobox } from "../../../components/ui/kund-combobox";
-import { InsatsCombobox } from "../../../components/ui/insats-combobox";
-import { BehandlareCombobox } from "../../../components/ui/behandlare-combobox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
+import { createCustomer, createCase, getCases, addShift, getStatsSummary, getStatsByEffort } from '@/lib/api';
+import { KundCombobox } from "@/components/ui/kund-combobox";
+import { InsatsCombobox } from "@/components/ui/insats-combobox";
+import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import { getStatsSummary, getStatsByEffort, getEfforts, getHandlers } from "../../../lib/api";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Trash2, Save, FileText, Clock, CheckCircle, Users, Activity, Calendar } from "lucide-react";
 
 export const MainContent = (): JSX.Element => {
+  const navigate = useNavigate();
   // Dynamisk statistik
   const [stats, setStats] = useState<{ antal_besok: number; antal_kunder: number; genomsnittlig_tid: number; avbokningsgrad: number } | null>(null);
   const [effortData, setEffortData] = useState<any[] | null>(null);
@@ -116,21 +120,29 @@ export const MainContent = (): JSX.Element => {
   });
 
   const [newCaseErrors, setNewCaseErrors] = useState<{ customerId?: string; effortId?: string; handler1Id?: string }>({});
-  const [efforts, setEfforts] = useState<any[]>([]);
-  const [handlers, setHandlers] = useState<any[]>([]);
   const [activeCases, setActiveCases] = useState<any[]>([]);
 
   useEffect(() => {
-    // Ladda efforts och handlers när modalen öppnas
-    if (openModal === "ny-insats") {
-      getEfforts().then(setEfforts);
-      getHandlers(true).then(setHandlers);
-    }
     // Ladda aktiva ärenden när tid-modalen öppnas
     if (openModal === "tid") {
-      getCases(false).then(setActiveCases); // false = endast aktiva ärenden
+      console.log("Öppnar tid-modal, laddar aktiva ärenden...");
+      getCases(false).then(cases => {
+        console.log("Aktiva ärenden laddade:", cases);
+        setActiveCases(cases);
+      }).catch(err => {
+        console.error("Fel vid laddning av aktiva ärenden:", err);
+      });
     }
   }, [openModal]);
+
+  // Ladda aktiva ärenden för dashboard-kortet
+  useEffect(() => {
+    getCases(false).then(cases => {
+      setActiveCases(cases);
+    }).catch(err => {
+      console.error("Fel vid laddning av aktiva ärenden för dashboard:", err);
+    });
+  }, []);
 
   function validateNewCase(c: typeof newCase) {
     const err: { customerId?: string; effortId?: string; handler1Id?: string } = {};
@@ -202,10 +214,11 @@ export const MainContent = (): JSX.Element => {
     date: "",
     hours: ""
   });
-  const [registerTimeErrors, setRegisterTimeErrors] = useState<{ customer?: string; effort?: string; handler?: string; date?: string; hours?: string }>({});
+  const [registerTimeErrors, setRegisterTimeErrors] = useState<{ customer?: string; date?: string; hours?: string }>({});
 
   const handleRegisterTimeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    console.log("Ändrar registerTime:", { name, value, type });
     setRegisterTime({
       ...registerTime,
       [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
@@ -214,12 +227,10 @@ export const MainContent = (): JSX.Element => {
   };
 
   function validateRegisterTime(rt: typeof registerTime) {
-    const err: { customer?: string; effort?: string; handler?: string; date?: string; hours?: string } = {};
-    if (!rt.customer) err.customer = "Du måste välja kund";
-    if (!rt.effort) err.effort = "Du måste välja insats";
-    if (!rt.handler) err.handler = "Du måste välja behandlare";
+    const err: { customer?: string; date?: string; hours?: string } = {};
+    if (!rt.customer) err.customer = "Du måste välja ärende";
     if (!rt.date) err.date = "Du måste ange datum";
-    if (!rt.hours || isNaN(Number(rt.hours))) err.hours = "Du måste ange antal timmar";
+    if (!rt.hours || isNaN(Number(rt.hours)) || Number(rt.hours) <= 0) err.hours = "Du måste ange antal timmar";
     return err;
   }
 
@@ -239,29 +250,47 @@ export const MainContent = (): JSX.Element => {
   const handleRegisterTimeSave = async () => {
     const errors = validateRegisterTime(registerTime);
     setRegisterTimeErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) {
+      console.log("Valideringsfel:", errors);
+      return;
+    }
 
     try {
-      await addShift({
-        customer_id: registerTime.customer,
-        effort_id: registerTime.effort,
-        handler1_id: registerTime.handler,
-        handler2_id: registerTime.secondary || null,
+      console.log("Försöker spara tid:", registerTime);
+      
+      // Find the selected case to get its details
+      const selectedCase = activeCases.find(c => c.id.toString() === registerTime.customer);
+      if (!selectedCase) {
+        toast.error("Välj ett ärende");
+        return;
+      }
+
+      console.log("Valt ärende:", selectedCase);
+
+      const shiftData = {
+        case_id: selectedCase.id,
         date: registerTime.date,
         hours: Number(registerTime.hours),
-        status: "Utförd"
-      });
+        status: "Utförd" as const
+      };
+      
+      console.log("Skickar shift-data:", shiftData);
+
+      await addShift(shiftData);
+      
       // Nollställ formuläret eller visa feedback
       setRegisterTime({
         customer: "",
         effort: "",
         handler: "",
         secondary: "",
-        date: "",
-        hours: ""
+        date: getToday(),
+        hours: "",
       });
+      setOpenModal(null);
       toast.success("Tid registrerad!");
     } catch (err) {
+      console.error("Fel vid sparande av tid:", err);
       toast.error("Kunde inte spara tid");
     }
   };
@@ -324,31 +353,69 @@ export const MainContent = (): JSX.Element => {
 
   const getToday = () => new Date().toISOString().slice(0, 10);
 
+  // Navigera till olika sidor från dashboard-korten
+  const handleCardClick = (destination: string) => {
+    switch (destination) {
+      case 'customers':
+        navigate('/kunder');
+        break;
+      case 'cases':
+        navigate('/arendelista');
+        break;
+      case 'visits':
+        navigate('/statistik');
+        break;
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col items-center">
       <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
       {/* Main Content Grid */}
       <div className="w-full max-w-7xl mx-auto px-8 flex flex-col gap-8">
-        {/* Statistik-kort */}
+        {/* Sammanfattning */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-          {statsCards.map((stat, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-center"
-            >
-              <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
-                {stat.title}
-              </div>
-              <div className="text-4xl text-[#222] font-light mt-2">
-                {stat.value}
-              </div>
-              {stat.note && (
-                <div className="text-gray-400 text-xs mt-2">
-                  {stat.note}
-                </div>
-              )}
+          <div
+            className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => handleCardClick('customers')}
+          >
+            <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
+              KUNDER TOTALT
             </div>
-          ))}
+            <div className="text-4xl text-[#222] font-light mt-2">
+              {stats?.antal_kunder || "-"}
+            </div>
+            <div className="text-gray-400 text-xs mt-2">
+              2025 siffror för hela enheten
+            </div>
+          </div>
+
+          <div
+            className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => handleCardClick('cases')}
+          >
+            <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
+              AKTIVA ÄRENDEN
+            </div>
+            <div className="text-4xl text-[#222] font-light mt-2">
+              {activeCases?.length || "-"}
+            </div>
+            <div className="text-gray-400 text-xs mt-2">
+              2025 siffror
+            </div>
+          </div>
+
+          <div
+            className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => handleCardClick('visits')}
+          >
+            <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
+              MÅNADENS BESÖK
+            </div>
+            <div className="text-4xl text-[#222] font-light mt-2">
+              {stats?.antal_besok || "-"}
+            </div>
+          </div>
         </div>
         
         {/* Snabbåtgärder */}

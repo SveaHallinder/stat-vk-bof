@@ -5,7 +5,7 @@ export default function customers(pool: Pool) {
   const router = Router();
 
   // Skapa kund
-  router.post("/customers", async (req, res) => {
+  router.post("/", async (req, res) => {
     const { initials, gender, birthYear, startDate } = req.body;
     if (!initials || !gender || !birthYear) {
       return res.status(400).json({ error: "Alla fält krävs" });
@@ -30,7 +30,7 @@ export default function customers(pool: Pool) {
   });
 
   // Hämta alla kunder (med stöd för all=true)
-  router.get("/customers", async (req, res) => {
+  router.get("/", async (req, res) => {
     try {
       let result;
       if (req.query.all === "true") {
@@ -45,7 +45,7 @@ export default function customers(pool: Pool) {
   });
 
   // Avaktivera kund
-  router.put("/customers/:id/deactivate", async (req, res) => {
+  router.put("/:id/deactivate", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
@@ -62,7 +62,7 @@ export default function customers(pool: Pool) {
   });
 
   // Återaktivera kund
-  router.put("/customers/:id/activate", async (req, res) => {
+  router.put("/:id/activate", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
@@ -79,7 +79,7 @@ export default function customers(pool: Pool) {
   });
 
   // Hämta en specifik kund
-  router.get("/customers/:id", async (req, res) => {
+  router.get("/:id", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query("SELECT * FROM customers WHERE id = $1", [id]);
@@ -93,7 +93,7 @@ export default function customers(pool: Pool) {
   });
 
   // Uppdatera en kund
-  router.put("/customers/:id", async (req, res) => {
+  router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { initials, gender, birthYear, active, startDate } = req.body;
     if (!initials || !gender || !birthYear || typeof active !== "boolean") {
@@ -122,7 +122,7 @@ export default function customers(pool: Pool) {
   });
 
   // Radera en kund
-  router.delete("/customers/:id", async (req, res) => {
+  router.delete("/:id", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query("DELETE FROM customers WHERE id = $1 RETURNING *", [id]);

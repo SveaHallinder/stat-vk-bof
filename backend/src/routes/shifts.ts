@@ -5,7 +5,7 @@ export default function shifts(pool: Pool) {
   const router = Router();
 
   // Hämta alla shifts med relaterad information och filter
-  router.get("/shifts", async (req, res) => {
+  router.get("/", async (req, res) => {
     try {
       const { case_id, customer_id, effort_id, from, to } = req.query;
       
@@ -68,7 +68,7 @@ export default function shifts(pool: Pool) {
   });
 
   // Skapa ny shift och säkerställ att ett case finns
-  router.post("/shifts", async (req, res) => {
+  router.post("/", async (req, res) => {
     const { case_id, customer_id, effort_id, handler1_id, handler2_id, date, hours, status } = req.body;
     if ((!case_id && (!customer_id || !effort_id || !handler1_id)) || !date || hours === undefined) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });
@@ -107,7 +107,7 @@ export default function shifts(pool: Pool) {
   });
 
   // Uppdatera befintlig shift
-  router.put("/shifts/:id", async (req, res) => {
+  router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { date, hours, status } = req.body;
     
@@ -132,6 +132,26 @@ export default function shifts(pool: Pool) {
     } catch (e) {
       console.error("Error updating shift:", e);
       res.status(500).json({ error: "Kunde inte uppdatera shift" });
+    }
+  });
+
+  // Inaktivera shifts som tillhör ett specifikt case (soft delete - INGEN permanent radering!)
+  router.put("/case/:caseId/deactivate", async (req, res) => {
+    const { caseId } = req.params;
+    
+    try {
+      const result = await pool.query(
+        `UPDATE shifts SET active = FALSE WHERE case_id = $1 AND active = TRUE`,
+        [caseId]
+      );
+      
+      res.json({ 
+        message: `Inaktiverade ${result.rowCount} shifts för case ${caseId}`,
+        deactivatedCount: result.rowCount 
+      });
+    } catch (e) {
+      console.error("Error deactivating shifts for case:", e);
+      res.status(500).json({ error: "Kunde inte inaktivera shifts för case" });
     }
   });
 

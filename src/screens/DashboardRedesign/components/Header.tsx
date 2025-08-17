@@ -1,7 +1,7 @@
 import { Bell, Search } from "lucide-react";
 import React from "react";
-import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
-import { Input } from "../../../components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 
 interface HeaderProps {
   title: string;

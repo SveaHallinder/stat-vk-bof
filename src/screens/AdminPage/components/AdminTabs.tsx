@@ -1,4 +1,4 @@
-import { Button } from "../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import { UsersIcon, SettingsIcon, FileTextIcon } from "lucide-react";
 
 interface AdminTabsProps {

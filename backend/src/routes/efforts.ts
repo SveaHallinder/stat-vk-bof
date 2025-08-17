@@ -5,7 +5,7 @@ export default function efforts(pool: Pool) {
   const router = Router();
 
   // Skapa insats
-  router.post("/efforts", async (req, res) => {
+  router.post("/", async (req, res) => {
     const { name, available_for } = req.body;
     if (!name || !available_for) {
       return res.status(400).json({ error: "Alla fält krävs" });
@@ -22,7 +22,7 @@ export default function efforts(pool: Pool) {
   });
 
   // Hämta alla insatser (med stöd för all=true)
-  router.get("/efforts", async (req, res) => {
+  router.get("/", async (req, res) => {
     try {
       let result;
       if (req.query.all === "true") {
@@ -37,7 +37,7 @@ export default function efforts(pool: Pool) {
   });
 
   // Avaktivera insats
-  router.put("/efforts/:id/deactivate", async (req, res) => {
+  router.put("/:id/deactivate", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
@@ -51,7 +51,7 @@ export default function efforts(pool: Pool) {
   });
 
   // Återaktivera insats
-  router.put("/efforts/:id/activate", async (req, res) => {
+  router.put("/:id/activate", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
@@ -65,7 +65,7 @@ export default function efforts(pool: Pool) {
   });
 
   // Uppdatera insats
-  router.put("/efforts/:id", async (req, res) => {
+  router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { name, available_for } = req.body;
     if (!name || !available_for) {
@@ -86,7 +86,7 @@ export default function efforts(pool: Pool) {
   });
 
   // Radera insats
-  router.delete("/efforts/:id", async (req, res) => {
+  router.delete("/:id", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query("DELETE FROM efforts WHERE id = $1 RETURNING *", [id]);

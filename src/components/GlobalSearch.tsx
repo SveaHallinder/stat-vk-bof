@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Search, X, User, Clock, FileText, Users, Calendar } from "lucide-react";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { getCustomers, getHandlers, getEfforts, getCases, getShifts } from "../lib/api";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { getCustomers, getHandlers, getEfforts, getCases, getShifts } from "@/lib/api";
 
 interface SearchResult {
   id: number;

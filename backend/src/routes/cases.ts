@@ -5,7 +5,7 @@ export default function cases(pool: Pool) {
   const router = Router();
 
   // Skapa nytt ärende
-  router.post("/cases", async (req, res) => {
+  router.post("/", async (req, res) => {
     const { customer_id, handler1_id, handler2_id, effort_id, active } = req.body;
     if (!customer_id || !handler1_id || !effort_id) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });
@@ -57,7 +57,7 @@ export default function cases(pool: Pool) {
   });
 
   // Hämta ärenden (med namn) + FILTER: all, customer_id, effort_id, active
-  router.get("/cases", async (req, res) => {
+  router.get("/", async (req, res) => {
     try {
       const { all, customer_id, effort_id, active } = req.query as {
         all?: string; customer_id?: string; effort_id?: string; active?: string;
@@ -95,6 +95,7 @@ export default function cases(pool: Pool) {
           cases.handler1_id,
           cases.handler2_id,
           cases.active,
+          cases.created_at,
           customers.initials AS customer_name,
           efforts.name       AS effort_name,
           h1.name            AS handler1_name,
@@ -116,7 +117,7 @@ export default function cases(pool: Pool) {
   });
 
   // Av/på-aktivera
-  router.put("/cases/:id/deactivate", async (req, res) => {
+  router.put("/:id/deactivate", async (req, res) => {
     try {
       const r = await pool.query("UPDATE cases SET active = FALSE WHERE id = $1 RETURNING *", [req.params.id]);
       if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
@@ -127,7 +128,7 @@ export default function cases(pool: Pool) {
     }
   });
 
-  router.put("/cases/:id/activate", async (req, res) => {
+  router.put("/:id/activate", async (req, res) => {
     try {
       const r = await pool.query("UPDATE cases SET active = TRUE WHERE id = $1 RETURNING *", [req.params.id]);
       if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
@@ -139,7 +140,7 @@ export default function cases(pool: Pool) {
   });
 
   // Uppdatera ärende
-  router.put("/cases/:id", async (req, res) => {
+  router.put("/:id", async (req, res) => {
     const { customer_id, handler1_id, handler2_id, effort_id, active } = req.body;
     if (!customer_id || !handler1_id || !effort_id) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });
@@ -200,17 +201,8 @@ export default function cases(pool: Pool) {
     }
   });
 
-  // Radera
-  router.delete("/cases/:id", async (req, res) => {
-    try {
-      const r = await pool.query("DELETE FROM cases WHERE id = $1 RETURNING *", [req.params.id]);
-      if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
-      res.json({ message: "Ärende raderat", case: r.rows[0] });
-    } catch (e) {
-      console.error("Error deleting case:", e);
-      res.status(500).json({ error: "Kunde inte radera ärende" });
-    }
-  });
+  // INGEN DELETE ENDPOINT - ärenden ska aldrig raderas, bara avslutas/aktiveras
+  // Detta skyddar statistiken och historiken
 
   return router;
 }

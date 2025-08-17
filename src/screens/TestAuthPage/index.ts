@@ -1,0 +1,1 @@
+export { TestAuthPage } from './TestAuthPage';

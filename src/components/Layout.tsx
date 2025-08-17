@@ -1,7 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Sidebar } from "../screens/DashboardRedesign/components/Sidebar";
+import { Sidebar } from "@/screens/DashboardRedesign/components/Sidebar";
 import { GlobalSearch } from "./GlobalSearch";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { LogOut, User } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +13,7 @@ interface LayoutProps {
 
 export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const handleSearchResult = (result: any) => {
     console.log("Valt sökresultat:", result);
@@ -52,6 +56,26 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
           </div>
           <div className="flex items-center gap-4">
             <GlobalSearch onResultSelect={handleSearchResult} />
+            
+            {/* User info and logout */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <User className="w-4 h-4" />
+                <span>{user?.name}</span>
+                <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                  {user?.role}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={logout}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logga ut
+              </Button>
+            </div>
           </div>
         </header>
         <main className="flex-1 p-8">

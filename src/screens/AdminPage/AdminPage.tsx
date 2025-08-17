@@ -1,14 +1,14 @@
 import React, { useEffect } from "react";
-import { API_URL } from "../../lib/api";
-import { Layout } from "../../components/Layout";
+import { Layout } from "@/components/Layout";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
-import { Card, CardContent } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
-import { Modal } from "../../components/ui/modal";
-import { AuditLog } from "../AdminPage/components/AuditLog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Modal } from "@/components/ui/modal";
+import { AuditLog } from "./components/AuditLog";
 import { Effort, Handler } from "@/types/types";
 import toast from "react-hot-toast";
+import { API_URL } from "@/lib/api";
 
 
 const TableHeader = ({ children }: { children: React.ReactNode }) => (

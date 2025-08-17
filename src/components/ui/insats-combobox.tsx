@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { getEfforts } from "../../lib/api";
+import { getEfforts } from "@/lib/api";
 
 interface Effort {
   id: string;

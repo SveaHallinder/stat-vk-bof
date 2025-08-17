@@ -3,8 +3,8 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "../../../components/ui/avatar";
-import { Button } from "../../../components/ui/button";
+} from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 export const Sidebar = (): JSX.Element => {
   const location = useLocation();

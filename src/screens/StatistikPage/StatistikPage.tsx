@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Layout } from "../../components/Layout";
-import { getStatsSummary, getStatsByEffort } from "../../lib/api";
-import { Button } from "../../components/ui/button";
-import { MultiSelectCombobox } from "../../components/ui/multi-select-combobox";
-import { DateRangePicker } from "../../components/ui/date-range-picker";
+import { Layout } from "@/components/Layout";
+import { getStatsSummary, getStatsByEffort, getEfforts, getHandlers, getCustomers } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
-import { getEfforts, getHandlers, getCustomers } from "../../lib/api";
 import { Customer, Handler, Effort } from "@/types/types";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";

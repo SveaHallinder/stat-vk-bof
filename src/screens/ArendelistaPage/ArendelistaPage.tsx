@@ -1,45 +1,49 @@
 import { useEffect, useState } from "react";
-import { Layout } from "../../components/Layout";
-import { Card, CardContent } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { Layout } from "@/components/Layout";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUp, ArrowDown } from "lucide-react";
-import { getShifts } from "../../lib/api";
-import { ShiftEntry } from "../../types/types";
+import { getCases } from "@/lib/api";
+import { CaseWithNames } from "@/types/types";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 export const ArendelistaPage = (): JSX.Element => {
-  const [shifts, setShifts] = useState<ShiftEntry[]>([]);
+  const navigate = useNavigate();
+  const [cases, setCases] = useState<CaseWithNames[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortField, setSortField] = useState<keyof ShiftEntry>("date");
+  const [sortField, setSortField] = useState<keyof CaseWithNames>("created_at");
   const [sortAsc, setSortAsc] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
-        const data = await getShifts();
-        setShifts(data);
+        const data = await getCases(true); // true = alla ärenden (aktiva och inaktiva)
+        setCases(data);
       } catch {
-        toast.error("Kunde inte hämta besök");
+        toast.error("Kunde inte hämta ärenden");
       }
     }
     load();
   }, []);
 
-  const statusOptions = Array.from(new Set(shifts.map(s => s.status || "Okänd"))).filter(Boolean);
+  const statusOptions = ["Aktivt", "Inaktivt"];
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
 
-  const filtered = shifts.filter(s => {
+  const filtered = cases.filter(c => {
     const term = debouncedSearch.toLowerCase();
     const matchesSearch =
-      !term || (s.customer_name || "").toLowerCase().includes(term) || (s.effort_name || "").toLowerCase().includes(term);
-    const matchesStatus = statusFilter === "all" || (s.status || "Okänd") === statusFilter;
+      !term || 
+      (c.customer_name || "").toLowerCase().includes(term) || 
+      (c.effort_name || "").toLowerCase().includes(term);
+    const matchesStatus = statusFilter === "all" || (c.active ? "Aktivt" : "Inaktivt") === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -50,6 +54,11 @@ export const ArendelistaPage = (): JSX.Element => {
     if (av > bv) return sortAsc ? 1 : -1;
     return 0;
   });
+
+  // Navigera till kundens profil med ärendet markerat
+  const handleCaseClick = (caseItem: CaseWithNames) => {
+    navigate(`/kunder/${caseItem.customer_id}?caseId=${caseItem.id}`);
+  };
 
   return (
     <Layout title="Ärendelista">
@@ -81,9 +90,8 @@ export const ArendelistaPage = (): JSX.Element => {
                   {[
                     { label: "Kund", field: "customer_name" },
                     { label: "Insats", field: "effort_name" },
-                    { label: "Datum", field: "date" },
-                    { label: "Timmar", field: "hours" },
-                    { label: "Status", field: "status" },
+                    { label: "Startdatum", field: "created_at" },
+                    { label: "Status", field: "active" },
                     { label: "Behandlare 1", field: "handler1_name" },
                     { label: "Behandlare 2", field: "handler2_name" }
                   ].map(col => (
@@ -91,7 +99,7 @@ export const ArendelistaPage = (): JSX.Element => {
                       key={col.field}
                       className="py-2 px-4 cursor-pointer"
                       onClick={() => {
-                        const f = col.field as keyof ShiftEntry;
+                        const f = col.field as keyof CaseWithNames;
                         if (sortField === f) setSortAsc(a => !a);
                         else {
                           setSortField(f);
@@ -99,24 +107,39 @@ export const ArendelistaPage = (): JSX.Element => {
                         }
                       }}
                     >
-                      <span className="inline-flex items-center gap-1">
+                      <div className="flex items-center gap-1">
                         {col.label}
-                        {sortField === col.field ? (sortAsc ? <ArrowUp size={14} /> : <ArrowDown size={14} />) : null}
-                      </span>
+                        {sortField === col.field && (
+                          sortAsc ? <ArrowUp size={16} /> : <ArrowDown size={16} />
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {sorted.map(s => (
-                  <tr key={s.id} className="border-b hover:bg-gray-50">
-                    <td className="py-2 px-4">{s.customer_name}</td>
-                    <td className="py-2 px-4">{s.effort_name}</td>
-                    <td className="py-2 px-4">{s.date ? s.date.slice(0,10) : "-"}</td>
-                    <td className="py-2 px-4">{s.hours}</td>
-                    <td className="py-2 px-4">{s.status || "Okänd"}</td>
-                    <td className="py-2 px-4">{s.handler1_name}</td>
-                    <td className="py-2 px-4">{s.handler2_name}</td>
+                {sorted.map(c => (
+                  <tr 
+                    key={c.id} 
+                    className="border-b hover:bg-gray-50 cursor-pointer transition-colors group"
+                    onClick={() => handleCaseClick(c)}
+                  >
+                    <td className="py-3 px-4 group-hover:text-[#17694c] group-hover:font-medium">{c.customer_name}</td>
+                    <td className="py-3 px-4 group-hover:text-[#17694c]">{c.effort_name}</td>
+                    <td className="py-3 px-4">
+                      {new Date(c.created_at).toLocaleDateString('sv-SE')}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        c.active 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {c.active ? 'Aktivt' : 'Inaktivt'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 group-hover:text-[#17694c]">{c.handler1_name}</td>
+                    <td className="py-3 px-4 group-hover:text-[#17694c]">{c.handler2_name || '-'}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Layout } from "../../components/Layout";
+import { Layout } from "@/components/Layout";
 import { useNavigate } from "react-router-dom";
 import { XCircle, Plus, ArrowUpDown, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
-import { Card, CardContent } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { createCustomer, getCustomers, softDeleteCustomer, reactivateCustomer } from "../../lib/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { createCustomer, getCustomers, softDeleteCustomer, reactivateCustomer } from "@/lib/api";
 import toast from "react-hot-toast";
 
 interface Customer {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { getCustomers } from "../../lib/api";
+import { getCustomers } from "@/lib/api";
 
 interface Customer {
   id: string;

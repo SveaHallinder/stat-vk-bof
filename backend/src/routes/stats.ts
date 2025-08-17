@@ -5,7 +5,7 @@ export default function stats(pool: Pool) {
   const router = Router();
 
   // Statistik: summeringar
-  router.get("/stats/summary", async (req, res) => {
+  router.get("/summary", async (req, res) => {
     const { from, to, insats, gender, birthYear, customer } = req.query;
     let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
@@ -82,7 +82,7 @@ export default function stats(pool: Pool) {
   });
 
   // Statistik: per insats
-  router.get("/stats/by-effort", async (req, res) => {
+  router.get("/by-effort", async (req, res) => {
     const { from, to, insats, gender, birthYear, customer } = req.query;
     let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
@@ -135,7 +135,7 @@ export default function stats(pool: Pool) {
   });
 
   // Statistik: per månad
-  router.get("/stats/by-month", async (req, res) => {
+  router.get("/by-month", async (req, res) => {
     const { from, to, insats } = req.query;
     let where = "WHERE cases.active = TRUE";
     const params: any[] = [];
@@ -169,7 +169,7 @@ export default function stats(pool: Pool) {
   });
 
   // Statistik: per behandlare
-  router.get("/stats/by-handler", async (req, res) => {
+  router.get("/by-handler", async (req, res) => {
     const { from, to, insats } = req.query;
     let where = "WHERE cases.active = TRUE";
     const params: any[] = [];

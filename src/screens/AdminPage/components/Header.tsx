@@ -1,6 +1,6 @@
 import { SearchIcon, ShieldIcon } from "lucide-react";
-import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
-import { Input } from "../../../components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 
 export const Header = (): JSX.Element => {
   return (
