@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { Pool } from "pg";
+import { authenticateToken } from "../middleware/auth";
 
 export default function efforts(pool: Pool) {
   const router = Router();
+  router.use(authenticateToken);
 
   // Skapa insats
   router.post("/", async (req, res) => {

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { API_URL } from '@/lib/api';
+import { api } from '@/lib/apiClient';
 
 export interface User {
   id: number;
@@ -41,12 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = async () => {
       if (token) {
         try {
-          const response = await fetch(`${API_URL}/users/me`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
+          const response = await api(`/users/me`);
 
           if (response.ok) {
             const data = await response.json();
@@ -70,13 +65,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_URL}/users/login`, {
+      const response = await api(`/users/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include', // behåll om ni använder cookie-baserad auth
+        body: JSON.stringify({ email, password })
       });
 
       if (!response.ok) {

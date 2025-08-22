@@ -2,41 +2,10 @@ import { Router, Request, Response } from "express";
 import { Pool } from "pg";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
-// Utöka Request interface för att inkludera user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        email: string;
-        name: string;
-        role: string;
-      };
-    }
-  }
-}
+import { authenticateToken } from "../middleware/auth";
 
 const users = (pool: Pool) => {
   const router = Router();
-
-  // Middleware för att validera JWT token
-  const authenticateToken = (req: Request, res: Response, next: any) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ error: 'Access token saknas' });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err: any, user: any) => {
-      if (err) {
-        return res.status(403).json({ error: 'Ogiltig token' });
-      }
-      req.user = user;
-      next();
-    });
-  };
 
   // Login endpoint
   router.post('/login', async (req: Request, res: Response) => {

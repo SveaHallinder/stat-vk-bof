@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { API_URL } from "@/lib/api";
+import { api } from "@/lib/apiClient";
 
 interface Handler {
   id: number;
@@ -23,7 +23,7 @@ export const BehandlareCombobox: React.FC<BehandlareComboboxProps> = ({ value, o
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`${API_URL}/handlers`);
+        const res = await api(`/handlers`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         setHandlers(data.filter((h: any) => h.active !== false));

@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { Pool } from "pg";
+import { authenticateToken } from "../middleware/auth";
 
 export default function cases(pool: Pool) {
   const router = Router();
+  router.use(authenticateToken);
 
   // Skapa nytt ärende
   router.post("/", async (req, res) => {

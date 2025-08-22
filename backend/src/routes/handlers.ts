@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { Pool } from "pg";
-import crypto from "crypto";
+import { authenticateToken } from "../middleware/auth";
+import { requireRole } from "../middleware/requireRole";
 
 export default function handlers(pool: Pool) {
   const router = Router();
+  router.use(authenticateToken, requireRole("admin"));
 
   // Hämta alla behandlare (med stöd för all=true)
   router.get("/", async (req, res) => {
@@ -59,13 +61,7 @@ export default function handlers(pool: Pool) {
         "INSERT INTO handlers (name, email) VALUES ($1, $2) RETURNING *",
         [name, email]
       );
-      const handler = result.rows[0];
-      const token = crypto.randomBytes(32).toString("hex");
-      await pool.query(
-        "INSERT INTO invites (handler_id, email, token) VALUES ($1, $2, $3)",
-        [handler.id, email, token]
-      );
-      res.status(201).json({ ...handler, inviteToken: token });
+      res.status(201).json(result.rows[0]);
     } catch {
       res.status(500).json({ error: "Kunde inte skapa behandlare" });
     }

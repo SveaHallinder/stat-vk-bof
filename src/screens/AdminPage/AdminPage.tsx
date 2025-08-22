@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/modal";
 import { AuditLog } from "./components/AuditLog";
 import { Effort, Handler } from "@/types/types";
 import toast from "react-hot-toast";
-import { API_URL } from "@/lib/api";
+import { api } from "@/lib/apiClient";
 
 
 const TableHeader = ({ children }: { children: React.ReactNode }) => (
@@ -32,7 +32,8 @@ export const AdminPage = (): JSX.Element => {
   const [openEditModal, setOpenEditModal] = React.useState(false);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [handlers, setHandlers] = React.useState<Handler[]>([]);
-  const [inviteLink, setInviteLink] = React.useState<string | null>(null);
+  const [inviteToken, setInviteToken] = React.useState<string | null>(null);
+  const [copied, setCopied] = React.useState(false);
   const [editHandler, setEditHandler] = React.useState<{ id: number, name: string, email: string } | null>(null);
   const [openEditHandlerModal, setOpenEditHandlerModal] = React.useState(false);
   const [showInactive, setShowInactive] = React.useState(false);
@@ -44,8 +45,8 @@ export const AdminPage = (): JSX.Element => {
 
   async function fetchEfforts() {
     try {
-      const url = showInactiveEfforts ? `${API_URL}/efforts?all=true` : `${API_URL}/efforts`;
-      const res = await fetch(url);
+      const url = showInactiveEfforts ? `/efforts?all=true` : `/efforts`;
+      const res = await api(url);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setInsatser(data);
@@ -61,8 +62,8 @@ export const AdminPage = (): JSX.Element => {
 
   async function fetchHandlers() {
     try {
-      const url = showInactive ? `${API_URL}/handlers?all=true` : `${API_URL}/handlers`;
-      const res = await fetch(url);
+      const url = showInactive ? `/handlers?all=true` : `/handlers`;
+      const res = await api(url);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setHandlers(data);
@@ -75,7 +76,7 @@ export const AdminPage = (): JSX.Element => {
   // Lägg till insats
   const handleAddInsats = async () => {
       try {
-        const res = await fetch(`${API_URL}/efforts`, {
+        const res = await api(`/efforts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: newInsats.name, available_for: newInsats.for })
@@ -94,7 +95,7 @@ export const AdminPage = (): JSX.Element => {
   const handleEditInsats = async () => {
     if (editIdx == null) return;
       try {
-        const res = await fetch(`${API_URL}/efforts/${insatser[editIdx].id}`, {
+        const res = await api(`/efforts/${insatser[editIdx].id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: editInsats.name, available_for: editInsats.for })
@@ -127,19 +128,25 @@ export const AdminPage = (): JSX.Element => {
     setHandlerErrors(errors);
     if (Object.keys(errors).length > 0) return;
     try {
-      const res = await fetch(`${API_URL}/handlers`, {
+      const res = await api(`/handlers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newHandler)
       });
       if (!res.ok) throw new Error();
-      const data = await res.json();
+      const handler = await res.json();
+      const inviteRes = await api(`/invites`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handler_id: handler.id, email: handler.email })
+      });
+      if (!inviteRes.ok) throw new Error();
+      const invite = await inviteRes.json();
       setNewHandler({ name: "", email: "" });
       setHandlerErrors({});
       setOpenHandlerModal(false);
       fetchHandlers();
-      // Spara inbjudningslänk
-      setInviteLink(`http://localhost:5173/invite/${data.inviteToken}`);
+      setInviteToken(invite.token);
     } catch {
       toast.error("Kunde inte spara behandlare");
     }
@@ -195,7 +202,7 @@ export const AdminPage = (): JSX.Element => {
                               size="sm"
                               onClick={async () => {
                                 try {
-                                  const res = await fetch(`${API_URL}/efforts/${i.id}/activate`, { method: "PUT" });
+                                  const res = await api(`/efforts/${i.id}/activate`, { method: "PUT" });
                                   if (!res.ok) throw new Error();
                                   fetchEfforts();
                                 } catch {
@@ -266,7 +273,7 @@ export const AdminPage = (): JSX.Element => {
                   onClick={async () => {
                     if (editIdx != null) {
                       try {
-                        const res = await fetch(`${API_URL}/efforts/${insatser[editIdx].id}/deactivate`, { method: "PUT" });
+                        const res = await api(`/efforts/${insatser[editIdx].id}/deactivate`, { method: "PUT" });
                         if (!res.ok) throw new Error();
                         setShowDeleteModal(false);
                         setOpenEditModal(false);
@@ -323,7 +330,7 @@ export const AdminPage = (): JSX.Element => {
                               size="sm"
                               onClick={async () => {
                                 try {
-                                  const res = await fetch(`${API_URL}/handlers/${h.id}/activate`, { method: "PUT" });
+                                  const res = await api(`/handlers/${h.id}/activate`, { method: "PUT" });
                                   if (!res.ok) throw new Error();
                                   fetchHandlers();
                                 } catch {
@@ -404,7 +411,7 @@ export const AdminPage = (): JSX.Element => {
                   onClick={async () => {
                     if (editHandler) {
                       try {
-                        const res = await fetch(`${API_URL}/handlers/${editHandler.id}/deactivate`, { method: "PUT" });
+                        const res = await api(`/handlers/${editHandler.id}/deactivate`, { method: "PUT" });
                         if (!res.ok) throw new Error();
                         setOpenEditHandlerModal(false);
                         fetchHandlers();
@@ -423,7 +430,7 @@ export const AdminPage = (): JSX.Element => {
                     onClick={async () => {
                       if (editHandler) {
                         try {
-                          const res = await fetch(`${API_URL}/handlers/${editHandler.id}`, {
+                          const res = await api(`/handlers/${editHandler.id}`, {
                             method: "PUT",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ name: editHandler.name, email: editHandler.email })
@@ -443,28 +450,31 @@ export const AdminPage = (): JSX.Element => {
               </div>
             </div>
           </Modal>
-          {inviteLink && (
+          {inviteToken && (
             <div className="fixed top-8 right-8 bg-white border border-green-400 shadow-lg rounded-lg p-6 z-50">
               <div className="mb-2 font-semibold text-green-700">Inbjudningslänk skapad!</div>
-              <input
-                className="w-full border rounded px-2 py-1 mb-2"
-                value={inviteLink}
-                readOnly
-                onFocus={e => e.target.select()}
-              />
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  className="w-full border rounded px-2 py-1"
+                  value={`${window.location.origin}/invite/${inviteToken}`}
+                  readOnly
+                  onFocus={e => e.target.select()}
+                />
+                <button
+                  className="bg-green-600 text-white px-4 py-2 rounded"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/invite/${inviteToken}`);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  Kopiera länk
+                </button>
+              </div>
+              {copied && <div className="text-green-600 text-sm">Kopierad!</div>}
               <button
-                className="bg-green-600 text-white px-4 py-2 rounded"
-                onClick={() => {
-                  navigator.clipboard.writeText(inviteLink);
-                  alert('Länk kopierad!');
-                  setInviteLink(null);
-                }}
-              >
-                Kopiera länk
-              </button>
-              <button
-                className="ml-2 text-gray-500 underline"
-                onClick={() => setInviteLink(null)}
+                className="mt-2 text-gray-500 underline"
+                onClick={() => setInviteToken(null)}
               >
                 Stäng
               </button>
