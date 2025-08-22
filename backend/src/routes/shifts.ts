@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { Pool } from "pg";
+import { authenticateToken } from "../middleware/auth";
 
 export default function shifts(pool: Pool) {
   const router = Router();
+  router.use(authenticateToken);
 
   // Hämta alla shifts med relaterad information och filter
   router.get("/", async (req, res) => {

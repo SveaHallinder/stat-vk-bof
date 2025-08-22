@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { Pool } from "pg";
+import { authenticateToken } from "../middleware/auth";
 
 export default function stats(pool: Pool) {
   const router = Router();
+  router.use(authenticateToken);
 
   // Statistik: summeringar
   router.get("/summary", async (req, res) => {

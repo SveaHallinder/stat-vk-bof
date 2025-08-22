@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./globals.css";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "@/routes/AdminRoute";
 import { DashboardRedesign } from "./screens/DashboardRedesign";
 import { KunderPage } from "./screens/KunderPage";
 import { CustomerProfile } from "./screens/KunderPage/CustomerProfile";
@@ -13,6 +14,7 @@ import { StatistikPage } from "./screens/StatistikPage";
 import { AdminPage } from "./screens/AdminPage";
 import { LoginPage } from "./screens/LoginPage";
 import { TestAuthPage } from "./screens/TestAuthPage";
+import { InviteAcceptPage } from "./screens/InviteAcceptPage";
 import { Toaster } from "react-hot-toast";
 
 createRoot(document.getElementById("app") as HTMLElement).render(
@@ -22,6 +24,7 @@ createRoot(document.getElementById("app") as HTMLElement).render(
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/invite/:token" element={<InviteAcceptPage />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardRedesign /></ProtectedRoute>} />
           <Route path="/kunder" element={<ProtectedRoute><KunderPage /></ProtectedRoute>} />
@@ -29,7 +32,7 @@ createRoot(document.getElementById("app") as HTMLElement).render(
           <Route path="/registrera-tid" element={<ProtectedRoute><RegisteraTidPage /></ProtectedRoute>} />
           <Route path="/arendelista" element={<ProtectedRoute><ArendelistaPage /></ProtectedRoute>} />
           <Route path="/statistik" element={<ProtectedRoute><StatistikPage /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
+          <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
           <Route path="/test-auth" element={<ProtectedRoute><TestAuthPage /></ProtectedRoute>} />
         </Routes>
       </AuthProvider>
