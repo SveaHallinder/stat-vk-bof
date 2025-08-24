@@ -17,6 +17,21 @@ import invites from "./routes/invites";
 
 dotenv.config();
 
+// Tvinga rätt databasanslutning för att lösa problemet
+process.env.DATABASE_URL = 'postgres://admin@localhost:5432/vallentuna';
+
+// Validera kritiska miljövariabler
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'devsecret') {
+  console.error('❌ KRITISKT: JWT_SECRET måste vara en stark secret!');
+  console.error('   Använd: openssl rand -base64 32');
+  process.exit(1);
+}
+
+if (!process.env.DATABASE_URL) {
+  console.error('❌ KRITISKT: DATABASE_URL saknas!');
+  process.exit(1);
+}
+
 const app = express();
 app.set("trust proxy", 1);
 const corsOrigins = process.env.CORS_ORIGIN?.split(",").map(o => o.trim()).filter(Boolean);
@@ -33,12 +48,21 @@ app.use(helmet());
 app.use(express.json());
 
 app.get("/api/healthz", (_req, res) => {
-  res.json({ ok: true, uptime: process.uptime(), version: pkg.version });
+  res.json({ 
+    ok: true, 
+    uptime: process.uptime(), 
+    version: pkg.version,
+    message: 'Backend is running and responding to requests'
+  });
 });
+
+
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
+
+
 
 // Viktigt: allt under /api
 app.use("/api/customers", customers(pool));

@@ -5,9 +5,11 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Sidebar = (): JSX.Element => {
   const location = useLocation();
+  const { user } = useAuth();
 
   const navItems = [
     { id: 1, name: "Startsida", path: "/", active: location.pathname === "/" },
@@ -15,7 +17,13 @@ export const Sidebar = (): JSX.Element => {
     { id: 3, name: "Registrera tid", path: "/registrera-tid", active: location.pathname === "/registrera-tid" },
     { id: 4, name: "Ärendelista", path: "/arendelista", active: location.pathname === "/arendelista" },
     { id: 5, name: "Statistik", path: "/statistik", active: location.pathname === "/statistik" },
-    { id: 6, name: "Admin", path: "/admin", active: location.pathname === "/admin" },
+    // Visa "Min Profil" för vanliga behandlare, "Admin" för admin-användare
+    { 
+      id: 6, 
+      name: user?.role === 'admin' ? "Admin" : "Min Profil", 
+      path: user?.role === 'admin' ? "/admin" : "/min-profil", 
+      active: location.pathname === (user?.role === 'admin' ? "/admin" : "/min-profil") 
+    },
   ];
 
   return (

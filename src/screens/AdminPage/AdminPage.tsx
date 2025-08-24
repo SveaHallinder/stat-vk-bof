@@ -33,6 +33,7 @@ export const AdminPage = (): JSX.Element => {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [handlers, setHandlers] = React.useState<Handler[]>([]);
   const [inviteToken, setInviteToken] = React.useState<string | null>(null);
+  const [inviteVerificationCode, setInviteVerificationCode] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
   const [editHandler, setEditHandler] = React.useState<{ id: number, name: string, email: string } | null>(null);
   const [openEditHandlerModal, setOpenEditHandlerModal] = React.useState(false);
@@ -128,27 +129,39 @@ export const AdminPage = (): JSX.Element => {
     setHandlerErrors(errors);
     if (Object.keys(errors).length > 0) return;
     try {
-      const res = await api(`/handlers`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newHandler)
-      });
-      if (!res.ok) throw new Error();
-      const handler = await res.json();
+      // Skapa invite direkt (ingen handler skapas än)
       const inviteRes = await api(`/invites`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handler_id: handler.id, email: handler.email })
+        body: JSON.stringify({ 
+          email: newHandler.email, 
+          role: 'handler' 
+        })
       });
-      if (!inviteRes.ok) throw new Error();
+      if (!inviteRes.ok) {
+        const errorData = await inviteRes.json();
+        throw new Error(errorData.error || 'Kunde inte skapa inbjudan');
+      }
+      
       const invite = await inviteRes.json();
+      
+      // Visa invite-information för admin
+      setInviteToken(invite.token);
+      setInviteVerificationCode(invite.verification_code);
+      
+      // Rensa formuläret
       setNewHandler({ name: "", email: "" });
       setHandlerErrors({});
       setOpenHandlerModal(false);
+      
+      // Uppdatera handlers-listan
       fetchHandlers();
-      setInviteToken(invite.token);
-    } catch {
-      toast.error("Kunde inte spara behandlare");
+      
+      toast.success(`Inbjudan skapad för ${invite.email}`);
+      
+    } catch (error) {
+      console.error('Error creating invite:', error);
+      toast.error(error instanceof Error ? error.message : "Kunde inte skapa inbjudan");
     }
   }
 
@@ -451,33 +464,87 @@ export const AdminPage = (): JSX.Element => {
             </div>
           </Modal>
           {inviteToken && (
-            <div className="fixed top-8 right-8 bg-white border border-green-400 shadow-lg rounded-lg p-6 z-50">
-              <div className="mb-2 font-semibold text-green-700">Inbjudningslänk skapad!</div>
-              <div className="flex items-center gap-2 mb-2">
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={`${window.location.origin}/invite/${inviteToken}`}
-                  readOnly
-                  onFocus={e => e.target.select()}
-                />
+            <div className="fixed top-8 right-8 bg-white border border-green-400 shadow-lg rounded-lg p-6 z-50 max-w-md">
+              <div className="mb-4">
+                <div className="font-semibold text-green-700 text-lg mb-2">🎉 Inbjudning skapad!</div>
+                <div className="text-sm text-gray-600 mb-4">
+                  Skicka följande information till användaren:
+                </div>
+              </div>
+
+              {/* Verifieringskod */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🔐 Verifieringskod (8 siffror)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    className="w-full border rounded px-3 py-2 font-mono text-lg tracking-widest text-center bg-gray-50"
+                    value={inviteVerificationCode || "Laddar..."}
+                    readOnly
+                    onFocus={e => e.target.select()}
+                  />
+                  <button
+                    className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
+                    onClick={() => {
+                      if (inviteVerificationCode) {
+                        navigator.clipboard.writeText(inviteVerificationCode);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }
+                    }}
+                  >
+                    Kopiera
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Denna kod går ut om 24 timmar
+                </div>
+              </div>
+
+              {/* Invite-länk */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🔗 Inbjudningslänk
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    className="w-full border rounded px-2 py-2 text-sm"
+                    value={`${window.location.origin}/invite/${inviteToken}`}
+                    readOnly
+                    onFocus={e => e.target.select()}
+                  />
+                  <button
+                    className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/invite/${inviteToken}`);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                  >
+                    Kopiera
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Denna länk går ut om 7 dagar
+                </div>
+              </div>
+
+              {/* Status */}
+              {copied && (
+                <div className="text-green-600 text-sm text-center mb-3">
+                  ✅ Kopierat till urklipp!
+                </div>
+              )}
+
+              <div className="text-center">
                 <button
-                  className="bg-green-600 text-white px-4 py-2 rounded"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/invite/${inviteToken}`);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  }}
+                  className="text-gray-500 underline text-sm"
+                  onClick={() => setInviteToken(null)}
                 >
-                  Kopiera länk
+                  Stäng
                 </button>
               </div>
-              {copied && <div className="text-green-600 text-sm">Kopierad!</div>}
-              <button
-                className="mt-2 text-gray-500 underline"
-                onClick={() => setInviteToken(null)}
-              >
-                Stäng
-              </button>
             </div>
           )}
         </TabsContent>

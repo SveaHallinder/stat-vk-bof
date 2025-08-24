@@ -5,6 +5,20 @@ import { requireRole } from "../middleware/requireRole";
 
 export default function handlers(pool: Pool) {
   const router = Router();
+  
+  // Public endpoint: Get a limited list of handlers (for all authenticated users)
+  // This endpoint will return only ID and name, and will not require 'admin' role.
+  router.get('/public', authenticateToken, async (req, res) => {
+    try {
+      const result = await pool.query('SELECT id, name FROM handlers ORDER BY name');
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error fetching public handlers list:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Admin-only endpoints
   router.use(authenticateToken, requireRole("admin"));
 
   // Hämta alla behandlare (med stöd för all=true)
@@ -50,21 +64,13 @@ export default function handlers(pool: Pool) {
     }
   });
 
-  // Skapa behandlare
+  // Skapa behandlare - DENNA FUNKTION ÄR INAKTIVERAD
+  // Behandlare skapas endast via invite-systemet för säkerhet
   router.post("/", async (req, res) => {
-    const { name, email } = req.body;
-    if (!name || !email) {
-      return res.status(400).json({ error: "Namn och mail krävs" });
-    }
-    try {
-      const result = await pool.query(
-        "INSERT INTO handlers (name, email) VALUES ($1, $2) RETURNING *",
-        [name, email]
-      );
-      res.status(201).json(result.rows[0]);
-    } catch {
-      res.status(500).json({ error: "Kunde inte skapa behandlare" });
-    }
+    res.status(403).json({ 
+      error: "Behandlare kan inte skapas direkt. Använd invite-systemet istället.",
+      message: "Gå till Admin > Behandlare och skapa en inbjudan."
+    });
   });
 
   // Uppdatera behandlare

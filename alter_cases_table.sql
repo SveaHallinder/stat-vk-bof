@@ -1,3 +1,0 @@
-ALTER TABLE cases DROP COLUMN date;
-ALTER TABLE cases DROP COLUMN hours;
-ALTER TABLE cases DROP COLUMN status;

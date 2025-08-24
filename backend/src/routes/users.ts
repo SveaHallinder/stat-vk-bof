@@ -1,17 +1,28 @@
 import { Router, Request, Response } from "express";
 import { Pool } from "pg";
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { authenticateToken } from "../middleware/auth";
+import rateLimit from "express-rate-limit";
+
+// Rate limiting för login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minuter
+  max: 5, // 5 försök per IP
+  message: { error: 'För många inloggningsförsök. Försök igen om 15 minuter.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const users = (pool: Pool) => {
   const router = Router();
 
-  // Login endpoint
-  router.post('/login', async (req: Request, res: Response) => {
+
+
+  // Login endpoint med rate limiting
+  router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-
       if (!email || !password) {
         return res.status(400).json({ error: 'Email och lösenord krävs' });
       }
@@ -28,8 +39,8 @@ const users = (pool: Pool) => {
 
       const user = result.rows[0];
 
-      // Kontrollera lösenord (för nu använder vi en enkel hash, senare kan vi uppgradera)
-      const isValidPassword = await bcrypt.compare(password, user.password_hash || '');
+      // Kontrollera lösenord med bcrypt
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
       
       if (!isValidPassword) {
         return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' });
@@ -43,7 +54,7 @@ const users = (pool: Pool) => {
           name: user.name,
           role: user.role || 'handler'
         },
-        process.env.JWT_SECRET || 'fallback_secret',
+        process.env.JWT_SECRET!,
         { expiresIn: '24h' }
       );
 
@@ -60,6 +71,7 @@ const users = (pool: Pool) => {
 
     } catch (error) {
       console.error('Login error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       res.status(500).json({ error: 'Internt serverfel' });
     }
   });
@@ -78,14 +90,14 @@ const users = (pool: Pool) => {
         return res.status(400).json({ error: 'Namn, email och lösenord krävs' });
       }
 
-      // Hasha lösenord
+      // Hasha lösenord med bcrypt
       const saltRounds = 10;
-      const passwordHash = await bcrypt.hash(password, saltRounds);
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
 
       // Skapa användare
       const result = await pool.query(
         'INSERT INTO handlers (name, email, password_hash, role, active) VALUES ($1, $2, $3, $4, true) RETURNING id, name, email, role',
-        [name, email, passwordHash, role]
+        [name, email, hashedPassword, role]
       );
 
       const newUser = result.rows[0];

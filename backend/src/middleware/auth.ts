@@ -24,7 +24,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    const user = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as any;
+    const user = jwt.verify(token, process.env.JWT_SECRET!) as any;
     req.user = user;
     next();
   } catch (err: any) {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "@/components/Layout";
-import { getStatsSummary, getStatsByEffort, getEfforts, getHandlers, getCustomers } from "@/lib/api";
+import { getStatsSummary, getStatsByEffort, getEfforts, getHandlers, getPublicHandlers, getCustomers } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -14,6 +15,7 @@ import { Loader2 } from "lucide-react";
 const minBarHeight = 24;
 
 export const StatistikPage = (): JSX.Element => {
+  const { user } = useAuth();
   const [tooltip, setTooltip] = useState<{ x: number; y: number; value: string } | null>(null);
   const [stats, setStats] = useState<{ antal_besok: number; antal_kunder: number; genomsnittlig_tid: number; avbokningsgrad: number } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,7 +52,7 @@ export const StatistikPage = (): JSX.Element => {
   // Hämta filteralternativ vid mount
   useEffect(() => {
     getEfforts().then(setEffortOptions).catch(() => toast.error("Kunde inte hämta insatser"));
-    getHandlers(true).then(setHandlerOptions).catch(() => toast.error("Kunde inte hämta behandlare"));
+    (user?.role === 'admin' ? getHandlers({ all: true }) : getPublicHandlers()).then(setHandlerOptions).catch(() => toast.error("Kunde inte hämta behandlare"));
     getCustomers(true).then((data) => {
       // Konvertera Customer[] till CustomerItem[] genom att säkerställa att birthYear finns
       const customerItems: CustomerItem[] = data
@@ -68,7 +70,7 @@ export const StatistikPage = (): JSX.Element => {
         .sort((a, b) => Number(b) - Number(a));
       setYearOptions(years.map((y: string) => ({ label: y, value: y })));
     }).catch(() => toast.error("Kunde inte hämta kunder"));
-  }, []);
+  }, [user]);
 
   // Bygg query params från filter
   function buildParams() {

@@ -288,3 +288,13 @@ export async function getHandlers(all = false): Promise<Handler[]> {
   if (!res.ok) throw new Error("Kunde inte hämta behandlare");
   return res.json();
 }
+
+export interface HandlerPublic {
+  id: string;
+  name: string;
+}
+
+export const getPublicHandlers = async (): Promise<HandlerPublic[]> => {
+  const response = await api(`/handlers/public`);
+  return response.json();
+};

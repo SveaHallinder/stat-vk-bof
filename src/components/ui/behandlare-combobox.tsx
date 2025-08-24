@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Handler {
   id: number;
@@ -14,6 +15,7 @@ interface BehandlareComboboxProps {
 }
 
 export const BehandlareCombobox: React.FC<BehandlareComboboxProps> = ({ value, onChange, label }) => {
+  const { user } = useAuth();
   const [handlers, setHandlers] = useState<Handler[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -23,16 +25,25 @@ export const BehandlareCombobox: React.FC<BehandlareComboboxProps> = ({ value, o
   useEffect(() => {
     async function load() {
       try {
-        const res = await api(`/handlers`);
+        // Använd /handlers/public för vanliga användare, /handlers för admin
+        const endpoint = user?.role === 'admin' ? '/handlers' : '/handlers/public';
+        const res = await api(endpoint);
         if (!res.ok) throw new Error();
         const data = await res.json();
-        setHandlers(data.filter((h: any) => h.active !== false));
+        
+        // Filtrera bara aktiva behandlare om vi använder admin-endpoint
+        if (user?.role === 'admin') {
+          setHandlers(data.filter((h: any) => h.active !== false));
+        } else {
+          // För public endpoint behöver vi inte filtrera eftersom den redan returnerar aktiva
+          setHandlers(data);
+        }
       } catch {
         setHandlers([]);
       }
     }
     load();
-  }, []);
+  }, [user?.role]);
 
   useEffect(() => {
     const match = handlers.find(h => h.id.toString() === value);

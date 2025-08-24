@@ -25,8 +25,8 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
         navigate('/kunder');
         break;
       case 'handler':
-        // Navigera till admin-sida
-        navigate('/admin');
+        // Navigera till min profil-sida för vanliga behandlare
+        navigate('/min-profil');
         break;
       case 'effort':
         // Navigera till admin-sida (där insatser hanteras)

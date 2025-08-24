@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Save, FileText, Clock, CheckCircle, Edit } from "lucide-react";
-import { addShift, getShifts, getCases, getEfforts, getHandlers, createCase, updateShift } from "@/lib/api";
+import { Plus, Trash2, Save, FileText, Clock, CheckCircle } from "lucide-react";
+import { addShift, getShifts, getCases, getEfforts, getHandlers, getPublicHandlers, createCase, updateShift } from "@/lib/api";
 import { KundCombobox } from "@/components/ui/kund-combobox";
 import { ShiftEntry, CaseWithNames, Effort, Handler } from "@/types/types";
+import { HandlerPublic } from "@/lib/api";
 import toast from "react-hot-toast";
 
 // Hjälpfunktion för att få dagens datum
@@ -25,6 +27,7 @@ interface TimeEntry {
 }
 
 export const RegisteraTidPage = (): JSX.Element => {
+  const { user } = useAuth();
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([
     {
       id: "1",
@@ -37,7 +40,7 @@ export const RegisteraTidPage = (): JSX.Element => {
   
   const [activeCases, setActiveCases] = useState<CaseWithNames[]>([]);
   const [efforts, setEfforts] = useState<Effort[]>([]);
-  const [handlers, setHandlers] = useState<Handler[]>([]);
+  const [handlers, setHandlers] = useState<Handler[] | HandlerPublic[]>([]);
   const [shifts, setShifts] = useState<ShiftEntry[]>([]);
   
   // State för att registrera ärende
@@ -62,7 +65,7 @@ export const RegisteraTidPage = (): JSX.Element => {
         const [activeCasesData, effortsData, handlersData, shiftsData] = await Promise.all([
           getCases(false), // false = endast aktiva ärenden
           getEfforts(),
-          getHandlers(true),
+          user?.role === 'admin' ? getHandlers(true) : getPublicHandlers(),
           getShifts()
         ]);
         setActiveCases(activeCasesData);
@@ -83,7 +86,7 @@ export const RegisteraTidPage = (): JSX.Element => {
       }
     }
     loadData();
-  }, []);
+  }, [user]);
 
   // Debug useEffect för showCreateCase
   useEffect(() => {
@@ -589,7 +592,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                 </tr>
               </thead>
               <tbody>
-                {shifts.map((shift, index) => (
+                {shifts.map((shift) => (
                   <tr 
                     key={shift.id} 
                     className={`hover:bg-blue-50 border-b border-gray-200 transition-colors cursor-pointer`}

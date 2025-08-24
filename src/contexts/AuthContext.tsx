@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { api } from '@/lib/apiClient';
 
 export interface User {
@@ -36,6 +36,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
   const [loading, setLoading] = useState(true);
 
+  // Session timeout - 30 minuter inaktivitet
+  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minuter
+  const inactivityTimerRef = useRef<NodeJS.Timeout>();
+
   // Kontrollera om användaren är inloggad vid app-start
   useEffect(() => {
     const checkAuth = async () => {
@@ -61,6 +65,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     checkAuth();
+  }, [token]);
+
+  // Event listeners för session timeout
+  useEffect(() => {
+    if (token) {
+      resetInactivityTimer();
+      
+      const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+      
+      events.forEach(event => {
+        document.addEventListener(event, resetInactivityTimer);
+      });
+
+      return () => {
+        events.forEach(event => {
+          document.removeEventListener(event, resetInactivityTimer);
+        });
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+        }
+      };
+    }
   }, [token]);
 
   const login = async (email: string, password: string) => {
@@ -94,7 +120,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('authToken');
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
   };
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    if (token) {
+      inactivityTimerRef.current = setTimeout(() => {
+        console.log('Session timeout - utloggning på grund av inaktivitet');
+        logout();
+      }, SESSION_TIMEOUT);
+    }
+  }, [token]);
 
   const isAuthenticated = !!user && !!token;
 

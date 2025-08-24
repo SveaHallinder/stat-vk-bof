@@ -62,7 +62,14 @@ export default function shifts(pool: Pool) {
          ORDER BY shifts.date DESC, shifts.id DESC`,
         params
       );
-      res.json(result.rows);
+      
+      // Konvertera datum till YYYY-MM-DD format för att undvika tidszonsproblem
+      const rows = result.rows.map(row => ({
+        ...row,
+        date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date
+      }));
+      
+      res.json(rows);
     } catch (e) {
       console.error("Error fetching shifts:", e);
       res.status(500).json({ error: "Kunde inte hämta shifts" });
