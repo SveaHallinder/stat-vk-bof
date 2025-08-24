@@ -36,6 +36,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
   const [loading, setLoading] = useState(true);
 
+  // Debug localStorage
+  useEffect(() => {
+    console.log('🔍 AuthProvider mounted');
+    console.log('📱 Initial localStorage token:', localStorage.getItem('authToken') ? 'Found' : 'Not found');
+    console.log('📱 Initial state token:', token ? 'Found' : 'Not found');
+    
+    // Test localStorage direkt
+    const storedToken = localStorage.getItem('authToken');
+    console.log('🔍 Direct localStorage check:', storedToken ? `${storedToken.substring(0, 20)}...` : 'None');
+  }, []);
+
   // Session timeout - 30 minuter inaktivitet
   const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minuter
   const inactivityTimerRef = useRef<NodeJS.Timeout>();
@@ -43,23 +54,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Kontrollera om användaren är inloggad vid app-start
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('🔍 Checking auth on app start...');
+      console.log('📱 Stored token:', token ? `${token.substring(0, 20)}...` : 'None');
+      
       if (token) {
         try {
+          console.log('🔐 Validating token with backend...');
           const response = await api(`/users/me`);
 
           if (response.ok) {
             const data = await response.json();
+            console.log('✅ Token valid, user:', data.user.name);
             setUser(data.user);
           } else {
+            console.log('❌ Token invalid, response status:', response.status);
             // Token är ogiltig, ta bort den
             localStorage.removeItem('authToken');
             setToken(null);
           }
         } catch (error) {
-          console.error('Auth check failed:', error);
+          console.error('❌ Auth check failed:', error);
           localStorage.removeItem('authToken');
           setToken(null);
         }
+      } else {
+        console.log('📱 No token found in localStorage');
       }
       setLoading(false);
     };
@@ -91,6 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('🔑 Attempting login for:', email);
       const response = await api(`/users/login`, {
         method: 'POST',
         headers: {
@@ -106,12 +126,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const data = await response.json();
+      console.log('✅ Login successful, user:', data.user.name);
+      console.log('🔐 Token received:', data.token ? `${data.token.substring(0, 20)}...` : 'None');
       
       setUser(data.user);
       setToken(data.token);
       localStorage.setItem('authToken', data.token);
+      console.log('💾 Token saved to localStorage');
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       throw error;
     }
   };
