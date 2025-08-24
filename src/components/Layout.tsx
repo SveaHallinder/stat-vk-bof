@@ -57,24 +57,22 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
           <div className="flex items-center gap-4">
             <GlobalSearch onResultSelect={handleSearchResult} />
             
-            {/* User info and logout */}
+            {/* User profile section */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <User className="w-4 h-4" />
-                <span>{user?.name}</span>
-                <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
-                  {user?.role}
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={logout}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              <button
+                onClick={() => navigate('/min-profil')}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logga ut
-              </Button>
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <User className="w-4 h-4 text-green-600" />
+                </div>
+                <div className="text-left">
+                  <div className="text-sm font-medium text-gray-900">{user?.name}</div>
+                  <div className="text-xs text-gray-500 capitalize">
+                    {user?.role === 'handler' ? 'Behandlare' : user?.role === 'admin' ? 'Administratör' : user?.role}
+                  </div>
+                </div>
+              </button>
             </div>
           </div>
         </header>

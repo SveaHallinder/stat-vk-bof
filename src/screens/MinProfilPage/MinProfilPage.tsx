@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCustomers, getCases } from '../../lib/api';
 import { Layout } from '../../components/Layout';
+import { LogOut } from 'lucide-react';
 
 interface Customer {
   id: number;
@@ -91,12 +92,23 @@ const MinProfilPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Roll</label>
-                  <p className="mt-1 text-sm text-gray-900 capitalize">{user?.role}</p>
+                  <p className="mt-1 text-sm text-gray-900 capitalize">
+                    {user?.role === 'handler' ? 'Behandlare' : user?.role === 'admin' ? 'Administratör' : user?.role}
+                  </p>
                 </div>
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-800">
                     💡 Kontakta systemadministratören om du behöver ändra din profilinformation.
                   </p>
+                </div>
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={logout}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logga ut
+                  </button>
                 </div>
               </div>
             </div>
