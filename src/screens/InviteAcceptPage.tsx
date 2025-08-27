@@ -91,7 +91,7 @@ export const InviteAcceptPage = () => {
   if (step === 'verify') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+        <div className="max-w-sm md:max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Verifiera e-postadress</h1>
             <p className="text-gray-600">Ange din e-postadress och verifieringskoden från inbjudan</p>
@@ -141,7 +141,7 @@ export const InviteAcceptPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full sm:w-auto bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? "Verifierar..." : "Verifiera e-postadress"}
             </button>
@@ -159,7 +159,7 @@ export const InviteAcceptPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+      <div className="max-w-sm md:max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Skapa ditt konto</h1>
           <p className="text-gray-600">E-postadressen {email} är verifierad. Ange dina uppgifter för att slutföra registreringen.</p>
@@ -221,7 +221,7 @@ export const InviteAcceptPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full sm:w-auto bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? "Skapar konto..." : "Skapa konto"}
           </button>
