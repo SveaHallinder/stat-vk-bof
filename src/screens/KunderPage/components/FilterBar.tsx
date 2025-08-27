@@ -35,14 +35,14 @@ export const FilterBar = ({
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-80 pl-4 pr-12 py-2 h-10 rounded-lg border border-gray-300 text-sm placeholder:text-[#888888] focus:border-[#17694c] focus:ring-0"
+            className="w-full sm:w-80 pl-4 pr-12 py-2 h-10 rounded-lg border border-gray-300 text-sm placeholder:text-[#888888] focus:border-[#17694c] focus:ring-0"
             placeholder="Sök efter namn, personnummer eller ID..."
           />
           <SearchIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         {filters.map((filter) => (
           <Button
             key={filter.id}
