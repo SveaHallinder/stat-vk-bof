@@ -269,16 +269,6 @@ export const RegisteraTidPage = (): JSX.Element => {
 
   return (
     <Layout title="Registrera tid">
-      <div className="mb-6 text-gray-600 text-base">
-        <p className="mb-2">
-          <strong>Registrera tid</strong> - Här kan du registrera tidsregistreringar för befintliga aktiva ärenden. 
-          Välj ärende, datum, timmar och status.
-        </p>
-        <p className="text-sm text-gray-500">
-          <strong>Skillnad från Ärendelista:</strong> Ärendelista visar ärenden/cases, medan denna sida visar tidsregistreringar (shifts) 
-          och låter dig skapa nya tidsregistreringar.
-        </p>
-      </div>
 
       {/* Tidsregistreringar - nu först eftersom det är huvudsyftet */}
       <Card className="mb-8">
@@ -289,76 +279,80 @@ export const RegisteraTidPage = (): JSX.Element => {
                 <Clock className="w-4 h-4 text-white" />
               </div>
               <span>Tidsregistreringar</span>
-              {hasUnsavedChanges && (
-                <span className="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
-                  {getUnsavedCount()} rad(er) redo att sparas
-                </span>
-              )}
             </div>
+            {hasUnsavedChanges && (
+              <span className="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                {getUnsavedCount()} rad(er) redo att sparas
+              </span>
+            )}
           </CardTitle>
+          <p className="mb-2 text-sm max-w-xl">
+                Här kan du registrera tidsregistreringar för befintliga aktiva ärenden. 
+                Välj ärende, datum, timmar och status. Registrera ett nytt ärende nedan om du inte hittar ärendet i listan.
+          </p>
         </CardHeader>
         <CardContent>
           {/* Tidsregistreringar */}
           <div className="space-y-1">
-            {timeEntries.map((entry) => (
-              <div key={entry.id} className="grid grid-cols-4 gap-4 p-4 bg-white rounded-lg">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Ärende *</Label>
-                  <Select 
-                    value={entry.caseId?.toString() || ""} 
-                    onValueChange={(value) => updateTimeEntry(entry.id, 'caseId', Number(value))}
-                  >
-                    <SelectTrigger className="border-gray-300 focus:border-blue-600 focus:ring-blue-600">
-                      <SelectValue placeholder="Välj ärende" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeCases.map((caseItem) => (
-                        <SelectItem key={caseItem.id} value={caseItem.id.toString()}>
-                          {caseItem.customer_name} - {caseItem.effort_name} ({caseItem.handler1_name})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Datum *</Label>
-                  <Input
-                    type="date"
-                    value={entry.date}
-                    onChange={(e) => updateTimeEntry(entry.id, 'date', e.target.value)}
-                    className="border-gray-300 focus:border-blue-600 focus:ring-blue-600"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Timmar *</Label>
-                  <Input
-                    type="number"
-                    min="0.5"
-                    step="0.5"
-                    value={entry.hours}
-                    onChange={(e) => updateTimeEntry(entry.id, 'hours', Number(e.target.value))}
-                    className="border-gray-300 focus:border-blue-600 focus:ring-blue-600"
-                    placeholder="0.5"
-                  />
-                </div>
-                
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
+                          {timeEntries.map((entry) => (
+                <div key={entry.id} className="grid grid-cols-[1.75fr_auto_auto_auto] gap-4 p-4 bg-white rounded-lg">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">Ärende *</Label>
                     <Select 
-                      value={entry.status} 
-                      onValueChange={(value) => updateTimeEntry(entry.id, 'status', value)}
+                      value={entry.caseId?.toString() || ""} 
+                      onValueChange={(value) => updateTimeEntry(entry.id, 'caseId', Number(value))}
                     >
-                      <SelectTrigger className="border-gray-300 focus:border-blue-600 focus:ring-blue-600">
-                        <SelectValue />
+                      <SelectTrigger className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 max-w-xl h-10">
+                        <SelectValue placeholder="Välj ärende" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Utförd">Utförd</SelectItem>
-                        <SelectItem value="Avbokad">Avbokad</SelectItem>
+                        {activeCases.map((caseItem) => (
+                          <SelectItem key={caseItem.id} value={caseItem.id.toString()}>
+                            {caseItem.customer_name} - {caseItem.effort_name} ({caseItem.handler1_name})
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">Datum *</Label>
+                    <Input
+                      type="date"
+                      value={entry.date}
+                      onChange={(e) => updateTimeEntry(entry.id, 'date', e.target.value)}
+                      className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 w-52 h-10"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">Timmar *</Label>
+                    <Input
+                      type="number"
+                      min="0.5"
+                      step="0.5"
+                      value={entry.hours}
+                      onChange={(e) => updateTimeEntry(entry.id, 'hours', Number(e.target.value))}
+                      className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 w-52 h-10"
+                      placeholder="0.5"
+                    />
+                  </div>
+                  
+                  <div className="flex items-end gap-2">
+                    <div className="w-32">
+                      <Select 
+                        value={entry.status} 
+                        onValueChange={(value) => updateTimeEntry(entry.id, 'status', value)}
+                      >
+                        <SelectTrigger className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Utförd">Utförd</SelectItem>
+                          <SelectItem value="Avbokad">Avbokad</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   {timeEntries.length === 1 ? (
                     <Button 
                       onClick={saveAllEntries} 
@@ -370,7 +364,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                           : hasUnsavedChanges 
                             ? 'bg-blue-600 hover:bg-blue-700' 
                             : 'bg-gray-300 cursor-not-allowed'
-                      } text-white transition-colors`}
+                      } text-white transition-colors mb-1 max-h-9 h-full`}
                     >
                       {isSaving ? (
                         <>
@@ -379,7 +373,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                         </>
                       ) : (
                         <>
-                          <Save className="w-4 h-4 mr-2" />
+                          <Save className="w-4 h-4 mr-2 " />
                           Spara ({getUnsavedCount()})
                         </>
                       )}
@@ -565,8 +559,8 @@ export const RegisteraTidPage = (): JSX.Element => {
       </Card>
 
       {/* Befintliga shifts */}
-      <Card className="mt-8">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+      <Card className="mt-8 border-radius-lg">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
           <CardTitle className="flex items-center gap-3 text-blue-900">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
               <CheckCircle className="w-4 h-4 text-white" />
@@ -595,7 +589,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                 {shifts.map((shift) => (
                   <tr 
                     key={shift.id} 
-                    className={`hover:bg-blue-50 border-b border-gray-200 transition-colors cursor-pointer`}
+                    className={`hover:bg-blue-50 border-t border-gray-200 transition-colors cursor-pointer`}
                     onClick={() => handleShiftClick(shift)}
                   >
                     <td className="px-6 py-4 font-medium text-gray-800">{shift.customer_name}</td>

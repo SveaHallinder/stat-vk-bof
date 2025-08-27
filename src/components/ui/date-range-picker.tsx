@@ -63,7 +63,7 @@ export function DateRangePicker({ value, onChange }: {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="justify-between min-w-[180px] px-4 text-left">
+        <Button variant="outline" className="justify-between min-w-[180px] px-4 text-left font-normal">
           {formatRange(range)}
         </Button>
       </PopoverTrigger>

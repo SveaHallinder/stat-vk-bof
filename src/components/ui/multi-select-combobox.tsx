@@ -62,7 +62,7 @@ export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ option
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full justify-between">
+        <Button variant="outline" className="w-full justify-between font-normal overflow-hidden">
           {displayText()}
         </Button>
       </PopoverTrigger>

@@ -8,7 +8,8 @@ export default function stats(pool: Pool) {
 
   // Statistik: summeringar
   router.get("/summary", async (req, res) => {
-    const { from, to, insats, gender, birthYear, customer } = req.query;
+    const { from, to, insats, effortCategory, gender, birthYear, customer, handler } = req.query;
+    console.log("Stats summary request params:", { from, to, insats, effortCategory, gender, birthYear, customer });
     let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
 
@@ -23,6 +24,15 @@ export default function stats(pool: Pool) {
     if (insats && insats !== "alla") {
       params.push(insats);
       where += ` AND cases.effort_id = $${params.length}`;
+    }
+    if (effortCategory) {
+      console.log("SUMMARY: Processing effortCategory:", effortCategory);
+      const categories = String(effortCategory).split(",");
+      console.log("SUMMARY: Split categories:", categories);
+      where += ` AND efforts.available_for = ANY($${params.length + 1})`;
+      params.push(categories);
+      console.log("SUMMARY: Added effortCategory filter, WHERE now:", where);
+      console.log("SUMMARY: Params after effortCategory:", params);
     }
     if (gender) {
       const genders = String(gender).split(",");
@@ -39,20 +49,29 @@ export default function stats(pool: Pool) {
       where += ` AND cases.customer_id = ANY($${params.length + 1})`;
       params.push(customers);
     }
+    if (handler) {
+      const handlers = String(handler).split(",").map(Number);
+      where += ` AND (cases.handler1_id = ANY($${params.length + 1}) OR cases.handler2_id = ANY($${params.length + 1}))`;
+      params.push(handlers);
+    }
 
     try {
       const baseQuery = `
         FROM shifts
         LEFT JOIN cases ON shifts.case_id = cases.id
+        LEFT JOIN efforts ON cases.effort_id = efforts.id
         LEFT JOIN customers ON cases.customer_id = customers.id
         ${where}
       `;
 
+      console.log("Summary: Final WHERE clause:", where);
+      console.log("Summary: Final params:", params);
+
       // Antal besök i valt filter
       const besokRes = await pool.query(`SELECT COUNT(*) ${baseQuery}`, params);
 
-      // Antal kunder totalt i systemet (oavsett filter)
-      const kunderRes = await pool.query(`SELECT COUNT(*) FROM customers WHERE active = TRUE`);
+      // Antal kunder med aktiva ärenden inom vald kategori (med filter)
+      const kunderRes = await pool.query(`SELECT COUNT(DISTINCT cases.customer_id) ${baseQuery}`, params);
 
       // Genomsnittlig tid
       const tidRes = await pool.query(`SELECT AVG(shifts.hours) ${baseQuery}`, params);
@@ -85,7 +104,7 @@ export default function stats(pool: Pool) {
 
   // Statistik: per insats
   router.get("/by-effort", async (req, res) => {
-    const { from, to, insats, gender, birthYear, customer } = req.query;
+    const { from, to, insats, effortCategory, gender, birthYear, customer, handler } = req.query;
     let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
     if (from) {
@@ -99,6 +118,15 @@ export default function stats(pool: Pool) {
     if (insats && insats !== "alla") {
       params.push(insats);
       where += ` AND cases.effort_id = $${params.length}`;
+    }
+    if (effortCategory) {
+      console.log("BY-EFFORT: Processing effortCategory:", effortCategory);
+      const categories = String(effortCategory).split(",");
+      console.log("BY-EFFORT: Split categories:", categories);
+      where += ` AND efforts.available_for = ANY($${params.length + 1})`;
+      params.push(categories);
+      console.log("BY-EFFORT: Added effortCategory filter, WHERE now:", where);
+      console.log("BY-EFFORT: Params after effortCategory:", params);
     }
     if (gender) {
       const genders = String(gender).split(",");
@@ -115,7 +143,15 @@ export default function stats(pool: Pool) {
       where += ` AND cases.customer_id = ANY($${params.length + 1})`;
       params.push(customers);
     }
+    if (handler) {
+      const handlers = String(handler).split(",").map(Number);
+      where += ` AND (cases.handler1_id = ANY($${params.length + 1}) OR cases.handler2_id = ANY($${params.length + 1}))`;
+      params.push(handlers);
+    }
     try {
+      console.log("By-effort: Final WHERE clause:", where);
+      console.log("By-effort: Final params:", params);
+      
       const result = await pool.query(
         `SELECT efforts.id AS effort_id, efforts.name AS effort_name,
           COUNT(shifts.id) AS antal_besok,

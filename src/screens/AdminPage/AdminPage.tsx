@@ -16,7 +16,7 @@ const TableHeader = ({ children }: { children: React.ReactNode }) => (
 );
 
 const TableRow = ({ children }: { children: React.ReactNode }) => (
-  <tr className="hover:bg-gray-50 border-b border-gray-200">{children}</tr>
+  <tr className="hover:bg-gray-50 border-t border-gray-200">{children}</tr>
 );
 
 const TableCell = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (

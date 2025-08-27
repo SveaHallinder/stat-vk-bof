@@ -3,26 +3,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getCustomers, getCases } from '../../lib/api';
 import { Layout } from '../../components/Layout';
 import { LogOut } from 'lucide-react';
-
-interface Customer {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  status: string;
-}
-
-interface Case {
-  id: number;
-  title: string;
-  status: string;
-  created_at: string;
-}
+import { Customer, CaseWithNames } from '../../types/types';
 
 const MinProfilPage: React.FC = () => {
   const { user, logout } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [cases, setCases] = useState<Case[]>([]);
+  const [cases, setCases] = useState<CaseWithNames[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -127,20 +113,33 @@ const MinProfilPage: React.FC = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Namn</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-post</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kund-ID</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Initialer</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Födelseår</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Åtgärd</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {customers.map((customer) => (
-                          <tr key={customer.id}>
+                          <tr key={customer.id} className="hover:bg-gray-50 cursor-pointer">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{customer.id}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{customer.initials}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.birth_year}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                customer.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                              }`}>
                                 {customer.active ? 'Aktiv' : 'Inaktiv'}
                               </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <button 
+                                onClick={() => window.location.href = `/kunder/${customer.id}`}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                              >
+                                Visa profil →
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -162,17 +161,31 @@ const MinProfilPage: React.FC = () => {
                 {cases.length > 0 ? (
                   <div className="space-y-4">
                     {cases.map((caseItem) => (
-                      <div key={caseItem.id} className="border border-gray-200 rounded-lg p-4">
+                      <div key={caseItem.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer">
                         <div className="flex justify-between items-start">
-                          <div>
+                          <div className="flex-1">
                             <h3 className="text-lg font-medium text-gray-900">{caseItem.customer_name} - {caseItem.effort_name}</h3>
-                            <p className="text-sm text-gray-500">Skapad: {new Date(caseItem.created_at).toLocaleDateString('sv-SE')}</p>
+                            <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                              <span>Skapad: {new Date(caseItem.created_at).toLocaleDateString('sv-SE')}</span>
+                              <span>Kund-ID: {caseItem.customer_id}</span>
+                              {caseItem.handler2_id && (
+                                <span>Behandlare 2: {caseItem.handler2_name}</span>
+                              )}
+                            </div>
                           </div>
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            caseItem.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {caseItem.active ? 'Aktivt' : 'Inaktivt'}
-                          </span>
+                          <div className="flex flex-col items-end gap-2">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              caseItem.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {caseItem.active ? 'Aktivt' : 'Inaktivt'}
+                            </span>
+                            <button 
+                              onClick={() => window.location.href = `/arendelista`}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                            >
+                              Hantera ärende →
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}

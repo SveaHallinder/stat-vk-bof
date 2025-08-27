@@ -1,17 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getCustomers } from "@/lib/api";
-
-type Customer = {
-  id: number;
-  initials: string;
-  gender: string;
-  birthYear: number;
-  active: boolean;
-  created_at: string;
-  // Lägg till fler fält om du har dem i backend
-};
+import { Customer } from "@/types/types";
 
 interface CustomerTableProps {
   searchTerm: string;
@@ -20,7 +11,6 @@ interface CustomerTableProps {
 
 export const CustomerTable = ({ searchTerm, selectedFilter }: CustomerTableProps): JSX.Element => {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [reactivateId, setReactivateId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -48,10 +38,10 @@ export const CustomerTable = ({ searchTerm, selectedFilter }: CustomerTableProps
   };
 
   return (
-    <Card className="bg-white shadow-sm border border-gray-200">
+    <Card className="bg-white">
       <CardContent className="p-0">
         {/* Table Header */}
-        <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-[#666666]">
+        <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 text-sm font-semibold text-[#666666]">
           <div className="col-span-1">ID</div>
           <div className="col-span-1">Initialer</div>
           <div className="col-span-1">Kön</div>
@@ -73,7 +63,7 @@ export const CustomerTable = ({ searchTerm, selectedFilter }: CustomerTableProps
               </div>
               <div className="col-span-1 font-semibold text-[#333333]">{customer.initials}</div>
               <div className="col-span-1 text-[#666666]">{customer.gender}</div>
-              <div className="col-span-1 text-[#666666]">{customer.birthYear}</div>
+              <div className="col-span-1 text-[#666666]">{customer.birth_year}</div>
               <div className="col-span-1 flex gap-2 items-center">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(customer.active ? "Aktiv" : "Inaktiv")}`}>
                   {customer.active ? "Aktiv" : "Inaktiv"}

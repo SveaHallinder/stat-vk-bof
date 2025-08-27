@@ -62,14 +62,14 @@ export const ArendelistaPage = (): JSX.Element => {
 
   return (
     <Layout title="Ärendelista">
-      <Card className="flex-1 bg-white border border-gray-200 rounded-xl">
+      <Card className="flex-1 bg-white rounded-xl">
         <CardContent className="p-6">
           <div className="flex gap-4 mb-4">
             <Input
               placeholder="Sök kund eller insats"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="max-w-xs"
+              className="max-w-xs h-10"
             />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
@@ -121,7 +121,7 @@ export const ArendelistaPage = (): JSX.Element => {
                 {sorted.map(c => (
                   <tr 
                     key={c.id} 
-                    className="border-b hover:bg-gray-50 cursor-pointer transition-colors group"
+                    className="border-t hover:bg-gray-50 cursor-pointer transition-colors group"
                     onClick={() => handleCaseClick(c)}
                   >
                     <td className="py-3 px-4 group-hover:text-[#17694c] group-hover:font-medium">{c.customer_name}</td>

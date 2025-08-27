@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 interface BarChartStatistikProps {
   data: { label: string; besok: number; kunder: number }[];
@@ -14,7 +14,7 @@ export const BarChartStatistik = ({ data, titel, maxY: maxYProp }: BarChartStati
   const maxY = maxYProp ?? Math.max(maxBesok, maxKunder, 1);
 
   return (
-    <div className="bg-white rounded-xl p-8 flex flex-col items-center relative">
+    <div className="bg-white rounded-xl p-8 flex flex-col items-center relative shadow-sm">
       <div className="text-base font-medium text-gray-800 mb-6">{titel}</div>
       <div className="flex w-full h-64 mb-6">
         {/* Y-axel */}
@@ -68,7 +68,7 @@ export const BarChartStatistik = ({ data, titel, maxY: maxYProp }: BarChartStati
                 />
               </div>
               {/* Etikett under staplarna */}
-              <div className="text-gray-400 font-normal text-sm text-center mt-6 max-w-[80px] whitespace-nowrap overflow-hidden">{item.label}</div>
+              <div className="text-gray-400 font-normal text-sm text-center mt-6 whitespace-nowrap overflow-visible text-ellipsis line-clamp-1 items-center">{item.label}</div>
             </div>
           ))}
         </div>

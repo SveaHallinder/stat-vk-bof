@@ -15,10 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Save, FileText, Clock, CheckCircle, Users, Activity, Calendar } from "lucide-react";
 
 export const MainContent = (): JSX.Element => {
   const navigate = useNavigate();
@@ -375,51 +371,29 @@ export const MainContent = (): JSX.Element => {
       <div className="w-full max-w-7xl mx-auto px-8 flex flex-col gap-8">
         {/* Sammanfattning */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-          <div
-            className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleCardClick('customers')}
-          >
-            <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
-              KUNDER TOTALT
+          {statsCards.map((card, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleCardClick(['customers', 'cases', 'visits'][index])}
+            >
+              <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
+                {card.title}
+              </div>
+              <div className="text-4xl text-[#222] font-light mt-2">
+                {card.value}
+              </div>
+              {card.note && (
+                <div className="text-gray-400 text-xs mt-2">
+                  {card.note}
+                </div>
+              )}
             </div>
-            <div className="text-4xl text-[#222] font-light mt-2">
-              {stats?.antal_kunder || "-"}
-            </div>
-            <div className="text-gray-400 text-xs mt-2">
-              2025 siffror för hela enheten
-            </div>
-          </div>
-
-          <div
-            className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleCardClick('cases')}
-          >
-            <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
-              AKTIVA ÄRENDEN
-            </div>
-            <div className="text-4xl text-[#222] font-light mt-2">
-              {activeCases?.length || "-"}
-            </div>
-            <div className="text-gray-400 text-xs mt-2">
-              2025 siffror
-            </div>
-          </div>
-
-          <div
-            className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleCardClick('visits')}
-          >
-            <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
-              MÅNADENS BESÖK
-            </div>
-            <div className="text-4xl text-[#222] font-light mt-2">
-              {stats?.antal_besok || "-"}
-            </div>
-          </div>
+          ))}
         </div>
         
         {/* Snabbåtgärder */}
-        <div className="bg-white rounded-xl p-6 flex flex-col items-start">
+        <div className="bg-white rounded-xl p-6 flex flex-col shadow-sm items-start">
           <h3 className="text-[#333] text-lg font-light mb-6 tracking-tight">Snabbåtgärder</h3>
           <div className="flex gap-8 flex-wrap">
             <Button

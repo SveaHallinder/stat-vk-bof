@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { useNavigate } from "react-router-dom";
 import { XCircle, Plus, ArrowUpDown, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
@@ -6,31 +6,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { createCustomer, getCustomers, softDeleteCustomer, reactivateCustomer } from "@/lib/api";
 import toast from "react-hot-toast";
+import { Customer } from "@/types/types";
 
-interface Customer {
-  id: string;
-  initials: string;
-  gender: string;
-  birthYear: string;
-  startDate: string;
-  status: string;
-  active: boolean;
-  created_at?: string;
-}
 
 type NewCustomer = {
   initials: string;
   gender: string;
-  birthYear: string;
+  birth_year: number;
   active: boolean;
   startDate: string;
 };
 
 export const KunderPage = (): JSX.Element => {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [newCustomers, setNewCustomers] = useState<NewCustomer[]>([]);
-  const [errors, setErrors] = useState<{ [idx: number]: { initials?: string; gender?: string; birthYear?: string } }>({});
+  const [errors, setErrors] = useState<{ [idx: number]: { initials?: string; gender?: string; birth_year?: string } }>({});
   const [sortField, setSortField] = useState<string>("id");
   const [sortAsc, setSortAsc] = useState<boolean>(true);
   const navigate = useNavigate();
@@ -42,10 +33,10 @@ export const KunderPage = (): JSX.Element => {
     navigate(`/kunder/${customer.id}`);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     setDeleting(true);
     try {
-      await softDeleteCustomer(id);
+      await softDeleteCustomer(id.toString());
       const updated = await getCustomers(true);
       setCustomers(updated);
       setDeleteId(null);
@@ -57,10 +48,10 @@ export const KunderPage = (): JSX.Element => {
     }
   };
 
-  const handleReactivate = async (id: string) => {
+  const handleReactivate = async (id: number) => {
     setReactivating(true);
     try {
-      await reactivateCustomer(id);
+      await reactivateCustomer(id.toString());
       const updated = await getCustomers(true);
       setCustomers(updated);
       toast.success("Kund återaktiverad!");
@@ -79,11 +70,11 @@ export const KunderPage = (): JSX.Element => {
   const handleAddCustomer = () => {
     setNewCustomers(prev => [
       ...prev,
-      { initials: "", gender: "Flicka", birthYear: "", active: true, startDate: getToday() },
+      { initials: "", gender: "Flicka", birth_year: 0, active: true, startDate: getToday() },
     ]);
   };
 
-  const handleChangeNewCustomer = (idx: number, field: keyof Omit<Customer, "id">, value: string) => {
+  const handleChangeNewCustomer = (idx: number, field: keyof NewCustomer, value: string | number) => {
     setNewCustomers(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c));
     // Validera direkt när man skriver
     setErrors(prev => {
@@ -99,11 +90,11 @@ export const KunderPage = (): JSX.Element => {
   };
 
   const validateCustomer = (c: NewCustomer) => {
-    const err: { initials?: string; gender?: string; birthYear?: string } = {};
+    const err: { initials?: string; gender?: string; birth_year?: string } = {};
     if (!c.initials) err.initials = "Obligatoriskt fält";
     if (!c.gender) err.gender = "Obligatoriskt fält";
-    if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
-    else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
+    if (!c.birth_year) err.birth_year = "Obligatoriskt fält";
+    else if (!/^\d{4}$/.test(c.birth_year.toString())) err.birth_year = "Födelseår måste vara 4 siffror";
     return err;
   };
 
@@ -127,7 +118,7 @@ export const KunderPage = (): JSX.Element => {
           createCustomer({
             initials: c.initials,
             gender: c.gender,
-            birthYear: Number(c.birthYear),
+            birthYear: c.birth_year,
             startDate: c.startDate
           })
         )
@@ -152,10 +143,10 @@ export const KunderPage = (): JSX.Element => {
 
   // Sortera kunder
   const sortedCustomers = [...customers].sort((a, b) => {
-    let av = a[sortField];
-    let bv = b[sortField];
+    let av: any = a[sortField as keyof Customer];
+    let bv: any = b[sortField as keyof Customer];
     // Om det är datum, sortera som datum
-    if (sortField === "created_at" || sortField === "startDate") {
+    if (sortField === "created_at") {
       av = av ? new Date(av) : new Date(0);
       bv = bv ? new Date(bv) : new Date(0);
     }
@@ -170,11 +161,11 @@ export const KunderPage = (): JSX.Element => {
   });
 
   return (
-    <Layout activeItem="Kunder" title="Kunder">
+    <Layout title="Kunder">
       <div className="flex items-center justify-between mb-8">
         <Button
           variant="outline"
-          className="flex items-center justify-center gap-3 px-7 py-3 rounded-full border border-gray-300 text-lg text-[#17694c] font-semibold bg-white hover:bg-[#eaf6f1] hover:shadow-md transition"
+          className="flex items-center justify-center gap-3 px-7 py-3 rounded-lg text-lg text-[#17694c] font-semibold bg-white hover:bg-[#eaf6f1] hover:shadow-md transition"
           onClick={handleAddCustomer}
         >
           <Plus className="w-6 h-6 font-bold" />
@@ -185,12 +176,12 @@ export const KunderPage = (): JSX.Element => {
             variant="default"
             className="ml-4 px-6 py-3 rounded-lg text-lg font-semibold"
             onClick={handleSaveNewCustomers}
-            disabled={savingNew || newCustomers.some((c, idx) => Object.keys(validateCustomer(c)).length > 0)}>
+            disabled={savingNew || newCustomers.some((c) => Object.keys(validateCustomer(c)).length > 0)}>
             {savingNew ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Sparar...</> : "Spara alla"}
           </Button>
         )}
       </div>
-      <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+      <Card className="flex-1 bg-white rounded-xl shadow-sm">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -260,11 +251,11 @@ export const KunderPage = (): JSX.Element => {
                       <input
                         type="text"
                         placeholder="Födelseår"
-                        className={`border rounded px-2 py-1 w-full text-center focus:outline-none focus:ring-2 ${errors[idx]?.birthYear ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
-                        value={c.birthYear}
-                        onChange={e => handleChangeNewCustomer(idx, "birthYear", e.target.value)}
+                        className={`border rounded px-2 py-1 w-full text-center focus:outline-none focus:ring-2 ${errors[idx]?.birth_year ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                        value={c.birth_year}
+                        onChange={e => handleChangeNewCustomer(idx, "birth_year", parseInt(e.target.value) || 0)}
                       />
-                      {errors[idx]?.birthYear && <span className="text-red-500 text-xs mt-1 block">{errors[idx].birthYear}</span>}
+                      {errors[idx]?.birth_year && <span className="text-red-500 text-xs mt-1 block">{errors[idx].birth_year}</span>}
                     </td>
                     <td className="px-6 py-3 text-center">
                       <span className="inline-block px-3 py-1 text-xs rounded-full font-semibold bg-green-100 text-green-800">
@@ -289,13 +280,13 @@ export const KunderPage = (): JSX.Element => {
                 {sortedCustomers.map((customer) => (
                   <tr
                     key={customer.id}
-                    className={`hover:bg-gray-50 cursor-pointer border-b border-gray-200 ${!customer.active ? 'bg-gray-100 text-gray-400' : ''}`}
+                    className={`hover:bg-gray-50 cursor-pointer border-t border-gray-200 ${!customer.active ? 'bg-gray-100 text-gray-400' : ''}`}
                     onClick={() => handleRowClick(customer)}
                   >
                     <td className="px-6 py-4 font-medium text-center">{customer.id}</td>
                     <td className="px-6 py-4 text-center">{customer.initials}</td>
                     <td className="px-6 py-4 text-center">{customer.gender}</td>
-                    <td className="px-6 py-4 text-center">{customer.birthYear}</td>
+                    <td className="px-6 py-4 text-center">{customer.birth_year}</td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-block px-3 py-1 text-xs rounded-full font-semibold ${
                         customer.active

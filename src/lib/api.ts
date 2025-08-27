@@ -219,13 +219,14 @@ export async function deactivateShiftsForCase(caseId: string): Promise<{ message
   return res.json();
 }
 
-export async function getStatsSummary(params?: { from?: string; to?: string; insats?: string; gender?: string; birthYear?: string; handler?: string; customer?: string }): Promise<any> {
+export async function getStatsSummary(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string }): Promise<any> {
   let url = `/stats/summary`;
   if (params) {
     const search = new URLSearchParams();
     if (params.from) search.append('from', params.from);
     if (params.to) search.append('to', params.to);
     if (params.insats) search.append('insats', params.insats);
+    if (params.effortCategory) search.append('effortCategory', params.effortCategory);
     if (params.gender) search.append('gender', params.gender);
     if (params.birthYear) search.append('birthYear', params.birthYear);
     if (params.handler) search.append('handler', params.handler);
@@ -237,13 +238,14 @@ export async function getStatsSummary(params?: { from?: string; to?: string; ins
   return res.json();
 }
 
-export async function getStatsByEffort(params?: { from?: string; to?: string; insats?: string; gender?: string; birthYear?: string; handler?: string; customer?: string }): Promise<any> {
+export async function getStatsByEffort(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string }): Promise<any> {
   let url = `/stats/by-effort`;
   if (params) {
     const search = new URLSearchParams();
     if (params.from) search.append('from', params.from);
     if (params.to) search.append('to', params.to);
     if (params.insats) search.append('insats', params.insats);
+    if (params.effortCategory) search.append('effortCategory', params.effortCategory);
     if (params.gender) search.append('gender', params.gender);
     if (params.birthYear) search.append('birthYear', params.birthYear);
     if (params.handler) search.append('handler', params.handler);
