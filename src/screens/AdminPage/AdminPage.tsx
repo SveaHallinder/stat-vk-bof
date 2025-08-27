@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Modal } from "@/components/ui/modal";
-import { AuditLog } from "./components/AuditLog";
+import AuditLog from "./components/AuditLog";
 import { Effort, Handler } from "@/types/types";
 import toast from "react-hot-toast";
 import { api } from "@/lib/apiClient";
@@ -186,8 +186,8 @@ export const AdminPage = (): JSX.Element => {
                   Visa inaktiva insatser
                 </label>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
+              <div className="-mx-4 sm:mx-0 overflow-x-auto">
+                <table className="w-full text-left min-w-[640px] sm:min-w-0">
                   <thead>
                     <tr className="border-b border-gray-200">
                       <TableHeader>Insats</TableHeader>
@@ -232,7 +232,7 @@ export const AdminPage = (): JSX.Element => {
                   </tbody>
                 </table>
               </div>
-            </CardContent>
+          </CardContent>
           </Card>
           <Modal open={openModal} onClose={() => setOpenModal(false)}>
             <div className="p-8">
@@ -315,8 +315,8 @@ export const AdminPage = (): JSX.Element => {
                   Visa inaktiva behandlare
                 </label>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
+              <div className="-mx-4 sm:mx-0 overflow-x-auto">
+                <table className="w-full text-left min-w-[640px] sm:min-w-0">
                   <thead>
                     <tr className="border-b border-gray-200">
                       <TableHeader>Namn</TableHeader>
