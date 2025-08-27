@@ -269,6 +269,8 @@ export const RegisteraTidPage = (): JSX.Element => {
 
   return (
     <Layout title="Registrera tid">
+      {/* Responsiv container */}
+      <div className="w-full w-auto min-w-full mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
 
       {/* Tidsregistreringar - nu först eftersom det är huvudsyftet */}
       <Card className="mb-8">
@@ -281,7 +283,7 @@ export const RegisteraTidPage = (): JSX.Element => {
               <span>Tidsregistreringar</span>
             </div>
             {hasUnsavedChanges && (
-              <span className="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+              <span className="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-full mobile:hidden">
                 {getUnsavedCount()} rad(er) redo att sparas
               </span>
             )}
@@ -293,16 +295,16 @@ export const RegisteraTidPage = (): JSX.Element => {
         </CardHeader>
         <CardContent>
           {/* Tidsregistreringar */}
-          <div className="space-y-1">
+          <div className="space-y-1 mobile:space-y-2">
                           {timeEntries.map((entry) => (
-                <div key={entry.id} className="grid grid-cols-[1.75fr_auto_auto_auto] gap-4 p-4 bg-white rounded-lg">
-                  <div className="space-y-2">
+                <div key={entry.id} className="flex flex-col gap-4 p-4 bg-white rounded-lg lg:flex-row" style={{ gridTemplateColumns: '1.75fr auto auto auto' }}>
+                  <div className="space-y-2 mobile:flex-1">
                     <Label className="text-sm font-medium text-gray-700">Ärende *</Label>
                     <Select 
                       value={entry.caseId?.toString() || ""} 
                       onValueChange={(value) => updateTimeEntry(entry.id, 'caseId', Number(value))}
                     >
-                      <SelectTrigger className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 max-w-xl h-10">
+                      <SelectTrigger className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 flex-1 h-10">
                         <SelectValue placeholder="Välj ärende" />
                       </SelectTrigger>
                       <SelectContent>
@@ -315,17 +317,17 @@ export const RegisteraTidPage = (): JSX.Element => {
                     </Select>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-2 mobile:flex-1">
                     <Label className="text-sm font-medium text-gray-700">Datum *</Label>
                     <Input
                       type="date"
                       value={entry.date}
                       onChange={(e) => updateTimeEntry(entry.id, 'date', e.target.value)}
-                      className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 w-52 h-10"
+                      className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 w-52 h-10 mobile:flex-1"
                     />
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-2 mobile:flex-1">
                     <Label className="text-sm font-medium text-gray-700">Timmar *</Label>
                     <Input
                       type="number"
@@ -364,7 +366,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                           : hasUnsavedChanges 
                             ? 'bg-blue-600 hover:bg-blue-700' 
                             : 'bg-gray-300 cursor-not-allowed'
-                      } text-white transition-colors mb-1 max-h-9 h-full`}
+                      } text-white transition-colors mb-1 max-h-9 h-full mobile:w-full mobile:min-h-10 mobile:mb-0`}
                     >
                       {isSaving ? (
                         <>
@@ -373,7 +375,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                         </>
                       ) : (
                         <>
-                          <Save className="w-4 h-4 mr-2 " />
+                          <Save className="w-4 h-4 mr-2" />
                           Spara ({getUnsavedCount()})
                         </>
                       )}
@@ -454,19 +456,21 @@ export const RegisteraTidPage = (): JSX.Element => {
       </Card>
 
       {/* Separerad sektion för att registrera ärende - nu underst med samma design */}
-      <Card className="mb-6">
+      <Card className="mb-6 ">
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-3 text-gray-800">
-            <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-              <FileText className="w-4 h-4 text-white" />
+          <CardTitle className="flex flex-col gap-3 text-gray-800">
+            <div className="flex items-center gap-3 mobile:mx-6 mobile:mb-4">
+              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                <FileText className="w-4 h-4 text-white" />
+              </div>
+              <span>Registrera nytt ärende för kund</span>
             </div>
-            Registrera nytt ärende för kund
-            <div className="ml-auto flex items-center gap-3">
+            <div className="flex items-center gap-3 mobile:w-full mobile:justify-center">
               <Button 
                 onClick={() => setShowCreateCase(!showCreateCase)} 
                 variant="outline"
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700 px-4 py-2 font-medium cursor-pointer z-10 relative"
+                className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700 px-4 py-2 font-medium cursor-pointer z-10 relative mobile:w-full mobile:mx-6 mobile:min-h-10 mobile:mb-0"
                 type="button"
               >
                 {showCreateCase ? 'Dölj formulär' : 'Registrera ärende'}
@@ -481,8 +485,8 @@ export const RegisteraTidPage = (): JSX.Element => {
               <div className="mb-4 text-sm text-gray-600">
                 Fyll i formuläret nedan för att skapa ett nytt ärende:
               </div>
-              <div className="grid grid-cols-4 gap-4">
-                <div className="space-y-2">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2 flex flex-col lg:flex-row">
                   <Label htmlFor="customer" className="text-sm font-medium text-gray-700">Kund *</Label>
                   <KundCombobox 
                     value={newCaseCustomerId} 
@@ -538,7 +542,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                 </div>
               </div>
               
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+              <div className="flex flex-col gap-3 mt-6 pt-4 border-t border-gray-200 lg:flex-row">
                 <Button 
                   onClick={handleCreateCase} 
                   className="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2"
@@ -680,6 +684,7 @@ export const RegisteraTidPage = (): JSX.Element => {
           </div>
         </div>
       )}
+    </div>
     </Layout>
   );
 };

@@ -39,7 +39,7 @@ export const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center p-4">
-      <Card className="w-full max-w-sm md:max-w-md">
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-light text-[#333]">
             Logga in
@@ -94,7 +94,7 @@ export const LoginPage = () => {
 
             <Button
               type="submit"
-              className="w-full sm:w-auto bg-[#17694c] hover:bg-[#17694c]/90"
+              className="w-full bg-[#17694c] hover:bg-[#17694c]/90"
               disabled={isLoading}
             >
               {isLoading ? (

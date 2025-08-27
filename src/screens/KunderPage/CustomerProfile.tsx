@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
-import { getCustomer, updateCustomer, getCustomerEfforts, getShiftsForCase, updateCase, updateShift, addShift, getEfforts, getHandlers, createCase } from "@/lib/api";
-import type { CaseWithNames, ShiftEntry, ShiftStatus, Effort, Handler } from "@/types/types";
+import { getCustomer, updateCustomer, getCustomerEfforts, getShiftsForCase, updateCase, updateShift, addShift, getEfforts, getPublicHandlers, createCase } from "@/lib/api";
+import type { CaseWithNames, ShiftEntry, ShiftStatus, Effort } from "@/types/types";
 import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
 import toast from "react-hot-toast";
 
@@ -46,7 +46,7 @@ export const CustomerProfile = () => {
   const [newCase, setNewCase] = useState({ effortId: "", handler1Id: "", handler2Id: "" });
   const [savingCase, setSavingCase] = useState(false);
   const [efforts, setEfforts] = useState<Effort[]>([]);
-  const [handlers, setHandlers] = useState<Handler[]>([]);
+  const [handlers, setHandlers] = useState<any[]>([]);
   
   // Toggle för att visa/dölja avslutade ärenden
   const [showClosedCases, setShowClosedCases] = useState(false);
@@ -64,12 +64,15 @@ export const CustomerProfile = () => {
         .finally(() => setLoadingCases(false));
       
       // Ladda efforts och handlers för tidsregistrering och nya ärenden
-      Promise.all([getEfforts(), getHandlers(true)])
+      Promise.all([getEfforts(), getPublicHandlers()])
         .then(([effortsData, handlersData]) => {
+          console.log('CustomerProfile: Efforts loaded:', effortsData);
+          console.log('CustomerProfile: Handlers loaded:', handlersData);
           setEfforts(effortsData);
           setHandlers(handlersData);
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error('CustomerProfile: Error loading efforts/handlers:', error);
           // Ignorera fel för dessa
         });
     }

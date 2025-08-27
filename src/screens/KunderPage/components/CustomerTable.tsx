@@ -40,48 +40,46 @@ export const CustomerTable = ({ searchTerm, selectedFilter }: CustomerTableProps
   return (
     <Card className="bg-white">
       <CardContent className="p-0">
-        <div className="-mx-4 sm:mx-0 overflow-x-auto">
-          {/* Table Header */}
-          <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 text-sm font-semibold text-[#666666] min-w-[640px] sm:min-w-0">
-            <div className="col-span-1">ID</div>
-            <div className="col-span-1">Initialer</div>
-            <div className="col-span-1">Kön</div>
-            <div className="col-span-1">Födelseår</div>
-            <div className="col-span-1">Status</div>
-          </div>
+        {/* Table Header */}
+        <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 text-sm font-semibold text-[#666666]">
+          <div className="col-span-1">ID</div>
+          <div className="col-span-1">Initialer</div>
+          <div className="col-span-1">Kön</div>
+          <div className="col-span-1">Födelseår</div>
+          <div className="col-span-1">Status</div>
+        </div>
 
-          {/* Table Body */}
-          <div className="divide-y divide-gray-200">
-            {filteredCustomers.map((customer) => (
-              <div
-                key={customer.id}
-                className={`grid grid-cols-5 gap-4 p-4 hover:bg-gray-50 transition-colors min-w-[640px] sm:min-w-0 ${!customer.active ? 'bg-gray-100 text-gray-400' : ''}`}
-              >
-                <div className="col-span-1">
-                  <div className="w-8 h-8 bg-[#17694c] text-white rounded-full flex items-center justify-center text-sm font-bold">
-                    {customer.id}
-                  </div>
-                </div>
-                <div className="col-span-1 font-semibold text-[#333333]">{customer.initials}</div>
-                <div className="col-span-1 text-[#666666]">{customer.gender}</div>
-                <div className="col-span-1 text-[#666666]">{customer.birth_year}</div>
-                <div className="col-span-1 flex gap-2 items-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(customer.active ? "Aktiv" : "Inaktiv")}`}>
-                    {customer.active ? "Aktiv" : "Inaktiv"}
-                  </span>
-                  {!customer.active && (
-                    <button
-                      className="ml-2 text-green-600 underline text-xs"
-                      title="Återaktivera kund"
-                      onClick={() => setReactivateId(customer.id)}
-                    >
-                      Återaktivera
-                    </button>
-                  )}
+        {/* Table Body */}
+        <div className="divide-y divide-gray-200">
+          {filteredCustomers.map((customer) => (
+            <div
+              key={customer.id}
+              className={`grid grid-cols-5 gap-4 p-4 hover:bg-gray-50 transition-colors ${!customer.active ? 'bg-gray-100 text-gray-400' : ''}`}
+            >
+              <div className="col-span-1">
+                <div className="w-8 h-8 bg-[#17694c] text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  {customer.id}
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="col-span-1 font-semibold text-[#333333]">{customer.initials}</div>
+              <div className="col-span-1 text-[#666666]">{customer.gender}</div>
+              <div className="col-span-1 text-[#666666]">{customer.birth_year}</div>
+              <div className="col-span-1 flex gap-2 items-center">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(customer.active ? "Aktiv" : "Inaktiv")}`}>
+                  {customer.active ? "Aktiv" : "Inaktiv"}
+                </span>
+                {!customer.active && (
+                  <button
+                    className="ml-2 text-green-600 underline text-xs"
+                    title="Återaktivera kund"
+                    onClick={() => setReactivateId(customer.id)}
+                  >
+                    Återaktivera
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Popup för återaktivering */}

@@ -29,8 +29,15 @@ export default function stats(pool: Pool) {
       console.log("SUMMARY: Processing effortCategory:", effortCategory);
       const categories = String(effortCategory).split(",");
       console.log("SUMMARY: Split categories:", categories);
-      where += ` AND efforts.available_for = ANY($${params.length + 1})`;
-      params.push(categories);
+      
+      // Skapa LIKE-villkor för varje kategori
+      const likeConditions = categories.map((_, index) => 
+        `efforts.available_for ILIKE $${params.length + index + 1}`
+      ).join(" OR ");
+      
+      where += ` AND (${likeConditions})`;
+      params.push(...categories.map(cat => `%${cat.trim()}%`));
+      
       console.log("SUMMARY: Added effortCategory filter, WHERE now:", where);
       console.log("SUMMARY: Params after effortCategory:", params);
     }
@@ -123,8 +130,15 @@ export default function stats(pool: Pool) {
       console.log("BY-EFFORT: Processing effortCategory:", effortCategory);
       const categories = String(effortCategory).split(",");
       console.log("BY-EFFORT: Split categories:", categories);
-      where += ` AND efforts.available_for = ANY($${params.length + 1})`;
-      params.push(categories);
+      
+      // Skapa LIKE-villkor för varje kategori
+      const likeConditions = categories.map((_, index) => 
+        `efforts.available_for ILIKE $${params.length + index + 1}`
+      ).join(" OR ");
+      
+      where += ` AND (${likeConditions})`;
+      params.push(...categories.map(cat => `%${cat.trim()}%`));
+      
       console.log("BY-EFFORT: Added effortCategory filter, WHERE now:", where);
       console.log("BY-EFFORT: Params after effortCategory:", params);
     }

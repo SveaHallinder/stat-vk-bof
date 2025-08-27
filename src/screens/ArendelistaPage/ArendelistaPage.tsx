@@ -62,17 +62,20 @@ export const ArendelistaPage = (): JSX.Element => {
 
   return (
     <Layout title="Ärendelista">
+      {/* Responsiv container */}
+      <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
+
       <Card className="flex-1 bg-white rounded-xl">
-        <CardContent className="p-6">
-          <div className="flex gap-4 mb-4">
+        <CardContent className="p-4 mobile:p-6">
+          <div className="flex flex-col mobile:flex-row gap-4 mb-4">
             <Input
               placeholder="Sök kund eller insats"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="max-w-xs h-10"
+              className="w-full mobile:max-w-xs h-10"
             />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full mobile:w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -97,7 +100,7 @@ export const ArendelistaPage = (): JSX.Element => {
                   ].map(col => (
                     <th
                       key={col.field}
-                      className="py-2 px-4 cursor-pointer"
+                      className="py-2 mobile:py-3 px-2 mobile:px-4 cursor-pointer text-xs mobile:text-sm"
                       onClick={() => {
                         const f = col.field as keyof CaseWithNames;
                         if (sortField === f) setSortAsc(a => !a);
@@ -110,7 +113,7 @@ export const ArendelistaPage = (): JSX.Element => {
                       <div className="flex items-center gap-1">
                         {col.label}
                         {sortField === col.field && (
-                          sortAsc ? <ArrowUp size={16} /> : <ArrowDown size={16} />
+                          sortAsc ? <ArrowUp size={14} className="mobile:w-4 mobile:h-4" /> : <ArrowDown size={14} className="mobile:w-4 mobile:h-4" />
                         )}
                       </div>
                     </th>
@@ -124,12 +127,12 @@ export const ArendelistaPage = (): JSX.Element => {
                     className="border-t hover:bg-gray-50 cursor-pointer transition-colors group"
                     onClick={() => handleCaseClick(c)}
                   >
-                    <td className="py-3 px-4 group-hover:text-[#17694c] group-hover:font-medium">{c.customer_name}</td>
-                    <td className="py-3 px-4 group-hover:text-[#17694c]">{c.effort_name}</td>
-                    <td className="py-3 px-4">
+                    <td className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] group-hover:font-medium text-xs mobile:text-sm">{c.customer_name}</td>
+                    <td className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.effort_name}</td>
+                    <td className="py-2 mobile:py-3 px-2 mobile:px-4 text-xs mobile:text-sm">
                       {new Date(c.created_at).toLocaleDateString('sv-SE')}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-2 mobile:py-3 px-2 mobile:px-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         c.active 
                           ? 'bg-green-100 text-green-800' 
@@ -138,8 +141,8 @@ export const ArendelistaPage = (): JSX.Element => {
                         {c.active ? 'Aktivt' : 'Inaktivt'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 group-hover:text-[#17694c]">{c.handler1_name}</td>
-                    <td className="py-3 px-4 group-hover:text-[#17694c]">{c.handler2_name || '-'}</td>
+                    <td className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.handler1_name}</td>
+                    <td className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.handler2_name || '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -147,6 +150,8 @@ export const ArendelistaPage = (): JSX.Element => {
           </div>
         </CardContent>
       </Card>
+
+      </div>
     </Layout>
   );
 };

@@ -14,6 +14,8 @@ import stats from "./routes/stats";
 import shifts from "./routes/shifts";
 import users from "./routes/users";
 import invites from "./routes/invites";
+import audit from "./routes/audit";
+import { initAuditLogger } from "./utils/auditLogger";
 
 dotenv.config();
 
@@ -62,6 +64,9 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
+// Initiera AuditLogger
+initAuditLogger(pool);
+
 
 
 // Viktigt: allt under /api
@@ -73,6 +78,7 @@ app.use("/api/stats", stats(pool));
 app.use("/api/shifts", shifts(pool));
 app.use("/api/users", users(pool));
 app.use("/api/invites", invites(pool));
+app.use("/api/audit", audit(pool));
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
+import { getAuditLogger } from "../utils/auditLogger";
 
 export default function customers(pool: Pool) {
   const router = Router();
@@ -25,6 +26,20 @@ export default function customers(pool: Pool) {
           [initials, gender, birthYear, true]
         );
       }
+      
+      // Logga skapandet av kund
+      if (req.user) {
+        const auditLogger = getAuditLogger(pool);
+        await auditLogger.logCreate(
+          req.user.id,
+          req.user.name, // Använd name istället för username
+          'customer',
+          result.rows[0].id,
+          `${initials} (${birthYear})`,
+          { initials, gender, birthYear, startDate }
+        );
+      }
+      
       res.status(201).json(result.rows[0]);
     } catch (err) {
       res.status(500).json({ error: "Kunde inte skapa kund" });
@@ -102,6 +117,13 @@ export default function customers(pool: Pool) {
       return res.status(400).json({ error: "Alla fält krävs" });
     }
     try {
+      // Hämta gamla värden för audit log
+      const oldResult = await pool.query("SELECT * FROM customers WHERE id = $1", [id]);
+      if (oldResult.rows.length === 0) {
+        return res.status(404).json({ error: "Kund hittades inte" });
+      }
+      const oldValues = oldResult.rows[0];
+      
       let result;
       if (startDate) {
         result = await pool.query(
@@ -114,9 +136,21 @@ export default function customers(pool: Pool) {
           [initials, gender, birthYear, active, id]
         );
       }
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Kund hittades inte" });
+      
+      // Logga uppdateringen
+      if (req.user) {
+        const auditLogger = getAuditLogger(pool);
+        await auditLogger.logUpdate(
+          req.user.id,
+          req.user.name, // Använd name istället för username
+          'customer',
+          parseInt(id),
+          `${initials} (${birthYear})`,
+          oldValues,
+          result.rows[0]
+        );
       }
+      
       res.json(result.rows[0]);
     } catch {
       res.status(500).json({ error: "Kunde inte uppdatera kund" });

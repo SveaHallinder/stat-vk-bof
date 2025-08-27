@@ -162,26 +162,29 @@ export const KunderPage = (): JSX.Element => {
 
   return (
     <Layout title="Kunder">
-      <div className="flex items-center justify-between mb-8">
+      {/* Header section */}
+      <div className="flex flex-col items-center mobile:flex-row mobile:items-center mobile:justify-between mb-6 mobile:mb-8 gap-4 mobile:gap-0">
         <Button
           variant="outline"
-          className="flex items-center justify-center gap-3 px-7 py-3 rounded-lg text-lg text-[#17694c] font-semibold bg-white hover:bg-[#eaf6f1] hover:shadow-md transition"
+          className="w-full max-w-[350px] mobile:w-full flex items-center justify-center gap-3 px-4 mobile:px-7 py-3 rounded-lg text-base mobile:text-lg text-[#17694c] font-semibold bg-white hover:bg-[#eaf6f1] hover:shadow-md transition"
           onClick={handleAddCustomer}
         >
-          <Plus className="w-6 h-6 font-bold" />
+          <Plus className="w-5 h-5 mobile:w-6 mobile:h-6 font-bold" />
           <span>Lägg till ny kund</span>
         </Button>
         {newCustomers.length > 0 && (
           <Button
             variant="default"
-            className="ml-4 px-6 py-3 rounded-lg text-lg font-semibold"
+            className="w-full mobile:max-w-[350px] mobile:w-auto px-4 mobile:px-6 py-3 rounded-lg text-base mobile:text-lg font-semibold"
             onClick={handleSaveNewCustomers}
             disabled={savingNew || newCustomers.some((c) => Object.keys(validateCustomer(c)).length > 0)}>
             {savingNew ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Sparar...</> : "Spara alla"}
           </Button>
         )}
       </div>
-      <Card className="flex-1 bg-white rounded-xl shadow-sm">
+
+      {/* Table card */}
+      <Card className="flex-1 w-full w-auto min-w-full bg-white rounded-xl shadow-sm mobile:w-full mobile:max-w-[350px]">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -197,7 +200,7 @@ export const KunderPage = (): JSX.Element => {
                   ].map(col => (
                     <th
                       key={col.field}
-                      className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-center cursor-pointer select-none group"
+                      className="px-3 mobile:px-6 py-3 mobile:py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-center cursor-pointer select-none group"
                       onClick={() => {
                         if (sortField === col.field) {
                           setSortAsc(a => !a);
@@ -210,33 +213,33 @@ export const KunderPage = (): JSX.Element => {
                       <span className="inline-flex items-center gap-1">
                         {col.label}
                         {sortField === col.field ? (
-                          sortAsc ? <ArrowUp className="w-4 h-4 inline" /> : <ArrowDown className="w-4 h-4 inline" />
+                          sortAsc ? <ArrowUp className="w-3 h-3 mobile:w-4 mobile:h-4 inline" /> : <ArrowDown className="w-3 h-3 mobile:w-4 mobile:h-4 inline" />
                         ) : (
-                          <ArrowUpDown className="w-4 h-4 opacity-30 group-hover:opacity-60 inline" />
+                          <ArrowUpDown className="w-3 h-3 mobile:w-4 mobile:h-4 opacity-30 group-hover:opacity-60 inline" />
                         )}
                       </span>
                     </th>
                   ))}
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm text-right">Åtgärder</th>
+                  <th className="px-3 mobile:px-6 py-3 mobile:py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-right">Åtgärder</th>
                 </tr>
               </thead>
               <tbody>
                 {newCustomers.map((c, idx) => (
                   <tr key={idx} className="bg-gray-50">
-                    <td className="px-6 py-3 text-gray-400 italic text-center">(genereras)</td>
-                    <td className="px-6 py-3 text-center">
+                    <td className="px-3 mobile:px-6 py-3 text-gray-400 italic text-center text-xs mobile:text-sm">(genereras)</td>
+                    <td className="px-3 mobile:px-6 py-3 text-center">
                       <input
                         type="text"
                         placeholder="Initialer"
-                        className={`border rounded px-2 py-1 w-full text-center focus:outline-none focus:ring-2 ${errors[idx]?.initials ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                        className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.initials ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
                         value={c.initials}
                         onChange={e => handleChangeNewCustomer(idx, "initials", e.target.value)}
                       />
                       {errors[idx]?.initials && <span className="text-red-500 text-xs mt-1 block">{errors[idx].initials}</span>}
                     </td>
-                    <td className="px-6 py-3 text-center">
+                    <td className="px-3 mobile:px-6 py-3 text-center">
                       <select
-                        className={`border rounded px-2 py-1 w-full text-center focus:outline-none focus:ring-2 ${errors[idx]?.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                        className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
                         value={c.gender}
                         onChange={e => handleChangeNewCustomer(idx, "gender", e.target.value)}
                       >
@@ -247,31 +250,31 @@ export const KunderPage = (): JSX.Element => {
                       </select>
                       {errors[idx]?.gender && <span className="text-red-500 text-xs mt-1 block">{errors[idx].gender}</span>}
                     </td>
-                    <td className="px-6 py-3 text-center">
+                    <td className="px-3 mobile:px-6 py-3 text-center">
                       <input
                         type="text"
                         placeholder="Födelseår"
-                        className={`border rounded px-2 py-1 w-full text-center focus:outline-none focus:ring-2 ${errors[idx]?.birth_year ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                        className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.birth_year ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
                         value={c.birth_year}
                         onChange={e => handleChangeNewCustomer(idx, "birth_year", parseInt(e.target.value) || 0)}
                       />
                       {errors[idx]?.birth_year && <span className="text-red-500 text-xs mt-1 block">{errors[idx].birth_year}</span>}
                     </td>
-                    <td className="px-6 py-3 text-center">
-                      <span className="inline-block px-3 py-1 text-xs rounded-full font-semibold bg-green-100 text-green-800">
+                    <td className="px-3 mobile:px-6 py-3 text-center">
+                      <span className="inline-block px-2 mobile:px-3 py-1 text-xs rounded-full font-semibold bg-green-100 text-green-800">
                         Pågående
                       </span>
                     </td>
-                    <td className="px-6 py-3 text-center">
+                    <td className="px-3 mobile:px-6 py-3 text-center">
                       <input
                         type="date"
-                        className="border rounded px-2 py-1 w-full text-center"
+                        className="border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm"
                         value={c.startDate}
                         onChange={e => handleChangeNewCustomer(idx, "startDate", e.target.value)}
                       />
                     </td>
-                    <td className="px-6 py-3 text-center">
-                      <Button size="sm" variant="outline" onClick={() => handleCancelAdd(idx)}>
+                    <td className="px-3 mobile:px-6 py-3 text-center">
+                      <Button size="sm" variant="outline" onClick={() => handleCancelAdd(idx)} className="text-xs mobile:text-sm">
                         Avbryt
                       </Button>
                     </td>
@@ -283,12 +286,12 @@ export const KunderPage = (): JSX.Element => {
                     className={`hover:bg-gray-50 cursor-pointer border-t border-gray-200 ${!customer.active ? 'bg-gray-100 text-gray-400' : ''}`}
                     onClick={() => handleRowClick(customer)}
                   >
-                    <td className="px-6 py-4 font-medium text-center">{customer.id}</td>
-                    <td className="px-6 py-4 text-center">{customer.initials}</td>
-                    <td className="px-6 py-4 text-center">{customer.gender}</td>
-                    <td className="px-6 py-4 text-center">{customer.birth_year}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-3 py-1 text-xs rounded-full font-semibold ${
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 font-medium text-center text-xs mobile:text-sm">{customer.id}</td>
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.initials}</td>
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.gender}</td>
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.birth_year}</td>
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center">
+                      <span className={`inline-block px-2 mobile:px-3 py-1 text-xs rounded-full font-semibold ${
                         customer.active
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
@@ -296,25 +299,25 @@ export const KunderPage = (): JSX.Element => {
                         {customer.active ? "Pågående" : "Avslutad"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">{customer.created_at?.slice(0, 10)}</td>
-                    <td className="px-6 py-4 text-right text-center">
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.created_at?.slice(0, 10)}</td>
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-right text-center">
                       <div className="flex gap-2 items-center justify-end" onClick={e => e.stopPropagation()}>
                         {customer.active ? (
                           <button
-                            className="p-2 hover:bg-gray-200 rounded-full"
+                            className="p-1.5 mobile:p-2 hover:bg-gray-200 rounded-full"
                             title="Avaktivera kund"
                             onClick={() => setDeleteId(customer.id)}
                           >
-                            <XCircle className="w-5 h-5 text-red-500" />
+                            <XCircle className="w-4 h-4 mobile:w-5 mobile:h-5 text-red-500" />
                           </button>
                         ) : (
                           <button
-                            className="p-2 hover:bg-gray-200 rounded-full"
+                            className="p-1.5 mobile:p-2 hover:bg-gray-200 rounded-full"
                             title="Återaktivera kund"
                             onClick={() => handleReactivate(customer.id)}
                             disabled={reactivating}
                           >
-                            {reactivating ? <Loader2 className="animate-spin w-4 h-4 inline"/> : <span className="text-green-600 font-semibold">Återaktivera</span>}
+                            {reactivating ? <Loader2 className="animate-spin w-3 h-3 mobile:w-4 mobile:h-4 inline"/> : <span className="text-green-600 font-semibold text-xs mobile:text-sm">Återaktivera</span>}
                           </button>
                         )}
                       </div>
@@ -326,21 +329,21 @@ export const KunderPage = (): JSX.Element => {
           </div>
           {/* Popup för radering */}
           {deleteId && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-              <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full flex flex-col items-center">
-                <div className="text-lg font-semibold mb-4">Är du säker att du vill radera denna kund?</div>
-                <div className="flex gap-4 mt-2">
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50 p-4">
+              <div className="bg-white rounded-lg shadow-lg p-6 mobile:p-8 max-w-sm w-full flex flex-col items-center">
+                <div className="text-base mobile:text-lg font-semibold mb-4 text-center">Är du säker att du vill radera denna kund?</div>
+                <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 mt-2 w-full">
                   <Button
                     variant="outline"
                     onClick={() => setDeleteId(null)}
-                    className="min-w-[100px]"
+                    className="w-full mobile:w-auto min-w-[100px]"
                   >
                     Avbryt
                   </Button>
                   <Button
                     variant="destructive"
                     onClick={() => handleDelete(deleteId)}
-                    className="min-w-[100px]"
+                    className="w-full mobile:w-auto min-w-[100px]"
                     disabled={deleting}
                   >
                     {deleting ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Raderar...</> : "Radera"}

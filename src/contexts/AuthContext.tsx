@@ -36,15 +36,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
   const [loading, setLoading] = useState(true);
 
-  // Debug localStorage
+  // Clean localStorage handling
   useEffect(() => {
-    console.log('🔍 AuthProvider mounted');
-    console.log('📱 Initial localStorage token:', localStorage.getItem('authToken') ? 'Found' : 'Not found');
-    console.log('📱 Initial state token:', token ? 'Found' : 'Not found');
-    
-    // Test localStorage direkt
-    const storedToken = localStorage.getItem('authToken');
-    console.log('🔍 Direct localStorage check:', storedToken ? `${storedToken.substring(0, 20)}...` : 'None');
+    // Silent localStorage handling
   }, []);
 
   // Session timeout - 30 minuter inaktivitet
@@ -54,31 +48,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Kontrollera om användaren är inloggad vid app-start
   useEffect(() => {
     const checkAuth = async () => {
-      console.log('🔍 Checking auth on app start...');
-      console.log('📱 Stored token:', token ? `${token.substring(0, 20)}...` : 'None');
-      
       if (token) {
         try {
-          console.log('🔐 Validating token with backend...');
           const response = await api(`/users/me`);
 
           if (response.ok) {
             const data = await response.json();
-            console.log('✅ Token valid, user:', data.user.name);
             setUser(data.user);
           } else {
-            console.log('❌ Token invalid, response status:', response.status);
             // Token är ogiltig, ta bort den
-            localStorage.removeItem('authToken');
+            localStorage.removeItem('token');
             setToken(null);
           }
         } catch (error) {
-          console.error('❌ Auth check failed:', error);
-          localStorage.removeItem('authToken');
+          localStorage.removeItem('token');
           setToken(null);
         }
-      } else {
-        console.log('📱 No token found in localStorage');
       }
       setLoading(false);
     };
@@ -110,7 +95,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('🔑 Attempting login for:', email);
       const response = await api(`/users/login`, {
         method: 'POST',
         headers: {
@@ -120,21 +104,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (!response.ok) {
-        // Hjälper att felsöka om det *inte* är JSON
         const text = await response.text();
         throw new Error(`Login failed ${response.status}: ${text.slice(0,120)}`);
       }
 
       const data = await response.json();
-      console.log('✅ Login successful, user:', data.user.name);
-      console.log('🔐 Token received:', data.token ? `${data.token.substring(0, 20)}...` : 'None');
-      
       setUser(data.user);
       setToken(data.token);
-      localStorage.setItem('authToken', data.token);
-      console.log('💾 Token saved to localStorage');
+      localStorage.setItem('token', data.token);
     } catch (error) {
-      console.error('❌ Login error:', error);
       throw error;
     }
   };
@@ -142,7 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
@@ -154,7 +132,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     if (token) {
       inactivityTimerRef.current = setTimeout(() => {
-        console.log('Session timeout - utloggning på grund av inaktivitet');
         logout();
       }, SESSION_TIMEOUT);
     }
