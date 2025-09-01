@@ -1,10 +1,10 @@
 import { API_URL } from "./api";
 
 export function api(path: string, options: RequestInit = {}) {
-  const token = localStorage.getItem('token');
+  const accessToken = localStorage.getItem('accessToken');
   const headers = {
     ...(options.headers || {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
   } as Record<string, string>;
   return fetch(`${API_URL}${path}`, { ...options, headers });
 }

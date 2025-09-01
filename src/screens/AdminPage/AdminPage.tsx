@@ -39,6 +39,10 @@ export const AdminPage = (): JSX.Element => {
   const [openEditHandlerModal, setOpenEditHandlerModal] = React.useState(false);
   const [showInactive, setShowInactive] = React.useState(false);
   const [showInactiveEfforts, setShowInactiveEfforts] = React.useState(false);
+  
+  // Lösenordsåterställning (likt invite-systemet)
+  const [resetPasswordToken, setResetPasswordToken] = React.useState<string | null>(null);
+  const [resetPasswordCopied, setResetPasswordCopied] = React.useState(false);
 
   useEffect(() => {
     fetchEfforts();
@@ -165,6 +169,23 @@ export const AdminPage = (): JSX.Element => {
     }
   }
 
+  async function generatePasswordResetLink(handlerId: number, handlerEmail: string) {
+    try {
+      const res = await api(`/handlers/${handlerId}/generate-reset-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: handlerEmail })
+      });
+      
+      if (!res.ok) throw new Error();
+      
+      const data = await res.json();
+      setResetPasswordToken(data.token);
+      setResetPasswordCopied(false);
+    } catch {
+      toast.error("Kunde inte generera återställningslänk");
+    }
+  }
 
   return (
     <Layout title="Admin">
@@ -421,6 +442,25 @@ export const AdminPage = (): JSX.Element => {
                   onChange={e => setEditHandler(editHandler ? { ...editHandler, email: e.target.value } : null)}
                   placeholder="Mail"
                 />
+                
+                {/* Lösenordsåterställning */}
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full text-sm"
+                    onClick={() => {
+                      if (editHandler) {
+                        generatePasswordResetLink(editHandler.id, editHandler.email);
+                      }
+                    }}
+                  >
+                    🔐 Skicka återställningslänk för glömt lösenord
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Genererar en unik länk som du kan skicka till behandlaren
+                  </p>
+                </div>
               </div>
               <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-between mt-6">
                 <Button
@@ -469,6 +509,64 @@ export const AdminPage = (): JSX.Element => {
               </div>
             </div>
           </Modal>
+          {/* Popup för lösenordsåterställning */}
+          {resetPasswordToken && (
+            <div className="fixed top-8 right-8 bg-white border border-blue-400 shadow-lg rounded-lg p-4 mobile:p-6 z-50 max-w-md">
+              <div className="mb-4">
+                <div className="font-semibold text-blue-700 text-base mobile:text-lg mb-2">🔐 Lösenordsåterställning skapad!</div>
+                <div className="text-sm text-gray-600 mb-4">
+                  Skicka följande information till behandlaren:
+                </div>
+              </div>
+
+
+
+              {/* Återställningslänk */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🔗 Återställningslänk
+                </label>
+                <div className="flex flex-col mobile:flex-row items-center gap-2">
+                  <input
+                    className="w-full border rounded px-2 py-2 text-sm"
+                    value={`${window.location.origin}/reset-password/${resetPasswordToken}`}
+                    readOnly
+                    onFocus={e => e.target.select()}
+                  />
+                  <button
+                    className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 w-full mobile:w-auto"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/reset-password/${resetPasswordToken}`);
+                      setResetPasswordCopied(true);
+                      setTimeout(() => setResetPasswordCopied(false), 2000);
+                    }}
+                  >
+                    Kopiera
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Denna länk går ut om 1 timme
+                </div>
+              </div>
+
+              {/* Status */}
+              {resetPasswordCopied && (
+                <div className="text-green-600 text-sm text-center mb-3">
+                  ✅ Kopierat till urklipp!
+                </div>
+              )}
+
+              <div className="text-center">
+                <button
+                  className="text-gray-500 underline text-sm"
+                  onClick={() => setResetPasswordToken(null)}
+                >
+                  Stäng
+                </button>
+              </div>
+            </div>
+          )}
+
           {inviteToken && (
             <div className="fixed top-8 right-8 bg-white border border-green-400 shadow-lg rounded-lg p-4 mobile:p-6 z-50 max-w-md">
               <div className="mb-4">

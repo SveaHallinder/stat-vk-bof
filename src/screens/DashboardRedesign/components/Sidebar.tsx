@@ -57,7 +57,7 @@ export const Sidebar = ({ onClose }: SidebarProps): JSX.Element => {
             Öppenvård
           </h2>
           <p className="font-normal text-white/80 text-sm font-['Arial-Regular',Helvetica] group-hover:text-white/70 transition-colors">
-            Statistiksystem
+            Barn och Familj
           </p>
         </div>
 

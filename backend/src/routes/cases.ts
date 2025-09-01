@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
+import { validateCaseData, sanitizeTextInputs } from "../middleware/validation";
 
 export default function cases(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
 
   // Skapa nytt ärende
-  router.post("/", async (req, res) => {
+  router.post("/", sanitizeTextInputs, validateCaseData, async (req, res) => {
     const { customer_id, handler1_id, handler2_id, effort_id, active } = req.body;
     if (!customer_id || !handler1_id || !effort_id) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });

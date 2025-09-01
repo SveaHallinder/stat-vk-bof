@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
+import { validateShiftData, sanitizeTextInputs } from "../middleware/validation";
 
 export default function shifts(pool: Pool) {
   const router = Router();
@@ -77,7 +78,7 @@ export default function shifts(pool: Pool) {
   });
 
   // Skapa ny shift och säkerställ att ett case finns
-  router.post("/", async (req, res) => {
+  router.post("/", sanitizeTextInputs, validateShiftData, async (req, res) => {
     const { case_id, customer_id, effort_id, handler1_id, handler2_id, date, hours, status } = req.body;
     if ((!case_id && (!customer_id || !effort_id || !handler1_id)) || !date || hours === undefined) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });

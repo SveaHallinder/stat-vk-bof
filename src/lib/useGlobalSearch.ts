@@ -28,7 +28,6 @@ export const useGlobalSearch = () => {
 
   const handleResultSelect = useCallback((result: SearchResult) => {
     // Här kan du implementera logik för att hantera valda sökresultat
-    console.log('Valt sökresultat:', result);
     
     // Exempel: Navigera till rätt sida baserat på resultattyp
     switch (result.type) {

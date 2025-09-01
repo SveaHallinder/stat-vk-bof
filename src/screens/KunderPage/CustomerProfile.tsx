@@ -66,8 +66,6 @@ export const CustomerProfile = () => {
       // Ladda efforts och handlers för tidsregistrering och nya ärenden
       Promise.all([getEfforts(), getPublicHandlers()])
         .then(([effortsData, handlersData]) => {
-          console.log('CustomerProfile: Efforts loaded:', effortsData);
-          console.log('CustomerProfile: Handlers loaded:', handlersData);
           setEfforts(effortsData);
           setHandlers(handlersData);
         })
@@ -144,6 +142,9 @@ export const CustomerProfile = () => {
       let updated;
       if (field === 'active') {
         updated = { ...prev, active: value === 'Aktiv' || value === true };
+      } else if (field === 'initials' && typeof value === 'string') {
+        // Konvertera initialer till versaler automatiskt
+        updated = { ...prev, [field]: value.toUpperCase() };
       } else {
         updated = { ...prev, [field]: value };
       }
@@ -224,8 +225,6 @@ export const CustomerProfile = () => {
 
   const handleEditShift = (shift: ShiftEntry) => {
     // Spara det ursprungliga datumet när man redigerar
-    console.log("Editing shift:", shift);
-    console.log("Shift date:", shift.date);
     
     // Konvertera ISO-datum till YYYY-MM-DD format för HTML date input
     let formattedDate = "";

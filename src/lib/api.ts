@@ -1,4 +1,4 @@
-export const API_URL = import.meta.env.VITE_API_URL;
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 import { Customer, Handler, Effort, CaseWithNames, ShiftEntry } from "@/types/types";
 import { api } from "./apiClient";
 
@@ -11,9 +11,6 @@ export async function getCustomers(all = false): Promise<Customer[]> {
     birthYear: c.birth_year,
   }));
 }
-
-console.log("API_URL:", API_URL);
-console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
 
 export async function createCustomer(data: { initials: string; gender: string; birthYear: number; startDate?: string }): Promise<Customer> {
   const res = await api(`/customers`, {

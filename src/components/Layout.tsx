@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/screens/DashboardRedesign/components/Sidebar";
 import { GlobalSearch } from "./GlobalSearch";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, Menu, X } from "lucide-react";
+import { User, Menu } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,7 +16,6 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleSearchResult = (result: any) => {
-    console.log("Valt sökresultat:", result);
     
     // Navigera till befintliga sidor baserat på resultattyp
     switch (result.type) {

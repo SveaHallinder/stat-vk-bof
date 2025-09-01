@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { BarChartStatistik } from "./BarChartStatistik";
@@ -28,57 +28,63 @@ export const MainContent = (): JSX.Element => {
   const [handlers, setHandlers] = useState<any[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Memoized date calculations
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    return { from, to };
+  }, []);
+
+  // Memoized data loading function
+  const loadDashboardData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // Ladda data parallellt men med bättre felhantering
+      const [statsResult, effortResult, handlersResult] = await Promise.allSettled([
+        getStatsSummary(dateRange),
+        getStatsByEffort(dateRange),
+        getPublicHandlers()
+      ]);
+      
+      // Hantera resultaten
+      if (statsResult.status === 'fulfilled') {
+        setStats(statsResult.value);
+      }
+      
+      if (effortResult.status === 'fulfilled') {
+        setEffortData(effortResult.value);
+      }
+      
+      if (handlersResult.status === 'fulfilled') {
+        setHandlers(handlersResult.value);
+      } else {
+        // Sätt fallback-data för handlers
+        setHandlers([
+          { id: "13", name: "Svea" },
+          { id: "14", name: "Anders" },
+          { id: "15", name: "Sandra" },
+          { id: "2", name: "System Admin" }
+        ]);
+      }
+    } catch (error) {
+      // Silent error handling
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dateRange]);
+
   useEffect(() => {
     // Vänta på att användaren är autentiserad
     if (!user) return;
     
-    const loadDashboardData = async () => {
-      setIsLoading(true);
-      try {
-        const now = new Date();
-        const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-        const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
-        
-        // Ladda data parallellt men med bättre felhantering
-        const [statsResult, effortResult, handlersResult] = await Promise.allSettled([
-          getStatsSummary({ from, to }),
-          getStatsByEffort({ from, to }),
-          getPublicHandlers()
-        ]);
-        
-        // Hantera resultaten
-        if (statsResult.status === 'fulfilled') {
-          setStats(statsResult.value);
-        }
-        
-        if (effortResult.status === 'fulfilled') {
-          setEffortData(effortResult.value);
-        }
-        
-        if (handlersResult.status === 'fulfilled') {
-          setHandlers(handlersResult.value);
-        } else {
-          // Sätt fallback-data för handlers
-          setHandlers([
-            { id: "13", name: "Svea" },
-            { id: "14", name: "Anders" },
-            { id: "15", name: "Sandra" },
-            { id: "2", name: "System Admin" }
-          ]);
-        }
-      } catch (error) {
-        // Silent error handling
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     // Ladda data med en liten fördröjning för att säkerställa att token är redo
     const timer = setTimeout(loadDashboardData, 100);
     return () => clearTimeout(timer);
-  }, [user]);
+  }, [user, loadDashboardData]);
 
-  const statsCards = [
+  // Memoized stats cards
+  const statsCards = useMemo(() => [
     {
       title: "Kunder totalt",
       value: stats ? stats.antal_kunder : "-",
@@ -94,15 +100,19 @@ export const MainContent = (): JSX.Element => {
       value: stats ? stats.antal_besok : "-",
       note: "",
     },
-  ];
+  ], [stats, effortData]);
 
-  const chartData = effortData
-    ? effortData.map(d => ({
-        label: d.effort_name,
-        besok: Number(d.antal_besok),
-        kunder: Number(d.antal_kunder),
-      }))
-    : [];
+  // Memoized chart data
+  const chartData = useMemo(() => 
+    effortData
+      ? effortData.map(d => ({
+          label: d.effort_name,
+          besok: Number(d.antal_besok),
+          kunder: Number(d.antal_kunder),
+        }))
+      : [], 
+    [effortData]
+  );
 
   const [openModal, setOpenModal] = useState<null | "kund" | "tid" | "statistik" | "ny-insats">(null);
 
@@ -115,28 +125,36 @@ export const MainContent = (): JSX.Element => {
 
   const [errors, setErrors] = useState<{ initials?: string; gender?: string; birthYear?: string }>({});
 
-  function validateCustomer(c: typeof newCustomer) {
+  // Memoized validation function
+  const validateCustomer = useCallback((c: typeof newCustomer) => {
     const err: { initials?: string; gender?: string; birthYear?: string } = {};
     if (!c.initials) err.initials = "Obligatoriskt fält";
     if (!c.gender) err.gender = "Obligatoriskt fält";
     if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
     else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
     return err;
-  }
+  }, []);
 
-  const handleCustomerChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const updated = { ...newCustomer, [e.target.name]: e.target.value };
+  const handleCustomerChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    let value = e.target.value;
+    
+    // Konvertera initialer till versaler automatiskt
+    if (e.target.name === 'initials') {
+      value = value.toUpperCase();
+    }
+    
+    const updated = { ...newCustomer, [e.target.name]: value };
     setNewCustomer(updated);
     setErrors(validateCustomer(updated));
-  };
+  }, [newCustomer, validateCustomer]);
 
-  const handleCustomerCancel = () => {
+  const handleCustomerCancel = useCallback(() => {
     setOpenModal(null);
     setNewCustomer({ initials: "", gender: "", birthYear: "" });
     setErrors({});
-  };
+  }, []);
 
-  const handleCustomerSave = async () => {
+  const handleCustomerSave = useCallback(async () => {
     const newErrors = validateCustomer(newCustomer);
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
@@ -153,7 +171,7 @@ export const MainContent = (): JSX.Element => {
     } catch (err) {
       toast.error('Kunde inte spara kund');
     }
-  };
+  }, [newCustomer, validateCustomer]);
 
   // Form state för Registrera ärende
   const [newCase, setNewCase] = useState({
@@ -166,25 +184,27 @@ export const MainContent = (): JSX.Element => {
   const [newCaseErrors, setNewCaseErrors] = useState<{ customerId?: string; effortId?: string; handler1Id?: string }>({});
   const [activeCases, setActiveCases] = useState<any[]>([]);
 
+  // Memoized case loading function
+  const loadActiveCases = useCallback(async () => {
+    try {
+      const cases = await getCases(false);
+      setActiveCases(cases);
+    } catch (error) {
+      // Silent error handling
+    }
+  }, []);
+
   useEffect(() => {
     // Ladda aktiva ärenden när tid-modalen öppnas
     if (openModal === "tid") {
-      getCases(false).then(cases => {
-        setActiveCases(cases);
-      }).catch(err => {
-        // Silent error handling
-      });
+      loadActiveCases();
     }
-  }, [openModal]);
+  }, [openModal, loadActiveCases]);
 
   // Ladda aktiva ärenden för dashboard-kortet
   useEffect(() => {
-    getCases(false).then(cases => {
-      setActiveCases(cases);
-    }).catch(err => {
-      // Silent error handling
-    });
-  }, []);
+    loadActiveCases();
+  }, [loadActiveCases]);
 
   function validateNewCase(c: typeof newCase) {
     const err: { customerId?: string; effortId?: string; handler1Id?: string } = {};
@@ -199,19 +219,19 @@ export const MainContent = (): JSX.Element => {
     return Object.keys(errors).filter(key => errors[key as keyof typeof errors]).length;
   }
 
-  const handleNewCaseChange = (field: string, value: string) => {
+  const handleNewCaseChange = useCallback((field: string, value: string) => {
     const updated = { ...newCase, [field]: value };
     setNewCase(updated);
     setNewCaseErrors(prev => ({ ...prev, [field]: undefined }));
-  };
+  }, [newCase]);
 
-  const handleNewCaseCancel = () => {
+  const handleNewCaseCancel = useCallback(() => {
     setOpenModal(null);
     setNewCase({ customerId: "", effortId: "", handler1Id: "", handler2Id: "" });
     setNewCaseErrors({});
-  };
+  }, []);
 
-  const handleNewCaseSave = async () => {
+  const handleNewCaseSave = useCallback(async () => {
     const newErrors = validateNewCase(newCase);
     setNewCaseErrors(newErrors);
     
@@ -243,7 +263,7 @@ export const MainContent = (): JSX.Element => {
         toast.error('Kunde inte skapa ärende');
       }
     }
-  };
+  }, [newCase, validateNewCase]);
 
   // Form state för Registrera tid
   const [registerTime, setRegisterTime] = useState({
@@ -256,14 +276,14 @@ export const MainContent = (): JSX.Element => {
   });
   const [registerTimeErrors, setRegisterTimeErrors] = useState<{ customer?: string; date?: string; hours?: string }>({});
 
-  const handleRegisterTimeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleRegisterTimeChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     setRegisterTime({
       ...registerTime,
       [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     });
     setRegisterTimeErrors(prev => ({ ...prev, [name]: undefined }));
-  };
+  }, [registerTime]);
 
   function validateRegisterTime(rt: typeof registerTime) {
     const err: { customer?: string; date?: string; hours?: string } = {};
@@ -273,7 +293,7 @@ export const MainContent = (): JSX.Element => {
     return err;
   }
 
-  const handleRegisterTimeCancel = () => {
+  const handleRegisterTimeCancel = useCallback(() => {
     setOpenModal(null);
     setRegisterTime({
       customer: "",
@@ -284,9 +304,9 @@ export const MainContent = (): JSX.Element => {
       hours: "",
     });
     setRegisterTimeErrors({});
-  };
+  }, []);
 
-  const handleRegisterTimeSave = async () => {
+  const handleRegisterTimeSave = useCallback(async () => {
     const errors = validateRegisterTime(registerTime);
     setRegisterTimeErrors(errors);
     if (Object.keys(errors).length > 0) {
@@ -324,7 +344,7 @@ export const MainContent = (): JSX.Element => {
     } catch (err) {
       toast.error("Kunde inte spara tid");
     }
-  };
+  }, [registerTime, activeCases]);
 
   // Form state för Ta ut statistik
   const [statistik, setStatistik] = useState({
@@ -340,7 +360,7 @@ export const MainContent = (): JSX.Element => {
 
   const [showStatistikChart, setShowStatistikChart] = useState(false);
 
-  const handleStatistikApply = async (e: React.FormEvent) => {
+  const handleStatistikApply = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Hämta ny data baserat på filter
@@ -369,9 +389,9 @@ export const MainContent = (): JSX.Element => {
     } catch (error) {
       toast.error('Kunde inte hämta filtrerad data');
     }
-  };
+  }, [statistik]);
 
-  const handleStatistikCancel = () => {
+  const handleStatistikCancel = useCallback(() => {
     setOpenModal(null);
     setStatistik({ 
       from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
@@ -382,10 +402,10 @@ export const MainContent = (): JSX.Element => {
       effort: [] 
     });
     setShowStatistikChart(false);
-  };
+  }, []);
 
   // Exportfunktioner
-  const handleExportPDF = () => {
+  const handleExportPDF = useCallback(() => {
     const input = document.getElementById('statistik-export');
     if (!input) return;
     html2canvas(input).then(canvas => {
@@ -394,9 +414,9 @@ export const MainContent = (): JSX.Element => {
       pdf.addImage(imgData, 'PNG', 10, 10, 270, 150);
       pdf.save('statistik.pdf');
     });
-  };
+  }, []);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = useCallback(() => {
     const data = [
       ['Insats', 'Antal besök', 'Antal kunder'],
       ...chartData.map(item => [item.label, item.besok, item.kunder])
@@ -405,12 +425,12 @@ export const MainContent = (): JSX.Element => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Statistik');
     XLSX.writeFile(wb, 'statistik.xlsx');
-  };
+  }, [chartData]);
 
-  const getToday = () => new Date().toISOString().slice(0, 10);
+  const getToday = useCallback(() => new Date().toISOString().slice(0, 10), []);
 
   // Navigera till olika sidor från dashboard-korten
-  const handleCardClick = (destination: string) => {
+  const handleCardClick = useCallback((destination: string) => {
     switch (destination) {
       case 'customers':
         navigate('/kunder');
@@ -422,7 +442,7 @@ export const MainContent = (): JSX.Element => {
         navigate('/statistik');
         break;
     }
-  };
+  }, [navigate]);
 
   return (
     <div className="flex-1 flex flex-col items-center min-h-screen bg-[#f5f7fa]">

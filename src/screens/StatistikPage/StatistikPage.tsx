@@ -85,9 +85,6 @@ export const StatistikPage = (): JSX.Element => {
     if (selectedHandlers.length > 0) params.handler = selectedHandlers.join(",");
     if (selectedCustomers.length > 0) params.customer = selectedCustomers.join(",");
     
-    console.log("Frontend buildParams - selectedEffortCategories:", selectedEffortCategories);
-    console.log("Frontend buildParams - final params:", params);
-    
     return params;
   }
 
@@ -276,8 +273,8 @@ export const StatistikPage = (): JSX.Element => {
         {/* Filterrad */}
         <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col gap-4 mobile:gap-6 shadow-sm">
         <label className="font-normal text-base mobile:text-lg m-0 p-0 text-black">Filtrera</label>
-          <div className="flex flex-col mobile:flex-row mobile:flex-wrap mobile:w-full gap-3 mb-4 items-end">
-            <div className="flex flex-col gap-1 w-full">
+          <div className="flex flex-col lg:flex-row mobile:w-full gap-3 mb-4 items-end">
+            <div className="gap-1 w-full">
               <label className="font-normal text-xs text-gray-500">Tidsperiod</label>
               <DateRangePicker value={dateRange} onChange={setDateRange} />
             </div>
@@ -470,7 +467,7 @@ export const StatistikPage = (): JSX.Element => {
         </div>
 
         {/* Export-knappar utanför diagrammet */}
-        <div className="flex flex-col mobile:flex-col gap-3 mobile:gap-4 justify-center">
+        <div className="flex flex-col lg:flex-row mobile:flex-col gap-3 mobile:gap-4 justify-center">
           <Button variant="outline" className="rounded-lg text-sm font-medium w-full mobile:w-auto" onClick={handleExportPDF}>Exportera som PDF</Button>
           <Button className="rounded-lg text-sm font-medium" variant="outline" onClick={handleExportExcel}>Ladda ner som Excel</Button>
         </div>

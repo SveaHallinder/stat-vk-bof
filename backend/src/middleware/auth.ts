@@ -41,10 +41,13 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
           user.name,
           req.path,
           req.method
-        ).catch(console.error);
+        ).catch((error) => {
+          // Logga felet men låt autentiseringen fortsätta
+          console.warn(`Audit logging failed for user ${user.id}:`, error.message);
+        });
       } catch (error) {
         // Om audit logging misslyckas, låt autentiseringen fortsätta
-        console.error('Audit logging failed:', error);
+        console.warn('Audit logging failed:', error);
       }
     }
     

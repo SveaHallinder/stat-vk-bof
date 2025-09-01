@@ -75,6 +75,11 @@ export const KunderPage = (): JSX.Element => {
   };
 
   const handleChangeNewCustomer = (idx: number, field: keyof NewCustomer, value: string | number) => {
+    // Konvertera initialer till versaler automatiskt
+    if (field === 'initials' && typeof value === 'string') {
+      value = value.toUpperCase();
+    }
+    
     setNewCustomers(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c));
     // Validera direkt när man skriver
     setErrors(prev => {

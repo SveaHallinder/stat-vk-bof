@@ -21,6 +21,15 @@ export class AuditLogger {
 
   async log(entry: AuditLogEntry): Promise<void> {
     try {
+      // Kontrollera att userId finns om det skickas med
+      if (entry.userId) {
+        const userCheck = await this.pool.query('SELECT id FROM handlers WHERE id = $1', [entry.userId]);
+        if (userCheck.rows.length === 0) {
+          console.warn(`Audit logging skipped: User ID ${entry.userId} does not exist`);
+          return; // Hoppa över loggningen istället för att krascha
+        }
+      }
+
       const query = `
         INSERT INTO audit_log (
           user_id, username, action, entity_type, entity_id, 

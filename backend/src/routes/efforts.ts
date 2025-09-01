@@ -32,7 +32,6 @@ export default function efforts(pool: Pool) {
       } else {
         result = await pool.query("SELECT * FROM efforts WHERE active = TRUE ORDER BY id ASC");
       }
-      console.log("Efforts data:", result.rows);
       res.json(result.rows);
     } catch {
       res.status(500).json({ error: "Kunde inte hämta insatser" });
@@ -99,22 +98,6 @@ export default function efforts(pool: Pool) {
       res.json({ message: "Insats raderad", effort: result.rows[0] });
     } catch {
       res.status(500).json({ error: "Kunde inte radera insats" });
-    }
-  });
-
-  // Debug: Kolla efforts-tabellen
-  router.get("/debug", async (req, res) => {
-    try {
-      const result = await pool.query("SELECT id, name, available_for, active FROM efforts ORDER BY id ASC");
-      console.log("DEBUG: Efforts table contents:", result.rows);
-      res.json({ 
-        message: "Efforts table contents", 
-        data: result.rows,
-        count: result.rows.length 
-      });
-    } catch (err) {
-      console.error("DEBUG: Error querying efforts:", err);
-      res.status(500).json({ error: "Kunde inte hämta efforts debug info" });
     }
   });
 

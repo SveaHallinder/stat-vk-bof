@@ -1,15 +1,15 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
+import { validateSearchParams, sanitizeTextInputs } from "../middleware/validation";
 
 export default function stats(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
 
   // Statistik: summeringar
-  router.get("/summary", async (req, res) => {
+  router.get("/summary", sanitizeTextInputs, validateSearchParams, async (req, res) => {
     const { from, to, insats, effortCategory, gender, birthYear, customer, handler } = req.query;
-    console.log("Stats summary request params:", { from, to, insats, effortCategory, gender, birthYear, customer });
     let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
 
@@ -26,20 +26,13 @@ export default function stats(pool: Pool) {
       where += ` AND cases.effort_id = $${params.length}`;
     }
     if (effortCategory) {
-      console.log("SUMMARY: Processing effortCategory:", effortCategory);
       const categories = String(effortCategory).split(",");
-      console.log("SUMMARY: Split categories:", categories);
-      
-      // Skapa LIKE-villkor för varje kategori
       const likeConditions = categories.map((_, index) => 
         `efforts.available_for ILIKE $${params.length + index + 1}`
       ).join(" OR ");
       
       where += ` AND (${likeConditions})`;
       params.push(...categories.map(cat => `%${cat.trim()}%`));
-      
-      console.log("SUMMARY: Added effortCategory filter, WHERE now:", where);
-      console.log("SUMMARY: Params after effortCategory:", params);
     }
     if (gender) {
       const genders = String(gender).split(",");
@@ -70,9 +63,6 @@ export default function stats(pool: Pool) {
         LEFT JOIN customers ON cases.customer_id = customers.id
         ${where}
       `;
-
-      console.log("Summary: Final WHERE clause:", where);
-      console.log("Summary: Final params:", params);
 
       // Antal besök i valt filter
       const besokRes = await pool.query(`SELECT COUNT(*) ${baseQuery}`, params);
@@ -127,20 +117,13 @@ export default function stats(pool: Pool) {
       where += ` AND cases.effort_id = $${params.length}`;
     }
     if (effortCategory) {
-      console.log("BY-EFFORT: Processing effortCategory:", effortCategory);
       const categories = String(effortCategory).split(",");
-      console.log("BY-EFFORT: Split categories:", categories);
-      
-      // Skapa LIKE-villkor för varje kategori
       const likeConditions = categories.map((_, index) => 
         `efforts.available_for ILIKE $${params.length + index + 1}`
       ).join(" OR ");
       
       where += ` AND (${likeConditions})`;
       params.push(...categories.map(cat => `%${cat.trim()}%`));
-      
-      console.log("BY-EFFORT: Added effortCategory filter, WHERE now:", where);
-      console.log("BY-EFFORT: Params after effortCategory:", params);
     }
     if (gender) {
       const genders = String(gender).split(",");
@@ -163,16 +146,13 @@ export default function stats(pool: Pool) {
       params.push(handlers);
     }
     try {
-      console.log("By-effort: Final WHERE clause:", where);
-      console.log("By-effort: Final params:", params);
-      
       const result = await pool.query(
         `SELECT efforts.id AS effort_id, efforts.name AS effort_name,
           COUNT(shifts.id) AS antal_besok,
-          SUM(shifts.hours) AS antal_timmar,
+          COALESCE(SUM(shifts.hours), 0) AS antal_timmar,
           COUNT(DISTINCT cases.customer_id) AS antal_kunder
-        FROM shifts
-        LEFT JOIN cases ON shifts.case_id = cases.id
+        FROM cases
+        LEFT JOIN shifts ON cases.id = shifts.case_id
         LEFT JOIN efforts ON cases.effort_id = efforts.id
         LEFT JOIN customers ON cases.customer_id = customers.id
         ${where}
@@ -181,7 +161,8 @@ export default function stats(pool: Pool) {
         params
       );
       res.json(result.rows);
-    } catch {
+    } catch (err) {
+      console.error("Error fetching by-effort stats:", err);
       res.status(500).json({ error: "Kunde inte hämta statistik per insats" });
     }
   });
@@ -193,11 +174,11 @@ export default function stats(pool: Pool) {
     const params: any[] = [];
     if (from) {
       params.push(from);
-      where += ` AND cases.date >= $${params.length}`;
+      where += ` AND cases.created_at >= $${params.length}::date`;
     }
     if (to) {
       params.push(to);
-      where += ` AND cases.date <= $${params.length}`;
+      where += ` AND cases.created_at <= $${params.length}::date`;
     }
     if (insats && insats !== "alla") {
       params.push(insats);
@@ -205,7 +186,7 @@ export default function stats(pool: Pool) {
     }
     try {
       const result = await pool.query(
-        `SELECT EXTRACT(YEAR FROM cases.date) AS year, EXTRACT(MONTH FROM cases.date) AS month,
+        `SELECT EXTRACT(YEAR FROM cases.created_at) AS year, EXTRACT(MONTH FROM cases.created_at) AS month,
           COUNT(cases.id) AS antal_besok,
           COUNT(DISTINCT cases.customer_id) AS antal_kunder
         FROM cases
@@ -215,7 +196,8 @@ export default function stats(pool: Pool) {
         params
       );
       res.json(result.rows);
-    } catch {
+    } catch (err) {
+      console.error("Error fetching by-month stats:", err);
       res.status(500).json({ error: "Kunde inte hämta statistik per månad" });
     }
   });
@@ -227,11 +209,11 @@ export default function stats(pool: Pool) {
     const params: any[] = [];
     if (from) {
       params.push(from);
-      where += ` AND cases.date >= $${params.length}`;
+      where += ` AND cases.created_at >= $${params.length}::date`;
     }
     if (to) {
       params.push(to);
-      where += ` AND cases.date <= $${params.length}`;
+      where += ` AND cases.created_at <= $${params.length}::date`;
     }
     if (insats && insats !== "alla") {
       params.push(insats);
@@ -241,16 +223,18 @@ export default function stats(pool: Pool) {
       const result = await pool.query(
         `SELECT h.id AS handler_id, h.name AS handler_name,
           COUNT(cases.id) AS antal_besok,
-          COALESCE(SUM(cases.hours), 0) AS antal_timmar
+          COALESCE(SUM(shifts.hours), 0) AS antal_timmar
         FROM cases
         LEFT JOIN handlers h ON cases.handler1_id = h.id
+        LEFT JOIN shifts ON cases.id = shifts.case_id AND shifts.active = TRUE
         ${where}
         GROUP BY h.id, h.name
         ORDER BY h.name ASC`,
         params
       );
       res.json(result.rows);
-    } catch {
+    } catch (err) {
+      console.error("Error fetching by-handler stats:", err);
       res.status(500).json({ error: "Kunde inte hämta statistik per behandlare" });
     }
   });
