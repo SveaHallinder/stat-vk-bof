@@ -16,7 +16,6 @@ import { StatistikPage } from "./screens/StatistikPage";
 import { AdminPage } from "./screens/AdminPage";
 import MinProfilPage from "./screens/MinProfilPage";
 import { LoginPage } from "./screens/LoginPage";
-
 import { InviteAcceptPage } from "./screens/InviteAcceptPage";
 import { ResetPasswordPage } from "./screens/ResetPasswordPage";
 import { Toaster } from "react-hot-toast";
