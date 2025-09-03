@@ -25,7 +25,13 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install deps (frontend)
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "No package-lock.json found. Falling back to npm install."
+            npm install
+          fi
 
       - name: Lint (if present)
         run: npm run lint --if-present
@@ -35,4 +41,3 @@ jobs:
 
       - name: Typecheck
         run: npx tsc --noEmit
-
