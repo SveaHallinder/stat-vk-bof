@@ -26,10 +26,12 @@ jobs:
 
       - name: Install deps (frontend)
         run: |
-          if [ -f package-lock.json ]; then
+          if [ -f package-lock.json ] && grep -q '"lockfileVersion"' package-lock.json; then
+            echo "Using npm ci with existing lockfile"
             npm ci
           else
-            echo "No package-lock.json found. Falling back to npm install."
+            echo "No valid package-lock.json. Generating and installing..."
+            npm install --package-lock-only
             npm install
           fi
 
