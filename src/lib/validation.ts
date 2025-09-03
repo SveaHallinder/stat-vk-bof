@@ -26,7 +26,7 @@ export const timeEntrySchema = z.object({
   date: z.string().min(1, swedishMessages.required),
   hours: z.number().min(0.5, 'Timmar måste vara minst 0.5').max(24, 'Timmar kan inte vara mer än 24'),
   status: z.enum(['Utförd', 'Avbokad'], {
-    errorMap: () => ({ message: 'Välj en giltig status' })
+    message: 'Välj en giltig status'
   }),
 });
 
@@ -46,7 +46,7 @@ export const customerSchema = z.object({
     .max(10, swedishMessages.maxLength(10))
     .regex(/^[A-ZÅÄÖ\s]+$/i, 'Endast bokstäver och mellanslag tillåtna'),
   gender: z.enum(['M', 'K', 'A'], {
-    errorMap: () => ({ message: 'Välj kön' })
+    message: 'Välj kön'
   }),
   birthYear: z.number()
     .int('År måste vara ett heltal')
@@ -65,7 +65,7 @@ export const userSchema = z.object({
     .min(8, swedishMessages.minLength(8))
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Lösenord måste innehålla små bokstäver, stora bokstäver och siffror'),
   role: z.enum(['admin', 'handler'], {
-    errorMap: () => ({ message: 'Välj en giltig roll' })
+    message: 'Välj en giltig roll'
   }),
 });
 
@@ -114,7 +114,7 @@ export const validateForm = <T>(schema: z.ZodSchema<T>, data: unknown): { succes
     return { success: true, data: validatedData };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map(err => err.message);
+      const errors = error.issues.map(err => err.message);
       return { success: false, errors };
     }
     // Logga oväntade fel för debugging
@@ -134,7 +134,7 @@ export const validateField = <T>(schema: z.ZodSchema<T>, value: unknown): { succ
     return { success: true, data: validatedData };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0]?.message || 'Ogiltigt värde' };
+      return { success: false, error: error.issues[0]?.message || 'Ogiltigt värde' };
     }
     return { success: false, error: 'Ett oväntat fel uppstod vid validering' };
   }

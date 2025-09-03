@@ -4,9 +4,9 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { enhancedToast } from '../components/ui/enhanced-toast';
-import { validateForm, schemas } from '../lib/validation';
+import { schemas } from '../lib/validation';
 import { z } from 'zod';
-import { Eye, EyeOff, Lock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Lock, AlertCircle } from 'lucide-react';
 import { API_URL } from '../lib/api';
 
 export const ResetPasswordPage: React.FC = () => {
@@ -86,7 +86,7 @@ export const ResetPasswordPage: React.FC = () => {
       } catch (directError) {
         console.error('❌ Direkt parsing misslyckades:', directError);
         if (directError instanceof z.ZodError) {
-          console.error('❌ Zod-fel:', directError.errors);
+          console.error('❌ Zod-fel:', directError.issues);
         }
       }
       
@@ -105,7 +105,7 @@ export const ResetPasswordPage: React.FC = () => {
         console.log('✅ Direkt validering lyckades:', validation);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          const errors = error.errors.map(err => err.message);
+          const errors = error.issues.map((err: any) => err.message);
           validation = { success: false, errors };
           console.log('❌ Direkt validering misslyckades:', validation);
         } else {
@@ -124,7 +124,7 @@ export const ResetPasswordPage: React.FC = () => {
     if (!validation.success) {
       console.log('❌ Validering misslyckades:', validation.errors);
       console.log('❌ Validering detaljer:', JSON.stringify(validation.errors, null, 2));
-      setErrors(validation.errors);
+      setErrors(Array.isArray(validation.errors) ? {} : (validation.errors || {}));
       return;
     }
     
@@ -142,10 +142,7 @@ export const ResetPasswordPage: React.FC = () => {
       });
 
       if (response.ok) {
-        enhancedToast.success(
-          'Lösenord återställt!',
-          'Du kan nu logga in med ditt nya lösenord'
-        );
+        enhancedToast.success('Lösenord återställt! Du kan nu logga in med ditt nya lösenord');
         navigate('/login');
       } else {
         const errorData = await response.json();
@@ -155,10 +152,7 @@ export const ResetPasswordPage: React.FC = () => {
         );
       }
     } catch (error) {
-      enhancedToast.error(
-        'Nätverksfel',
-        'Kunde inte ansluta till servern'
-      );
+      enhancedToast.error('Nätverksfel: Kunde inte ansluta till servern');
     } finally {
       setIsLoading(false);
     }
@@ -353,7 +347,7 @@ export const ResetPasswordPage: React.FC = () => {
                 } catch (error) {
                   console.error('❌ Ditt lösenord misslyckas:', error);
                   if (error instanceof z.ZodError) {
-                    console.error('❌ Zod-fel:', error.errors);
+                    console.error('❌ Zod-fel:', error.issues);
                   }
                 }
               } catch (error) {
