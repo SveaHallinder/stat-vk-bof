@@ -1,6 +1,7 @@
 # Vallentuna Kommun - Tidsregistreringssystem
 
 Ett modernt webbbaserat system för hantering av kunder, ärenden och tidsregistreringar för Vallentuna kommun.
+# Statistik Vallentuna
 
 ## 🚀 Funktioner
 
