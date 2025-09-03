@@ -34,6 +34,12 @@ jobs:
             npm install --package-lock-only
             npm install
           fi
+          
+      - name: Fix Rollup Linux module issue
+        run: |
+          echo "Fixing potential Rollup Linux module issue..."
+          rm -rf node_modules/@rollup/rollup-linux-*
+          npm install --force
 
       - name: Lint (if present)
         run: npm run lint --if-present
