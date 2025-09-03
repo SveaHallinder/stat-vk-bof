@@ -1,10 +1,13 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
+import { requireRole } from "../middleware/requireRole";
+import { getAuditLogger } from "../utils/auditLogger";
 
 export default function audit(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
+  router.use(requireRole('admin'));
 
   // Hämta alla audit loggar med filtrering
   router.get("/", async (req, res) => {
@@ -151,6 +154,22 @@ export default function audit(pool: Pool) {
     } catch (err) {
       console.error("Fel vid hämtning av audit statistik:", err);
       res.status(500).json({ error: "Kunde inte hämta audit statistik" });
+    }
+  });
+
+  // Logga export (adminkrav p.g.a. globalt requireRole ovan)
+  router.post("/export", async (req, res) => {
+    try {
+      const user = req.user!;
+      const payload = req.body || {};
+      const exportType = payload.entityName || payload.export_type || 'EXPORT';
+      const details = payload.details || payload;
+      const audit = getAuditLogger();
+      await audit.logExport(user.id, user.name, exportType, details);
+      return res.status(204).send();
+    } catch (err) {
+      console.error('Fel vid export-loggning:', err);
+      return res.status(500).json({ error: 'Kunde inte logga export' });
     }
   });
 

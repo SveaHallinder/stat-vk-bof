@@ -35,15 +35,15 @@ COMMENT ON COLUMN audit_log.user_agent IS 'Webbläsare/system info';
 CREATE OR REPLACE FUNCTION cleanup_old_audit_logs()
 RETURNS void AS $$
 BEGIN
-    -- Ta bort loggar äldre än 2 år (GDPR-kompatibelt)
+    -- Ta bort loggar äldre än 5 år (GDPR-kompatibelt)
     DELETE FROM audit_log 
-    WHERE created_at < NOW() - INTERVAL '2 years';
+    WHERE created_at < NOW() - INTERVAL '5 years';
     
     -- Logga rensningen
     INSERT INTO audit_log (user_id, username, action, entity_type, details)
     VALUES (NULL, 'SYSTEM', 'CLEANUP', 'audit_log', 
-            jsonb_build_object('message', 'Rensade gamla audit loggar', 'cutoff_date', NOW() - INTERVAL '2 years'));
+            jsonb_build_object('message', 'Rensade gamla audit loggar', 'cutoff_date', NOW() - INTERVAL '5 years'));
 END;
 $$ LANGUAGE plpgsql;
 
--- Skapa en cron-jobb eller kör manuellt: SELECT cleanup_old_audit_logs();
+-- Schemalägg körning via cron/pg_cron, t.ex. dagligen: SELECT cleanup_old_audit_logs();

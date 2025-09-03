@@ -42,6 +42,7 @@ export interface CaseBase {
 
 export interface CaseWithNames extends CaseBase {
   customer_name: string;   // customers.initials
+  customer_active?: boolean; // customers.active (för UI)
   effort_name: string;     // efforts.name
   handler1_name: string;   // handlers.name
   handler2_name: string | null;

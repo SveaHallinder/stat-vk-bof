@@ -201,7 +201,7 @@ export const AdminPage = (): JSX.Element => {
         <TabsContent value="insatser">
           <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
             <CardContent className="p-4 mobile:p-6">
-              <div className="flex flex-col mobile:flex-col justify-start mb-4 gap-4 mobile:gap-6 items-start mobile:items-center mobile:w-full">
+              <div className="flex flex-col lg:flex-row justify-start mb-4 gap-4 mobile:gap-6 items-start mobile:items-center mobile:w-full">
                 <Button variant="outline" className="flex items-center gap-2 w-full mobile:w-auto" onClick={() => setOpenModal(true)}>
                   <PlusCircle className="w-5 h-5" /> Lägg till ny insats
                 </Button>
@@ -331,7 +331,7 @@ export const AdminPage = (): JSX.Element => {
         <TabsContent value="behandlare">
           <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
             <CardContent className="p-4 mobile:p-6">
-              <div className="flex flex-col mobile:flex-col justify-start mb-4 gap-4 mobile:gap-6 items-start mobile:items-center">
+              <div className="flex flex-col lg:flex-row justify-start mb-4 gap-4 mobile:gap-6 items-start mobile:items-center">
                 <Button variant="outline" className="flex items-center gap-2 w-full mobile:w-auto" onClick={() => setOpenHandlerModal(true)}>
                   <PlusCircle className="w-5 h-5" /> Lägg till ny behandlare
                 </Button>

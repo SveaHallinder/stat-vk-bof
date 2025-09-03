@@ -62,17 +62,22 @@ export default function customers(pool: Pool) {
     }
   });
 
-  // Avaktivera kund
-  router.put("/:id/deactivate", async (req, res) => {
+  // Avaktivera kund + anonymisera initialer permanent (GDPR)
+  router.put("/:id/deactivate", sanitizeTextInputs, async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
-        "UPDATE customers SET active = FALSE WHERE id = $1 RETURNING *",
+        "UPDATE customers SET active = FALSE, initials = 'ANONYM' WHERE id = $1 RETURNING *",
         [id]
       );
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Kund hittades inte eller är redan avaktiverad" });
       }
+      // Sätt alla kundens aktiva ärenden till inaktiva för att undvika inkonsekvens
+      await pool.query(
+        'UPDATE cases SET active = FALSE WHERE customer_id = $1 AND active = TRUE',
+        [id]
+      );
       res.json(result.rows[0]);
     } catch {
       res.status(500).json({ error: "Kunde inte avaktivera kund" });
@@ -80,7 +85,7 @@ export default function customers(pool: Pool) {
   });
 
   // Återaktivera kund
-  router.put("/:id/activate", async (req, res) => {
+  router.put("/:id/activate", sanitizeTextInputs, async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
@@ -111,7 +116,7 @@ export default function customers(pool: Pool) {
   });
 
   // Uppdatera en kund
-  router.put("/:id", async (req, res) => {
+  router.put("/:id", sanitizeTextInputs, async (req, res) => {
     const { id } = req.params;
     const { initials, gender, birthYear, active, startDate } = req.body;
     if (!initials || !gender || !birthYear || typeof active !== "boolean") {
@@ -126,15 +131,24 @@ export default function customers(pool: Pool) {
       const oldValues = oldResult.rows[0];
       
       let result;
+      const newInitials = active === false ? 'ANONYM' : initials;
       if (startDate) {
         result = await pool.query(
           "UPDATE customers SET initials = $1, gender = $2, birth_year = $3, active = $4, created_at = $5 WHERE id = $6 RETURNING *",
-          [initials, gender, birthYear, active, startDate, id]
+          [newInitials, gender, birthYear, active, startDate, id]
         );
       } else {
         result = await pool.query(
           "UPDATE customers SET initials = $1, gender = $2, birth_year = $3, active = $4 WHERE id = $5 RETURNING *",
-          [initials, gender, birthYear, active, id]
+          [newInitials, gender, birthYear, active, id]
+        );
+      }
+
+      // Om kunden nu är inaktiv, stäng alla aktiva ärenden
+      if (active === false) {
+        await pool.query(
+          'UPDATE cases SET active = FALSE WHERE customer_id = $1 AND active = TRUE',
+          [id]
         );
       }
       
@@ -158,22 +172,10 @@ export default function customers(pool: Pool) {
     }
   });
 
-  // Radera en kund
-  router.delete("/:id", async (req, res) => {
-    const { id } = req.params;
-    try {
-      const result = await pool.query("DELETE FROM customers WHERE id = $1 RETURNING *", [id]);
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Kund hittades inte" });
-      }
-      res.json({ message: "Kund raderad", customer: result.rows[0] });
-    } catch {
-      res.status(500).json({ error: "Kunde inte radera kund" });
-    }
-  });
+  // Ingen hårdradering av kunder — historik/statistik ska bevaras.
 
   // Hämta alla insatser för en viss kund
-  router.get("/customers/:id/efforts", async (req, res) => {
+  router.get("/:id/efforts", async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
@@ -201,7 +203,7 @@ export default function customers(pool: Pool) {
   });
 
   // Hämta alla ärenden för en viss kund och insats
-  router.get("/customers/:customerId/efforts/:effortId/cases", async (req, res) => {
+  router.get("/:customerId/efforts/:effortId/cases", async (req, res) => {
     const { customerId, effortId } = req.params;
     try {
       const result = await pool.query(
@@ -231,4 +233,3 @@ export default function customers(pool: Pool) {
 
   return router;
 }
-

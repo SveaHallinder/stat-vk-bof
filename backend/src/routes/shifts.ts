@@ -117,7 +117,7 @@ export default function shifts(pool: Pool) {
   });
 
   // Uppdatera befintlig shift
-  router.put("/:id", async (req, res) => {
+  router.put("/:id", sanitizeTextInputs, async (req, res) => {
     const { id } = req.params;
     const { date, hours, status } = req.body;
     
@@ -146,7 +146,7 @@ export default function shifts(pool: Pool) {
   });
 
   // Inaktivera shifts som tillhör ett specifikt case (soft delete - INGEN permanent radering!)
-  router.put("/case/:caseId/deactivate", async (req, res) => {
+  router.put("/case/:caseId/deactivate", sanitizeTextInputs, async (req, res) => {
     const { caseId } = req.params;
     
     try {
@@ -167,4 +167,3 @@ export default function shifts(pool: Pool) {
 
   return router;
 }
-

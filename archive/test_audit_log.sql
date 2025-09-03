@@ -1,3 +1,6 @@
+-- Archived: manual test helper for audit logs
+-- Moved from root/test_audit_log.sql
+
 -- Test audit log funktionalitet
 -- Kör detta för att se att allt fungerar
 

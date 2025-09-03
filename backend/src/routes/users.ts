@@ -1,10 +1,12 @@
 import { Router, Request, Response } from "express";
 import { Pool } from "pg";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import { authenticateToken } from "../middleware/auth";
 import rateLimit from "express-rate-limit";
 import { validateUserRegistration, sanitizeTextInputs } from "../middleware/validation";
+
+const ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
 
 // Rate limiting för login
 const loginLimiter = rateLimit({
@@ -111,8 +113,7 @@ const users = (pool: Pool) => {
       }
 
       // Hasha lösenord med bcrypt
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      const hashedPassword = await bcrypt.hash(password, ROUNDS);
 
       // Skapa användare
       const result = await pool.query(

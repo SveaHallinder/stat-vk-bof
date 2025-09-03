@@ -216,7 +216,7 @@ export async function deactivateShiftsForCase(caseId: string): Promise<{ message
   return res.json();
 }
 
-export async function getStatsSummary(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string }): Promise<any> {
+export async function getStatsSummary(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }): Promise<any> {
   let url = `/stats/summary`;
   if (params) {
     const search = new URLSearchParams();
@@ -228,6 +228,8 @@ export async function getStatsSummary(params?: { from?: string; to?: string; ins
     if (params.birthYear) search.append('birthYear', params.birthYear);
     if (params.handler) search.append('handler', params.handler);
     if (params.customer) search.append('customer', params.customer);
+    if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
+    if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
   const res = await api(url);
@@ -235,7 +237,7 @@ export async function getStatsSummary(params?: { from?: string; to?: string; ins
   return res.json();
 }
 
-export async function getStatsByEffort(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string }): Promise<any> {
+export async function getStatsByEffort(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }): Promise<any> {
   let url = `/stats/by-effort`;
   if (params) {
     const search = new URLSearchParams();
@@ -247,6 +249,8 @@ export async function getStatsByEffort(params?: { from?: string; to?: string; in
     if (params.birthYear) search.append('birthYear', params.birthYear);
     if (params.handler) search.append('handler', params.handler);
     if (params.customer) search.append('customer', params.customer);
+    if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
+    if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
   const res = await api(url);
@@ -254,13 +258,14 @@ export async function getStatsByEffort(params?: { from?: string; to?: string; in
   return res.json();
 }
 
-export async function getStatsByMonth(params?: { from?: string; to?: string; insats?: string }): Promise<any> {
+export async function getStatsByMonth(params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean }): Promise<any> {
   let url = `/stats/by-month`;
   if (params) {
     const search = new URLSearchParams();
     if (params.from) search.append('from', params.from);
     if (params.to) search.append('to', params.to);
     if (params.insats) search.append('insats', params.insats);
+    if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
   const res = await api(url);
@@ -268,13 +273,15 @@ export async function getStatsByMonth(params?: { from?: string; to?: string; ins
   return res.json();
 }
 
-export async function getStatsByHandler(params?: { from?: string; to?: string; insats?: string }): Promise<any> {
+export async function getStatsByHandler(params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }): Promise<any> {
   let url = `/stats/by-handler`;
   if (params) {
     const search = new URLSearchParams();
     if (params.from) search.append('from', params.from);
     if (params.to) search.append('to', params.to);
     if (params.insats) search.append('insats', params.insats);
+    if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
+    if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
   const res = await api(url);

@@ -100,6 +100,13 @@ cd backend && npm run dev
 - [Admin-manual](./docs/ADMIN_MANUAL.md)
 - [Deployment](./docs/DEPLOYMENT.md)
 - [Onboarding](./docs/ONBOARDING_GUIDE.md)
+ - [Retention/Gallring](./docs/RETENTION_POLICY.md)
+
+## ♻️ Retention (kort)
+
+- Auditloggar gallras efter 5 år via funktionen `cleanup_old_audit_logs()` (se `create_audit_log_table.sql`).
+- Schemalägg gallring via cron/pg_cron eller anropa `/api/audit/cleanup` från ett serverjobb.
+- Verksamhetsdata (kunder/ärenden/tider/insatser/behandlare) hård‑raderas inte: avaktivera i stället. Kundinitialer anonymiseras vid avaktivering.
 
 ## 🤝 Bidrag
 

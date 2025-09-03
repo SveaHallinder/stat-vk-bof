@@ -11,7 +11,7 @@ export default function handlers(pool: Pool) {
   // This endpoint will return only ID and name, and will not require 'admin' role.
   router.get('/public', authenticateToken, async (req, res) => {
     try {
-      const result = await pool.query('SELECT id, name FROM handlers ORDER BY name');
+      const result = await pool.query('SELECT id, name FROM handlers WHERE active = TRUE ORDER BY name');
       res.json(result.rows);
     } catch (error) {
       console.error('Error fetching public handlers list:', error);
@@ -95,18 +95,9 @@ export default function handlers(pool: Pool) {
     }
   });
 
-  // Radera behandlare
-  router.delete("/:id", async (req, res) => {
-    const { id } = req.params;
-    try {
-      const result = await pool.query("DELETE FROM handlers WHERE id = $1 RETURNING *", [id]);
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Behandlare hittades inte" });
-      }
-      res.json({ message: "Behandlare raderad", handler: result.rows[0] });
-    } catch {
-      res.status(500).json({ error: "Kunde inte radera behandlare" });
-    }
+  // Ingen hårdradering av behandlare – använd avaktivera istället
+  router.delete("/:id", async (_req, res) => {
+    return res.status(405).json({ error: 'Method Not Allowed: hård radering är avstängd. Använd avaktivera/återaktivera.' });
   });
 
   // Generera lösenordsåterställningslänk för behandlare
@@ -179,4 +170,3 @@ export default function handlers(pool: Pool) {
 
   return router;
 }
-

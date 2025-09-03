@@ -24,6 +24,7 @@ export const KunderPage = (): JSX.Element => {
   const [errors, setErrors] = useState<{ [idx: number]: { initials?: string; gender?: string; birth_year?: string } }>({});
   const [sortField, setSortField] = useState<string>("id");
   const [sortAsc, setSortAsc] = useState<boolean>(true);
+  const [includeInactive, setIncludeInactive] = useState<boolean>(false);
   const navigate = useNavigate();
   const [savingNew, setSavingNew] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -37,7 +38,7 @@ export const KunderPage = (): JSX.Element => {
     setDeleting(true);
     try {
       await softDeleteCustomer(id.toString());
-      const updated = await getCustomers(true);
+      const updated = await getCustomers(includeInactive);
       setCustomers(updated);
       setDeleteId(null);
       toast.success("Kund avaktiverad!");
@@ -52,7 +53,7 @@ export const KunderPage = (): JSX.Element => {
     setReactivating(true);
     try {
       await reactivateCustomer(id.toString());
-      const updated = await getCustomers(true);
+      const updated = await getCustomers(includeInactive);
       setCustomers(updated);
       toast.success("Kund återaktiverad!");
     } catch (err: any) {
@@ -128,7 +129,7 @@ export const KunderPage = (): JSX.Element => {
           })
         )
       );
-      const updated = await getCustomers();
+      const updated = await getCustomers(includeInactive);
       setCustomers(updated);
       setNewCustomers([]);
       setErrors({});
@@ -141,10 +142,10 @@ export const KunderPage = (): JSX.Element => {
   };
 
   useEffect(() => {
-    getCustomers(true)
+    getCustomers(includeInactive)
       .then(setCustomers)
       .catch(() => toast.error("Kunde inte hämta kunder"));
-  }, []);
+  }, [includeInactive]);
 
   // Sortera kunder
   const sortedCustomers = [...customers].sort((a, b) => {
@@ -186,6 +187,14 @@ export const KunderPage = (): JSX.Element => {
             {savingNew ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Sparar...</> : "Spara alla"}
           </Button>
         )}
+        <label className="flex items-center gap-2 text-sm mt-2 mobile:mt-0">
+          <input
+            type="checkbox"
+            checked={includeInactive}
+            onChange={(e) => setIncludeInactive(e.target.checked)}
+          />
+          Inkludera inaktiva kunder
+        </label>
       </div>
 
       {/* Table card */}
@@ -292,7 +301,7 @@ export const KunderPage = (): JSX.Element => {
                     onClick={() => handleRowClick(customer)}
                   >
                     <td className="px-3 mobile:px-6 py-3 mobile:py-4 font-medium text-center text-xs mobile:text-sm">{customer.id}</td>
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.initials}</td>
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.active ? customer.initials : '—'}</td>
                     <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.gender}</td>
                     <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.birth_year}</td>
                     <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center">
@@ -336,7 +345,8 @@ export const KunderPage = (): JSX.Element => {
           {deleteId && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50 p-4">
               <div className="bg-white rounded-lg shadow-lg p-6 mobile:p-8 max-w-sm w-full flex flex-col items-center">
-                <div className="text-base mobile:text-lg font-semibold mb-4 text-center">Är du säker att du vill radera denna kund?</div>
+                <div className="text-base mobile:text-lg font-semibold mb-4 text-center">Vill du verkligen radera denna kund?</div>
+                <div className="text-sm text-gray-600 mb-4 text-center">Den försvinner inte helt men initialerna raderas permanent.</div>
                 <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 mt-2 w-full">
                   <Button
                     variant="outline"

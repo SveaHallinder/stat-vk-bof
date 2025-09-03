@@ -1,3 +1,6 @@
+-- Archived: utility to clear data in development (not for production)
+-- Moved from root/clear_database.sql
+
 -- Rensa databasen - behåll endast efforts tabellen
 -- Kör detta för att ta bort all testdata
 

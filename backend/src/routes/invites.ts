@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { authenticateToken } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import rateLimit from "express-rate-limit";
+import bcrypt from "bcrypt";
 // emailService borttagen - e-post skickas manuellt
 
 // Rate limiting för invite-accept
@@ -17,6 +18,7 @@ const acceptLimiter = rateLimit({
 
 export default function invites(pool: Pool) {
   const router = Router();
+  const ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
 
   // Skapa ny invite (endast admin)
   router.post("/", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
@@ -79,22 +81,10 @@ export default function invites(pool: Pool) {
 
       const inviteId = result.rows[0].id;
 
-      // Logga händelsen
+      // Logga att invite skapades (en gång)
       await pool.query(
         'INSERT INTO invite_audit_log (invite_id, action, performed_by, details) VALUES ($1, $2, $3, $4)',
-        [inviteId, 'created', adminId, { email, role, expires_at: expiresAt }]
-      );
-
-      // Skicka e-post automatiskt
-      const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/invite/${token}`;
-      const adminName = (req.user as any).name || 'System Admin';
-      
-
-
-      // Logga att invite skapades
-      await pool.query(
-        'INSERT INTO invite_audit_log (invite_id, action, performed_by, details) VALUES ($1, $2, $3, $4)',
-        [inviteId, 'created', adminId, { created_at: new Date() }]
+        [inviteId, 'created', adminId, { email, role, expires_at: expiresAt, created_at: new Date() }]
       );
 
       // Returnera data för admin
@@ -207,12 +197,8 @@ export default function invites(pool: Pool) {
         return res.status(400).json({ error: "E-postadressen måste verifieras först" });
       }
 
-      // Hasha lösenord med pgcrypto
-      const passwordHashResult = await pool.query(
-        'SELECT crypt($1, gen_salt(\'bf\')) as hash',
-        [password]
-      );
-      const hashedPassword = passwordHashResult.rows[0].hash;
+      // Hasha lösenord med bcrypt
+      const hashedPassword = await bcrypt.hash(password, ROUNDS);
 
       // Skapa användare
       const userResult = await pool.query(
@@ -235,8 +221,7 @@ export default function invites(pool: Pool) {
         [invite.id, 'accepted', userId, { user_id: userId, accepted_at: new Date() }]
       );
 
-                // Välkomst-e-post skickas manuellt
-          const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
+      // Välkomst-e-post skickas manuellt
 
       // Logga att användare skapades
       await pool.query(

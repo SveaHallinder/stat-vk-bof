@@ -39,15 +39,20 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
 
       // Sök parallellt i alla datatyper
       const [customers, handlers, efforts, cases, shifts] = await Promise.all([
-        getCustomers(true).catch(() => []),
-        getHandlers(true).catch(() => []),
+        // Endast aktiva kunder i global sök
+        getCustomers().catch(() => []),
+        // Endast aktiva behandlare
+        getHandlers().catch(() => []),
         getEfforts().catch(() => []),
-        getCases(true).catch(() => []),
+        // Endast aktiva ärenden
+        getCases().catch(() => []),
         getShifts().catch(() => [])
       ]);
 
       // Sök i kunder
       customers.forEach(customer => {
+        // Visa bara aktiva kunder i global sök
+        if (!customer.active) return;
         if (customer.initials.toLowerCase().includes(lowerQuery)) {
           searchResults.push({
             id: customer.id,
@@ -60,8 +65,9 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
         }
       });
 
-      // Sök i behandlare
+      // Sök i behandlare (visa endast aktiva)
       handlers.forEach(handler => {
+        if (handler.active === false) return;
         if (handler.name.toLowerCase().includes(lowerQuery)) {
           searchResults.push({
             id: handler.id,

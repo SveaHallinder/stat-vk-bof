@@ -12,6 +12,7 @@ function hashToken(token: string): string {
 }
 
 export default function authRoutes(pool: Pool) {
+  const ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
   // POST /api/auth/validate-reset-token
   router.post('/validate-reset-token', sanitizeTextInputs, async (req: Request, res: Response) => {
     try {
@@ -116,8 +117,7 @@ export default function authRoutes(pool: Pool) {
       const resetRequest = result.rows[0];
 
       // Hasha det nya lösenordet
-      const saltRounds = 12;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      const hashedPassword = await bcrypt.hash(password, ROUNDS);
 
       // Uppdatera behandlarens lösenord
       await pool.query(

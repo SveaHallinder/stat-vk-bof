@@ -1,3 +1,7 @@
+-- Archived: legacy dashboard schema and seed (not used by current app)
+-- Moved from root/create_dashboard_tables.sql
+-- NOTE: Do not run in production.
+
 -- Skapa tabeller för dashboard-funktionalitet
 
 -- 1. Customers tabell

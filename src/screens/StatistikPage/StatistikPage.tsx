@@ -3,12 +3,14 @@ import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import { getStatsSummary, getStatsByEffort, getEfforts, getHandlers, getPublicHandlers, getCustomers } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { Customer, Handler, Effort } from "@/types/types";
+import { api } from "@/lib/apiClient";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 
@@ -33,6 +35,8 @@ export const StatistikPage = (): JSX.Element => {
   const [selectedEffortCategories, setSelectedEffortCategories] = useState<string[]>([]);
   const [selectedHandlers, setSelectedHandlers] = useState<string[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
+  const [includeInactive, setIncludeInactive] = useState<boolean>(false);
+  const [shiftStatus, setShiftStatus] = useState<'Alla' | 'Utförd' | 'Avbokad'>('Alla');
   // Valbara alternativ
   type CustomerItem = Customer & { birthYear: number };
 
@@ -84,6 +88,8 @@ export const StatistikPage = (): JSX.Element => {
     if (selectedYears.length > 0) params.birthYear = selectedYears.join(",");
     if (selectedHandlers.length > 0) params.handler = selectedHandlers.join(",");
     if (selectedCustomers.length > 0) params.customer = selectedCustomers.join(",");
+    if (includeInactive) params.includeInactive = true;
+    if (shiftStatus && shiftStatus !== 'Alla') params.shiftStatus = shiftStatus;
     
     return params;
   }
@@ -107,18 +113,16 @@ export const StatistikPage = (): JSX.Element => {
   // Logga export
   const logExport = async (exportType: string, filters: any) => {
     try {
-      await fetch('/api/audit', {
+      const payload = {
+        action: 'EXPORT',
+        entityType: 'data',
+        entityName: exportType,
+        details: { event: 'data_exported', export_type: exportType, filters }
+      };
+      await api('/audit/export', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          action: 'EXPORT',
-          entityType: 'data',
-          entityName: exportType,
-          details: { event: 'data_exported', export_type: exportType, filters }
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
     } catch (error) {
       console.error('Failed to log export:', error);
@@ -271,10 +275,10 @@ export const StatistikPage = (): JSX.Element => {
 
       <div className="space-y-6 mobile:space-y-8">
         {/* Filterrad */}
-        <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col gap-4 mobile:gap-6 shadow-sm">
+        <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col gap-4 mobile:gap-6 shadow-sm border border-gray-200">
         <label className="font-normal text-base mobile:text-lg m-0 p-0 text-black">Filtrera</label>
-          <div className="flex flex-col lg:flex-row mobile:w-full gap-3 mb-4 items-end">
-            <div className="gap-1 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-2 items-end">
+            <div className="gap-1 w-full flex flex-col">
               <label className="font-normal text-xs text-gray-500">Tidsperiod</label>
               <DateRangePicker value={dateRange} onChange={setDateRange} />
             </div>
@@ -318,6 +322,19 @@ export const StatistikPage = (): JSX.Element => {
               />
             </div>
             <div className="flex flex-col gap-1 w-full">
+              <label className="font-normal text-xs text-gray-500">Tidsstatus</label>
+              <Select value={shiftStatus} onValueChange={(v) => setShiftStatus(v as any)}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Alla" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Alla">Alla</SelectItem>
+                  <SelectItem value="Utförd">Utförd</SelectItem>
+                  <SelectItem value="Avbokad">Avbokad</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1 w-full">
               <label className="font-normal text-xs text-gray-500">Behandlare</label>
               <MultiSelectCombobox
                 options={handlerOptions.map(h => ({ label: h.name, value: String(h.id) }))}
@@ -334,6 +351,12 @@ export const StatistikPage = (): JSX.Element => {
                 onChange={setSelectedCustomers}
                 placeholder="Alla kunder"
               />
+            </div>
+            <div className="flex items-end w-full h-10">
+              <label className="flex items-center gap-2 text-sm px-3 py-2 border rounded-lg bg-white w-full justify-center md:justify-start">
+                <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} />
+                Inkludera inaktiva
+              </label>
             </div>
             {/* Rensa alla filter-knapp */}
               <div className="flex justify-center mobile:justify-end w-full mobile:w-full">

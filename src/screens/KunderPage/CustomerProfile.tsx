@@ -114,7 +114,8 @@ export const CustomerProfile = () => {
     return <div className="p-8 text-center text-gray-500">Laddar kunddata...</div>;
   }
 
-  const customerTitle = `${customer.initials} - ${customer.gender} (${customer.birthYear})`;
+  const displayInitials = customer?.active ? customer.initials : '—';
+  const customerTitle = `${displayInitials} - ${customer.gender} (${customer.birthYear})`;
 
   function validateEditCustomer(c: any) {
     const err: { initials?: string; birthYear?: string; gender?: string } = {};

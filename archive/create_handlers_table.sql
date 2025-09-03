@@ -1,3 +1,6 @@
+-- Archived: legacy handlers bootstrap (dev-only), not used in production
+-- Moved from root/create_handlers_table.sql
+
 -- Skapa handlers-tabellen för användarhantering
 CREATE TABLE IF NOT EXISTS handlers (
   id SERIAL PRIMARY KEY,
