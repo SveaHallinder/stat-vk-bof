@@ -10,9 +10,11 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  refreshAccessToken: () => Promise<boolean>;
   loading: boolean;
   isAuthenticated: boolean;
 }
@@ -33,18 +35,13 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
+  const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('accessToken'));
+  const [refreshToken, setRefreshToken] = useState<string | null>(localStorage.getItem('refreshToken'));
   const [loading, setLoading] = useState(true);
 
-  // Debug localStorage
+  // Clean localStorage handling
   useEffect(() => {
-    console.log('🔍 AuthProvider mounted');
-    console.log('📱 Initial localStorage token:', localStorage.getItem('authToken') ? 'Found' : 'Not found');
-    console.log('📱 Initial state token:', token ? 'Found' : 'Not found');
-    
-    // Test localStorage direkt
-    const storedToken = localStorage.getItem('authToken');
-    console.log('🔍 Direct localStorage check:', storedToken ? `${storedToken.substring(0, 20)}...` : 'None');
+    // Silent localStorage handling
   }, []);
 
   // Session timeout - 30 minuter inaktivitet
@@ -54,41 +51,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Kontrollera om användaren är inloggad vid app-start
   useEffect(() => {
     const checkAuth = async () => {
-      console.log('🔍 Checking auth on app start...');
-      console.log('📱 Stored token:', token ? `${token.substring(0, 20)}...` : 'None');
-      
-      if (token) {
+      if (accessToken) {
         try {
-          console.log('🔐 Validating token with backend...');
           const response = await api(`/users/me`);
 
           if (response.ok) {
             const data = await response.json();
-            console.log('✅ Token valid, user:', data.user.name);
             setUser(data.user);
           } else {
-            console.log('❌ Token invalid, response status:', response.status);
-            // Token är ogiltig, ta bort den
-            localStorage.removeItem('authToken');
-            setToken(null);
+            // Access token är ogiltig, försök med refresh token
+            if (refreshToken) {
+              const refreshed = await refreshAccessToken();
+              if (!refreshed) {
+                // Båda tokens är ogiltiga, logga ut
+                logout();
+              }
+            } else {
+              logout();
+            }
           }
         } catch (error) {
-          console.error('❌ Auth check failed:', error);
-          localStorage.removeItem('authToken');
-          setToken(null);
+          // Försök med refresh token
+          if (refreshToken) {
+            const refreshed = await refreshAccessToken();
+            if (!refreshed) {
+              logout();
+            }
+          } else {
+            logout();
+          }
         }
-      } else {
-        console.log('📱 No token found in localStorage');
+      } else if (refreshToken) {
+        // Ingen access token men finns refresh token, försök förnya
+        const refreshed = await refreshAccessToken();
+        if (!refreshed) {
+          logout();
+        }
       }
       setLoading(false);
     };
 
     checkAuth();
-  }, [token]);
+  }, [accessToken, refreshToken]);
 
   // Event listeners för session timeout
   useEffect(() => {
-    if (token) {
+    if (accessToken) {
       resetInactivityTimer();
       
       const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
@@ -106,11 +114,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       };
     }
-  }, [token]);
+  }, [accessToken]);
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('🔑 Attempting login for:', email);
       const response = await api(`/users/login`, {
         method: 'POST',
         headers: {
@@ -120,29 +127,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (!response.ok) {
-        // Hjälper att felsöka om det *inte* är JSON
         const text = await response.text();
         throw new Error(`Login failed ${response.status}: ${text.slice(0,120)}`);
       }
 
       const data = await response.json();
-      console.log('✅ Login successful, user:', data.user.name);
-      console.log('🔐 Token received:', data.token ? `${data.token.substring(0, 20)}...` : 'None');
-      
       setUser(data.user);
-      setToken(data.token);
-      localStorage.setItem('authToken', data.token);
-      console.log('💾 Token saved to localStorage');
+      setAccessToken(data.accessToken);
+      setRefreshToken(data.refreshToken);
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
     } catch (error) {
-      console.error('❌ Login error:', error);
       throw error;
+    }
+  };
+
+  const refreshAccessToken = async (): Promise<boolean> => {
+    if (!refreshToken) return false;
+    
+    try {
+      const response = await api(`/users/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refreshToken })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAccessToken(data.accessToken);
+        setUser(data.user);
+        localStorage.setItem('accessToken', data.accessToken);
+        return true;
+      } else {
+        // Refresh token är ogiltig
+        logout();
+        return false;
+      }
+    } catch (error) {
+      logout();
+      return false;
     }
   };
 
   const logout = () => {
     setUser(null);
-    setToken(null);
-    localStorage.removeItem('authToken');
+    setAccessToken(null);
+    setRefreshToken(null);
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
@@ -152,21 +186,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
-    if (token) {
+    if (accessToken) {
       inactivityTimerRef.current = setTimeout(() => {
-        console.log('Session timeout - utloggning på grund av inaktivitet');
         logout();
       }, SESSION_TIMEOUT);
     }
-  }, [token]);
+  }, [accessToken]);
 
-  const isAuthenticated = !!user && !!token;
+  const isAuthenticated = !!user && !!accessToken;
 
   const value: AuthContextType = {
     user,
-    token,
+    accessToken,
+    refreshToken,
     login,
     logout,
+    refreshAccessToken,
     loading,
     isAuthenticated
   };

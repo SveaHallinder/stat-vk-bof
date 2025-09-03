@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Modal } from "@/components/ui/modal";
-import { AuditLog } from "./components/AuditLog";
+import AuditLog from "./components/AuditLog";
 import { Effort, Handler } from "@/types/types";
 import toast from "react-hot-toast";
 import { api } from "@/lib/apiClient";
@@ -39,6 +39,10 @@ export const AdminPage = (): JSX.Element => {
   const [openEditHandlerModal, setOpenEditHandlerModal] = React.useState(false);
   const [showInactive, setShowInactive] = React.useState(false);
   const [showInactiveEfforts, setShowInactiveEfforts] = React.useState(false);
+  
+  // Lösenordsåterställning (likt invite-systemet)
+  const [resetPasswordToken, setResetPasswordToken] = React.useState<string | null>(null);
+  const [resetPasswordCopied, setResetPasswordCopied] = React.useState(false);
 
   useEffect(() => {
     fetchEfforts();
@@ -165,9 +169,29 @@ export const AdminPage = (): JSX.Element => {
     }
   }
 
+  async function generatePasswordResetLink(handlerId: number, handlerEmail: string) {
+    try {
+      const res = await api(`/handlers/${handlerId}/generate-reset-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: handlerEmail })
+      });
+      
+      if (!res.ok) throw new Error();
+      
+      const data = await res.json();
+      setResetPasswordToken(data.token);
+      setResetPasswordCopied(false);
+    } catch {
+      toast.error("Kunde inte generera återställningslänk");
+    }
+  }
 
   return (
     <Layout title="Admin">
+      {/* Responsiv container */}
+      <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
+
       <Tabs defaultValue="insatser" className="w-full">
         <TabsList className="flex w-full bg-gray-100 rounded-2xl mb-2 p-1 gap-2">
           <TabsTrigger value="insatser" className="flex-1 py-3 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Insatser</TabsTrigger>
@@ -176,12 +200,12 @@ export const AdminPage = (): JSX.Element => {
         </TabsList>
         <TabsContent value="insatser">
           <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
-            <CardContent className="p-6">
-              <div className="flex justify-start mb-4 gap-6 items-center">
-                <Button variant="outline" className="flex items-center gap-2" onClick={() => setOpenModal(true)}>
+            <CardContent className="p-4 mobile:p-6">
+              <div className="flex flex-col lg:flex-row justify-start mb-4 gap-4 mobile:gap-6 items-start mobile:items-center mobile:w-full">
+                <Button variant="outline" className="flex items-center gap-2 w-full mobile:w-auto" onClick={() => setOpenModal(true)}>
                   <PlusCircle className="w-5 h-5" /> Lägg till ny insats
                 </Button>
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex items-center gap-2 text-sm w-full mobile:w-auto">
                   <input type="checkbox" checked={showInactiveEfforts} onChange={e => setShowInactiveEfforts(e.target.checked)} />
                   Visa inaktiva insatser
                 </label>
@@ -235,8 +259,8 @@ export const AdminPage = (): JSX.Element => {
             </CardContent>
           </Card>
           <Modal open={openModal} onClose={() => setOpenModal(false)}>
-            <div className="p-8">
-              <h2 className="text-xl font-semibold mb-4">Lägg till ny insats</h2>
+            <div className="p-4 mobile:p-8">
+              <h2 className="text-lg mobile:text-xl font-semibold mb-4">Lägg till ny insats</h2>
               <div className="flex flex-col gap-4">
                 <label className="text-sm font-medium text-gray-700">Namn på insats</label>
                 <input type="text" className="border rounded px-3 py-2" value={newInsats.name} onChange={e => setNewInsats({ ...newInsats, name: e.target.value })} placeholder="Namn på insats" />
@@ -247,15 +271,15 @@ export const AdminPage = (): JSX.Element => {
                   <option value="Biståndsbedömda, Förebyggande">Biståndsbedömda, Förebyggande</option>
                 </select>
               </div>
-              <div className="flex gap-4 justify-end mt-6">
-                <Button variant="outline" onClick={() => setOpenModal(false)}>Avbryt</Button>
-                <Button variant="default" onClick={handleAddInsats}>Spara</Button>
+              <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-end mt-6">
+                <Button variant="outline" className="w-full mobile:w-auto" onClick={() => setOpenModal(false)}>Avbryt</Button>
+                <Button variant="default" className="w-full mobile:w-auto" onClick={handleAddInsats}>Spara</Button>
               </div>
             </div>
           </Modal>
           <Modal open={openEditModal} onClose={() => setOpenEditModal(false)}>
-            <div className="p-8">
-              <h2 className="text-xl font-semibold mb-4">Redigera insats</h2>
+            <div className="p-4 mobile:p-8">
+              <h2 className="text-lg mobile:text-xl font-semibold mb-4">Redigera insats</h2>
               <div className="flex flex-col gap-4">
                 <label className="text-sm font-medium text-gray-700">Namn på insats</label>
                 <input type="text" className="border rounded px-3 py-2" value={editInsats.name} onChange={e => setEditInsats({ ...editInsats, name: e.target.value })} placeholder="Namn på insats" />
@@ -266,23 +290,24 @@ export const AdminPage = (): JSX.Element => {
                   <option value="Biståndsbedömda, Förebyggande">Biståndsbedömda, Förebyggande</option>
                 </select>
               </div>
-              <div className="flex gap-4 justify-between mt-6">
-                <Button variant="destructive" onClick={() => setShowDeleteModal(true)}>Radera</Button>
-                <div className="flex gap-4">
-                  <Button variant="outline" onClick={() => setOpenEditModal(false)}>Avbryt</Button>
-                  <Button variant="default" onClick={handleEditInsats}>Spara</Button>
+              <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-between mt-6">
+                <Button variant="destructive" className="w-full mobile:w-auto" onClick={() => setShowDeleteModal(true)}>Radera</Button>
+                <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4">
+                  <Button variant="outline" className="w-full mobile:w-auto" onClick={() => setOpenEditModal(false)}>Avbryt</Button>
+                  <Button variant="default" className="w-full mobile:w-auto" onClick={handleEditInsats}>Spara</Button>
                 </div>
               </div>
             </div>
           </Modal>
           <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-            <div className="p-8">
-              <h2 className="text-xl font-semibold mb-4">Radera insats</h2>
+            <div className="p-4 mobile:p-8">
+              <h2 className="text-lg mobile:text-xl font-semibold mb-4">Radera insats</h2>
               <p>Är du säker på att du vill avaktivera insatsen?</p>
-              <div className="flex gap-4 justify-end mt-6">
-                <Button variant="outline" onClick={() => setShowDeleteModal(false)}>Avbryt</Button>
+              <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-end mt-6">
+                <Button variant="outline" className="w-full mobile:w-auto" onClick={() => setShowDeleteModal(false)}>Avbryt</Button>
                 <Button
                   variant="destructive"
+                  className="w-full mobile:w-auto"
                   onClick={async () => {
                     if (editIdx != null) {
                       try {
@@ -305,12 +330,12 @@ export const AdminPage = (): JSX.Element => {
         </TabsContent>
         <TabsContent value="behandlare">
           <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
-            <CardContent className="p-6">
-              <div className="flex justify-start mb-4 gap-6 items-center">
-                <Button variant="outline" className="flex items-center gap-2" onClick={() => setOpenHandlerModal(true)}>
+            <CardContent className="p-4 mobile:p-6">
+              <div className="flex flex-col lg:flex-row justify-start mb-4 gap-4 mobile:gap-6 items-start mobile:items-center">
+                <Button variant="outline" className="flex items-center gap-2 w-full mobile:w-auto" onClick={() => setOpenHandlerModal(true)}>
                   <PlusCircle className="w-5 h-5" /> Lägg till ny behandlare
                 </Button>
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex items-center gap-2 text-sm w-full mobile:w-auto">
                   <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} />
                   Visa inaktiva behandlare
                 </label>
@@ -363,8 +388,8 @@ export const AdminPage = (): JSX.Element => {
             </CardContent>
           </Card>
           <Modal open={openHandlerModal} onClose={() => setOpenHandlerModal(false)}>
-            <div className="p-8">
-              <h2 className="text-xl font-semibold mb-4">Lägg till ny behandlare</h2>
+            <div className="p-4 mobile:p-8">
+              <h2 className="text-lg mobile:text-xl font-semibold mb-4">Lägg till ny behandlare</h2>
               <div className="flex flex-col gap-4">
                 <label className="text-sm font-medium text-gray-700">Namn</label>
                 <input
@@ -391,15 +416,15 @@ export const AdminPage = (): JSX.Element => {
                 />
                 {handlerErrors.email && <span className="text-red-500 text-xs mt-1">{handlerErrors.email}</span>}
               </div>
-              <div className="flex gap-4 justify-end mt-6">
-                <Button variant="outline" onClick={() => setOpenHandlerModal(false)}>Avbryt</Button>
-                <Button variant="default" onClick={handleAddHandler} disabled={!!handlerErrors.name || !!handlerErrors.email || !newHandler.name || !newHandler.email}>Spara</Button>
+              <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-end mt-6">
+                <Button variant="outline" className="w-full mobile:w-auto" onClick={() => setOpenHandlerModal(false)}>Avbryt</Button>
+                <Button variant="default" className="w-full mobile:w-auto" onClick={handleAddHandler} disabled={!!handlerErrors.name || !!handlerErrors.email || !newHandler.name || !newHandler.email}>Spara</Button>
               </div>
             </div>
           </Modal>
           <Modal open={openEditHandlerModal} onClose={() => setOpenEditHandlerModal(false)}>
-            <div className="p-8">
-              <h2 className="text-xl font-semibold mb-4">Redigera behandlare</h2>
+            <div className="p-4 mobile:p-8">
+              <h2 className="text-lg mobile:text-xl font-semibold mb-4">Redigera behandlare</h2>
               <div className="flex flex-col gap-4">
                 <label className="text-sm font-medium text-gray-700">Namn</label>
                 <input
@@ -417,10 +442,30 @@ export const AdminPage = (): JSX.Element => {
                   onChange={e => setEditHandler(editHandler ? { ...editHandler, email: e.target.value } : null)}
                   placeholder="Mail"
                 />
+                
+                {/* Lösenordsåterställning */}
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full text-sm"
+                    onClick={() => {
+                      if (editHandler) {
+                        generatePasswordResetLink(editHandler.id, editHandler.email);
+                      }
+                    }}
+                  >
+                    🔐 Skicka återställningslänk för glömt lösenord
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Genererar en unik länk som du kan skicka till behandlaren
+                  </p>
+                </div>
               </div>
-              <div className="flex gap-4 justify-between mt-6">
+              <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-between mt-6">
                 <Button
                   variant="destructive"
+                  className="w-full mobile:w-auto"
                   onClick={async () => {
                     if (editHandler) {
                       try {
@@ -436,10 +481,11 @@ export const AdminPage = (): JSX.Element => {
                 >
                   Radera
                 </Button>
-                <div className="flex gap-4">
-                  <Button variant="outline" onClick={() => setOpenEditHandlerModal(false)}>Avbryt</Button>
+                <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4">
+                  <Button variant="outline" className="w-full mobile:w-auto" onClick={() => setOpenEditHandlerModal(false)}>Avbryt</Button>
                   <Button
                     variant="default"
+                    className="w-full mobile:w-auto"
                     onClick={async () => {
                       if (editHandler) {
                         try {
@@ -463,10 +509,68 @@ export const AdminPage = (): JSX.Element => {
               </div>
             </div>
           </Modal>
-          {inviteToken && (
-            <div className="fixed top-8 right-8 bg-white border border-green-400 shadow-lg rounded-lg p-6 z-50 max-w-md">
+          {/* Popup för lösenordsåterställning */}
+          {resetPasswordToken && (
+            <div className="fixed top-8 right-8 bg-white border border-blue-400 shadow-lg rounded-lg p-4 mobile:p-6 z-50 max-w-md">
               <div className="mb-4">
-                <div className="font-semibold text-green-700 text-lg mb-2">🎉 Inbjudning skapad!</div>
+                <div className="font-semibold text-blue-700 text-base mobile:text-lg mb-2">🔐 Lösenordsåterställning skapad!</div>
+                <div className="text-sm text-gray-600 mb-4">
+                  Skicka följande information till behandlaren:
+                </div>
+              </div>
+
+
+
+              {/* Återställningslänk */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🔗 Återställningslänk
+                </label>
+                <div className="flex flex-col mobile:flex-row items-center gap-2">
+                  <input
+                    className="w-full border rounded px-2 py-2 text-sm"
+                    value={`${window.location.origin}/reset-password/${resetPasswordToken}`}
+                    readOnly
+                    onFocus={e => e.target.select()}
+                  />
+                  <button
+                    className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 w-full mobile:w-auto"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/reset-password/${resetPasswordToken}`);
+                      setResetPasswordCopied(true);
+                      setTimeout(() => setResetPasswordCopied(false), 2000);
+                    }}
+                  >
+                    Kopiera
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Denna länk går ut om 1 timme
+                </div>
+              </div>
+
+              {/* Status */}
+              {resetPasswordCopied && (
+                <div className="text-green-600 text-sm text-center mb-3">
+                  ✅ Kopierat till urklipp!
+                </div>
+              )}
+
+              <div className="text-center">
+                <button
+                  className="text-gray-500 underline text-sm"
+                  onClick={() => setResetPasswordToken(null)}
+                >
+                  Stäng
+                </button>
+              </div>
+            </div>
+          )}
+
+          {inviteToken && (
+            <div className="fixed top-8 right-8 bg-white border border-green-400 shadow-lg rounded-lg p-4 mobile:p-6 z-50 max-w-md">
+              <div className="mb-4">
+                <div className="font-semibold text-green-700 text-base mobile:text-lg mb-2">🎉 Inbjudning skapad!</div>
                 <div className="text-sm text-gray-600 mb-4">
                   Skicka följande information till användaren:
                 </div>
@@ -477,7 +581,7 @@ export const AdminPage = (): JSX.Element => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   🔐 Verifieringskod (8 siffror)
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col mobile:flex-row items-center gap-2">
                   <input
                     className="w-full border rounded px-3 py-2 font-mono text-lg tracking-widest text-center bg-gray-50"
                     value={inviteVerificationCode || "Laddar..."}
@@ -485,7 +589,7 @@ export const AdminPage = (): JSX.Element => {
                     onFocus={e => e.target.select()}
                   />
                   <button
-                    className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
+                    className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 w-full mobile:w-auto"
                     onClick={() => {
                       if (inviteVerificationCode) {
                         navigator.clipboard.writeText(inviteVerificationCode);
@@ -507,7 +611,7 @@ export const AdminPage = (): JSX.Element => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   🔗 Inbjudningslänk
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col mobile:flex-row items-center gap-2">
                   <input
                     className="w-full border rounded px-2 py-2 text-sm"
                     value={`${window.location.origin}/invite/${inviteToken}`}
@@ -515,7 +619,7 @@ export const AdminPage = (): JSX.Element => {
                     onFocus={e => e.target.select()}
                   />
                   <button
-                    className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700"
+                    className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 w-full mobile:w-auto"
                     onClick={() => {
                       navigator.clipboard.writeText(`${window.location.origin}/invite/${inviteToken}`);
                       setCopied(true);
@@ -550,12 +654,14 @@ export const AdminPage = (): JSX.Element => {
         </TabsContent>
         <TabsContent value="logg">
           <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
-            <CardContent className="p-6">
+            <CardContent className="p-4 mobile:p-6">
               <AuditLog />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      </div>
     </Layout>
   );
 };

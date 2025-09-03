@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
+import { validateCaseData, sanitizeTextInputs } from "../middleware/validation";
 
 export default function cases(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
 
   // Skapa nytt ärende
-  router.post("/", async (req, res) => {
+  router.post("/", sanitizeTextInputs, validateCaseData, async (req, res) => {
     const { customer_id, handler1_id, handler2_id, effort_id, active } = req.body;
     if (!customer_id || !handler1_id || !effort_id) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });
@@ -21,6 +22,14 @@ export default function cases(pool: Pool) {
     if (handler2_id && (isNaN(Number(handler2_id)) || Number(handler2_id) === 0)) {
       return res.status(400).json({ error: "Ogiltigt handler2_id värde" });
     }
+
+    // Kontrollera att kunden är aktiv
+    try {
+      const cust = await pool.query('SELECT active FROM customers WHERE id = $1', [Number(customer_id)]);
+      if (cust.rows.length === 0 || cust.rows[0].active === false) {
+        return res.status(400).json({ error: 'Kunden är inaktiv eller saknas' });
+      }
+    } catch {}
 
     // Kontrollera om det redan finns ett aktivt ärende med samma kombination
     try {
@@ -45,6 +54,22 @@ export default function cases(pool: Pool) {
     }
 
     try {
+      // Validera att insats och behandlare är aktiva
+      const eff = await pool.query('SELECT active FROM efforts WHERE id = $1', [Number(effort_id)]);
+      if (eff.rows.length === 0 || eff.rows[0].active === false) {
+        return res.status(400).json({ error: 'Insatsen är inaktiv eller saknas' });
+      }
+      const h1 = await pool.query('SELECT active FROM handlers WHERE id = $1', [Number(handler1_id)]);
+      if (h1.rows.length === 0 || h1.rows[0].active === false) {
+        return res.status(400).json({ error: 'Behandlare 1 är inaktiv eller saknas' });
+      }
+      if (handler2_id) {
+        const h2 = await pool.query('SELECT active FROM handlers WHERE id = $1', [Number(handler2_id)]);
+        if (h2.rows.length === 0 || h2.rows[0].active === false) {
+          return res.status(400).json({ error: 'Behandlare 2 är inaktiv eller saknas' });
+        }
+      }
+
       const r = await pool.query(
         `INSERT INTO cases (customer_id, handler1_id, handler2_id, effort_id, active)
          VALUES ($1,$2,$3,$4,$5)
@@ -99,6 +124,7 @@ export default function cases(pool: Pool) {
           cases.active,
           cases.created_at,
           customers.initials AS customer_name,
+          customers.active  AS customer_active,
           efforts.name       AS effort_name,
           h1.name            AS handler1_name,
           h2.name            AS handler2_name
@@ -119,7 +145,7 @@ export default function cases(pool: Pool) {
   });
 
   // Av/på-aktivera
-  router.put("/:id/deactivate", async (req, res) => {
+  router.put("/:id/deactivate", sanitizeTextInputs, async (req, res) => {
     try {
       const r = await pool.query("UPDATE cases SET active = FALSE WHERE id = $1 RETURNING *", [req.params.id]);
       if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
@@ -130,7 +156,7 @@ export default function cases(pool: Pool) {
     }
   });
 
-  router.put("/:id/activate", async (req, res) => {
+  router.put("/:id/activate", sanitizeTextInputs, async (req, res) => {
     try {
       const r = await pool.query("UPDATE cases SET active = TRUE WHERE id = $1 RETURNING *", [req.params.id]);
       if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
@@ -142,7 +168,7 @@ export default function cases(pool: Pool) {
   });
 
   // Uppdatera ärende
-  router.put("/:id", async (req, res) => {
+  router.put("/:id", sanitizeTextInputs, async (req, res) => {
     const { customer_id, handler1_id, handler2_id, effort_id, active } = req.body;
     if (!customer_id || !handler1_id || !effort_id) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });
@@ -181,6 +207,28 @@ export default function cases(pool: Pool) {
     }
 
     try {
+      // Kontrollera att kunden är aktiv
+      const cust = await pool.query('SELECT active FROM customers WHERE id = $1', [Number(customer_id)]);
+      if (cust.rows.length === 0 || cust.rows[0].active === false) {
+        return res.status(400).json({ error: 'Kunden är inaktiv eller saknas' });
+      }
+
+      // Validera att insats och behandlare är aktiva
+      const eff = await pool.query('SELECT active FROM efforts WHERE id = $1', [Number(effort_id)]);
+      if (eff.rows.length === 0 || eff.rows[0].active === false) {
+        return res.status(400).json({ error: 'Insatsen är inaktiv eller saknas' });
+      }
+      const h1 = await pool.query('SELECT active FROM handlers WHERE id = $1', [Number(handler1_id)]);
+      if (h1.rows.length === 0 || h1.rows[0].active === false) {
+        return res.status(400).json({ error: 'Behandlare 1 är inaktiv eller saknas' });
+      }
+      if (handler2_id) {
+        const h2 = await pool.query('SELECT active FROM handlers WHERE id = $1', [Number(handler2_id)]);
+        if (h2.rows.length === 0 || h2.rows[0].active === false) {
+          return res.status(400).json({ error: 'Behandlare 2 är inaktiv eller saknas' });
+        }
+      }
+
       const r = await pool.query(
         `UPDATE cases
            SET customer_id=$1, handler1_id=$2, handler2_id=$3, effort_id=$4, active=$5

@@ -42,6 +42,7 @@ export interface CaseBase {
 
 export interface CaseWithNames extends CaseBase {
   customer_name: string;   // customers.initials
+  customer_active?: boolean; // customers.active (för UI)
   effort_name: string;     // efforts.name
   handler1_name: string;   // handlers.name
   handler2_name: string | null;
@@ -65,6 +66,7 @@ export interface ShiftEntry {
   active: boolean;
   // bekvämlighetsfält i listor
   customer_name?: string;
+  customer_active?: boolean;
   effort_name?: string;
   handler1_name?: string;
   handler2_name?: string | null;

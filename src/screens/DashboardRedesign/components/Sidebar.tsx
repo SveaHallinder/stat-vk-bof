@@ -1,14 +1,16 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { Home, Users, Clock, FileText, BarChart3, User, Shield } from "lucide-react";
+import { Home, Users, Clock, FileText, BarChart3, User, Shield, X } from "lucide-react";
 
-export const Sidebar = (): JSX.Element => {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export const Sidebar = ({ onClose }: SidebarProps): JSX.Element => {
   const location = useLocation();
   const { user } = useAuth();
   
-
-
   const navItems = [
     { id: 1, name: "Startsida", path: "/", active: location.pathname === "/" || location.pathname === "/dashboard", icon: Home },
     { id: 2, name: "Kunder", path: "/kunder", active: location.pathname === "/kunder", icon: Users },
@@ -17,9 +19,29 @@ export const Sidebar = (): JSX.Element => {
     { id: 5, name: "Statistik", path: "/statistik", active: location.pathname === "/statistik", icon: BarChart3 },
   ];
 
+  const handleNavClick = () => {
+    // Stäng mobilmenyn om den finns
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
     <aside className="w-[300px] bg-[#17694c] flex flex-col h-screen sticky top-0">
       <div className="flex flex-col items-center gap-10 p-6 flex-1">
+        {/* Mobile close button - bara synlig på mobil */}
+        {onClose && (
+          <div className="lg:hidden w-full flex justify-end">
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              aria-label="Stäng meny"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+          </div>
+        )}
+        
         {/* Logo and title section */}
         <div className="flex flex-col items-center">
           <div className="relative group">
@@ -35,7 +57,7 @@ export const Sidebar = (): JSX.Element => {
             Öppenvård
           </h2>
           <p className="font-normal text-white/80 text-sm font-['Arial-Regular',Helvetica] group-hover:text-white/70 transition-colors">
-            Statistiksystem
+            Barn och Familj
           </p>
         </div>
 
@@ -44,7 +66,7 @@ export const Sidebar = (): JSX.Element => {
           {navItems.map((item) => {
             const IconComponent = item.icon;
             return (
-              <Link key={item.id} to={item.path}>
+              <Link key={item.id} to={item.path} onClick={handleNavClick}>
                 <Button
                   variant="ghost"
                   className={`group w-full h-12 flex items-center justify-start px-4 text-base font-['Arial-${
@@ -85,7 +107,7 @@ export const Sidebar = (): JSX.Element => {
 
         {/* Profile/Admin section at bottom */}
         <div className="mt-auto w-full">
-          <Link to={user?.role === 'admin' ? "/admin" : "/min-profil"}>
+          <Link to={user?.role === 'admin' ? "/admin" : "/min-profil"} onClick={handleNavClick}>
             <Button
               variant="ghost"
               className={`group w-full h-12 flex items-center justify-start px-4 text-base font-['Arial-${

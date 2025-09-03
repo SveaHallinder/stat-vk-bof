@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { getAuditLogger } from "../utils/auditLogger";
 
 // Utöka Request interface för att inkludera user
 declare global {
@@ -9,6 +10,7 @@ declare global {
         id: number;
         email: string;
         name: string;
+        username: string;
         role: string;
       };
     }
@@ -25,7 +27,30 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
 
   try {
     const user = jwt.verify(token, process.env.JWT_SECRET!) as any;
-    req.user = user;
+    req.user = {
+      ...user,
+      username: user.name // Lägg till username för kompatibilitet
+    };
+    
+    // Logga framgångsrik autentisering
+    if (req.path !== '/audit') { // Undvik oändlig loop
+      try {
+        const auditLogger = getAuditLogger();
+        auditLogger.logAccess(
+          user.id,
+          user.name,
+          req.path,
+          req.method
+        ).catch((error) => {
+          // Logga felet men låt autentiseringen fortsätta
+          console.warn(`Audit logging failed for user ${user.id}:`, error.message);
+        });
+      } catch (error) {
+        // Om audit logging misslyckas, låt autentiseringen fortsätta
+        console.warn('Audit logging failed:', error);
+      }
+    }
+    
     next();
   } catch (err: any) {
     if (err.name === "TokenExpiredError") {

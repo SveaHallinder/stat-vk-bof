@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
-import { getCustomer, updateCustomer, getCustomerEfforts, getShiftsForCase, updateCase, updateShift, addShift, getEfforts, getHandlers, createCase } from "@/lib/api";
-import type { CaseWithNames, ShiftEntry, ShiftStatus, Effort, Handler } from "@/types/types";
+import { getCustomer, updateCustomer, getCustomerEfforts, getShiftsForCase, updateCase, updateShift, addShift, getEfforts, getPublicHandlers, createCase } from "@/lib/api";
+import type { CaseWithNames, ShiftEntry, ShiftStatus, Effort } from "@/types/types";
 import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
 import toast from "react-hot-toast";
 
@@ -46,7 +46,7 @@ export const CustomerProfile = () => {
   const [newCase, setNewCase] = useState({ effortId: "", handler1Id: "", handler2Id: "" });
   const [savingCase, setSavingCase] = useState(false);
   const [efforts, setEfforts] = useState<Effort[]>([]);
-  const [handlers, setHandlers] = useState<Handler[]>([]);
+  const [handlers, setHandlers] = useState<any[]>([]);
   
   // Toggle för att visa/dölja avslutade ärenden
   const [showClosedCases, setShowClosedCases] = useState(false);
@@ -64,12 +64,13 @@ export const CustomerProfile = () => {
         .finally(() => setLoadingCases(false));
       
       // Ladda efforts och handlers för tidsregistrering och nya ärenden
-      Promise.all([getEfforts(), getHandlers(true)])
+      Promise.all([getEfforts(), getPublicHandlers()])
         .then(([effortsData, handlersData]) => {
           setEfforts(effortsData);
           setHandlers(handlersData);
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error('CustomerProfile: Error loading efforts/handlers:', error);
           // Ignorera fel för dessa
         });
     }
@@ -113,7 +114,8 @@ export const CustomerProfile = () => {
     return <div className="p-8 text-center text-gray-500">Laddar kunddata...</div>;
   }
 
-  const customerTitle = `${customer.initials} - ${customer.gender} (${customer.birthYear})`;
+  const displayInitials = customer?.active ? customer.initials : '—';
+  const customerTitle = `${displayInitials} - ${customer.gender} (${customer.birthYear})`;
 
   function validateEditCustomer(c: any) {
     const err: { initials?: string; birthYear?: string; gender?: string } = {};
@@ -141,6 +143,9 @@ export const CustomerProfile = () => {
       let updated;
       if (field === 'active') {
         updated = { ...prev, active: value === 'Aktiv' || value === true };
+      } else if (field === 'initials' && typeof value === 'string') {
+        // Konvertera initialer till versaler automatiskt
+        updated = { ...prev, [field]: value.toUpperCase() };
       } else {
         updated = { ...prev, [field]: value };
       }
@@ -221,8 +226,6 @@ export const CustomerProfile = () => {
 
   const handleEditShift = (shift: ShiftEntry) => {
     // Spara det ursprungliga datumet när man redigerar
-    console.log("Editing shift:", shift);
-    console.log("Shift date:", shift.date);
     
     // Konvertera ISO-datum till YYYY-MM-DD format för HTML date input
     let formattedDate = "";

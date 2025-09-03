@@ -3,12 +3,14 @@ import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import { getStatsSummary, getStatsByEffort, getEfforts, getHandlers, getPublicHandlers, getCustomers } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { Customer, Handler, Effort } from "@/types/types";
+import { api } from "@/lib/apiClient";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 
@@ -33,6 +35,8 @@ export const StatistikPage = (): JSX.Element => {
   const [selectedEffortCategories, setSelectedEffortCategories] = useState<string[]>([]);
   const [selectedHandlers, setSelectedHandlers] = useState<string[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
+  const [includeInactive, setIncludeInactive] = useState<boolean>(false);
+  const [shiftStatus, setShiftStatus] = useState<'Alla' | 'Utförd' | 'Avbokad'>('Alla');
   // Valbara alternativ
   type CustomerItem = Customer & { birthYear: number };
 
@@ -84,9 +88,8 @@ export const StatistikPage = (): JSX.Element => {
     if (selectedYears.length > 0) params.birthYear = selectedYears.join(",");
     if (selectedHandlers.length > 0) params.handler = selectedHandlers.join(",");
     if (selectedCustomers.length > 0) params.customer = selectedCustomers.join(",");
-    
-    console.log("Frontend buildParams - selectedEffortCategories:", selectedEffortCategories);
-    console.log("Frontend buildParams - final params:", params);
+    if (includeInactive) params.includeInactive = true;
+    if (shiftStatus && shiftStatus !== 'Alla') params.shiftStatus = shiftStatus;
     
     return params;
   }
@@ -106,6 +109,25 @@ export const StatistikPage = (): JSX.Element => {
   useEffect(() => {
     loadStats();
   }, [dateRange, selectedEfforts, selectedEffortCategories, selectedGenders, selectedYears, selectedHandlers, selectedCustomers]);
+
+  // Logga export
+  const logExport = async (exportType: string, filters: any) => {
+    try {
+      const payload = {
+        action: 'EXPORT',
+        entityType: 'data',
+        entityName: exportType,
+        details: { event: 'data_exported', export_type: exportType, filters }
+      };
+      await api('/audit/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      console.error('Failed to log export:', error);
+    }
+  };
 
   // Exportfunktioner
   const handleExportPDF = () => {
@@ -163,6 +185,20 @@ export const StatistikPage = (): JSX.Element => {
       pdf.text(String(totalTimmar), 114, y);
       pdf.text(String(totalKunder), 164, y);
       pdf.save('statistik.pdf');
+      
+      // Logga export
+      logExport('PDF', {
+        filters: {
+          dateRange: dateRange.from && dateRange.to ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}` : "Alla",
+          selectedEfforts: selectedEfforts.length > 0 ? effortOptions.filter(e => selectedEfforts.includes(String(e.id))).map(e => e.name).join(", ") : "Alla",
+          selectedEffortCategories: selectedEffortCategories.length > 0 ? selectedEffortCategories.join(", ") : "Alla",
+          selectedGenders: selectedGenders.length > 0 ? selectedGenders.join(", ") : "Alla",
+          selectedYears: selectedYears.length > 0 ? selectedYears.join(", ") : "Alla",
+          selectedHandlers: selectedHandlers.length > 0 ? handlerOptions.filter(h => selectedHandlers.includes(String(h.id))).map(h => h.name).join(", ") : "Alla",
+          selectedCustomers: selectedCustomers.length > 0 ? customerOptions.filter(c => selectedCustomers.includes(String(c.id))).map(c => `${c.initials} (${c.birthYear})`).join(", ") : "Alla"
+        }
+      });
+      
       toast.success("PDF exporterad!");
     }).catch(() => toast.error("Kunde inte exportera PDF"));
   };
@@ -212,6 +248,20 @@ export const StatistikPage = (): JSX.Element => {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Statistik');
       XLSX.writeFile(wb, 'statistik.xlsx');
+      
+      // Logga export
+      logExport('Excel', {
+        filters: {
+          dateRange: dateRange.from && dateRange.to ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}` : "Alla",
+          selectedEfforts: selectedEfforts.length > 0 ? effortOptions.filter(e => selectedEfforts.includes(String(e.id))).map(e => e.name).join(", ") : "Alla",
+          selectedEffortCategories: selectedEffortCategories.length > 0 ? selectedEffortCategories.join(", ") : "Alla",
+          selectedGenders: selectedGenders.length > 0 ? selectedGenders.join(", ") : "Alla",
+          selectedYears: selectedYears.length > 0 ? selectedYears.join(", ") : "Alla",
+          selectedHandlers: selectedHandlers.length > 0 ? handlerOptions.filter(h => selectedHandlers.includes(String(h.id))).map(h => h.name).join(", ") : "Alla",
+          selectedCustomers: selectedCustomers.length > 0 ? customerOptions.filter(c => selectedCustomers.includes(String(c.id))).map(c => `${c.initials} (${c.birthYear})`).join(", ") : "Alla"
+        }
+      });
+      
       toast.success("Excel exporterad!");
     } catch {
       toast.error("Kunde inte exportera Excel");
@@ -220,16 +270,19 @@ export const StatistikPage = (): JSX.Element => {
 
   return (
     <Layout title="Statistik">
-      <div className="space-y-8">
+      {/* Responsiv container */}
+      <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
+
+      <div className="space-y-6 mobile:space-y-8">
         {/* Filterrad */}
-        <div className="bg-white rounded-xl p-6 flex flex-col gap-6 shadow-sm">
-        <label className="font-normal text-lg m-0 p-0 text-black">Filtrera</label>
-          <div className="flex flex-wrap gap-3 mb-4 items-end">
-            <div className="flex flex-col gap-1">
+        <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col gap-4 mobile:gap-6 shadow-sm border border-gray-200">
+        <label className="font-normal text-base mobile:text-lg m-0 p-0 text-black">Filtrera</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-2 items-end">
+            <div className="gap-1 w-full flex flex-col">
               <label className="font-normal text-xs text-gray-500">Tidsperiod</label>
               <DateRangePicker value={dateRange} onChange={setDateRange} />
             </div>
-            <div className="flex flex-col gap-1 w-[180px]">
+            <div className="flex flex-col gap-1 w-full">
               <label className="font-normal text-xs text-gray-500">Kön</label>
               <MultiSelectCombobox
                 options={[
@@ -242,11 +295,11 @@ export const StatistikPage = (): JSX.Element => {
                 placeholder="Alla kön"
               />
             </div>
-            <div className="flex flex-col gap-1 w-[180px]">
+            <div className="flex flex-col gap-1 w-full ">
               <label className="font-normal text-xs text-gray-500">Födelseår</label>
               <MultiSelectCombobox options={yearOptions} value={selectedYears} onChange={setSelectedYears} placeholder="Alla år" />
             </div>
-            <div className="flex flex-col gap-1 w-[180px]">
+            <div className="flex flex-col gap-1 w-full">
               <label className="font-normal text-xs text-gray-500">Insats</label>
               <MultiSelectCombobox
                 options={effortOptions.map(e => ({ label: e.name, value: String(e.id) }))}
@@ -255,7 +308,7 @@ export const StatistikPage = (): JSX.Element => {
                 placeholder="Alla insatser"
               />
             </div>
-            <div className="flex flex-col gap-1 w-[180px]">
+            <div className="flex flex-col gap-1 w-full">
               <label className="font-normal text-xs text-gray-500">Insatskategori</label>
               <MultiSelectCombobox
                 options={[
@@ -268,7 +321,20 @@ export const StatistikPage = (): JSX.Element => {
                 placeholder="Alla kategorier"
               />
             </div>
-            <div className="flex flex-col gap-1 w-[180px]">
+            <div className="flex flex-col gap-1 w-full">
+              <label className="font-normal text-xs text-gray-500">Tidsstatus</label>
+              <Select value={shiftStatus} onValueChange={(v) => setShiftStatus(v as any)}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Alla" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Alla">Alla</SelectItem>
+                  <SelectItem value="Utförd">Utförd</SelectItem>
+                  <SelectItem value="Avbokad">Avbokad</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1 w-full">
               <label className="font-normal text-xs text-gray-500">Behandlare</label>
               <MultiSelectCombobox
                 options={handlerOptions.map(h => ({ label: h.name, value: String(h.id) }))}
@@ -277,7 +343,7 @@ export const StatistikPage = (): JSX.Element => {
                 placeholder="Alla behandlare"
               />
             </div>
-            <div className="flex flex-col gap-1 w-[180px]">
+            <div className="flex flex-col gap-1 w-full">
               <label className="font-normal text-xs text-gray-500">Kund</label>
               <MultiSelectCombobox
                 options={customerOptions.map(c => ({ label: `${c.initials} (${c.birthYear})`, value: String(c.id) }))}
@@ -286,12 +352,18 @@ export const StatistikPage = (): JSX.Element => {
                 placeholder="Alla kunder"
               />
             </div>
+            <div className="flex items-end w-full h-10">
+              <label className="flex items-center gap-2 text-sm px-3 py-2 border rounded-lg bg-white w-full justify-center md:justify-start">
+                <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} />
+                Inkludera inaktiva
+              </label>
+            </div>
             {/* Rensa alla filter-knapp */}
-              <div className="flex justify-end float-right">
+              <div className="flex justify-center mobile:justify-end w-full mobile:w-full">
                 <Button
                   variant="outline"
                   size="default"
-                  className="text-sm font-normal"
+                  className="text-sm font-normal w-full mobile:w-auto"
                   onClick={() => {
                     setDateRange({ from: null, to: null });
                     setSelectedGenders([]);
@@ -315,33 +387,33 @@ export const StatistikPage = (): JSX.Element => {
             <span className="text-lg text-[#17694c]">Laddar statistik...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-            <div className="bg-white rounded-xl p-6 flex flex-col items-center justify-center shadow-sm">
-              <div className="text-gray-600 text-sm font-medium mb-2 tracking-wide uppercase">Totalt antal besök</div>
-              <div className="text-[#222] text-3xl font-light mt-1">{stats ? stats.antal_besok.toLocaleString() : "-"}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mobile:gap-6 text-center">
+            <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
+              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Totalt antal besök</div>
+              <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">{stats ? stats.antal_besok.toLocaleString() : "-"}</div>
             </div>
-            <div className="bg-white rounded-xl p-6 flex flex-col items-center justify-center shadow-sm">
-              <div className="text-gray-600 text-sm font-medium mb-2 tracking-wide uppercase">Antal kunder</div>
-              <div className="text-[#222] text-3xl font-light mt-1">{stats ? stats.antal_kunder : "-"}</div>
+            <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
+              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Antal kunder</div>
+              <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">{stats ? stats.antal_kunder : "-"}</div>
             </div>
-            <div className="bg-white rounded-xl p-6 flex flex-col items-center justify-center shadow-sm">
-              <div className="text-gray-600 text-sm font-medium mb-2 tracking-wide uppercase">Genomsnittlig tid</div>
-              <div className="text-[#222] text-3xl font-light mt-1">{stats ? `${stats.genomsnittlig_tid} min` : "-"}</div>
+            <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
+              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Genomsnittlig tid</div>
+              <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">{stats ? `${stats.genomsnittlig_tid} min` : "-"}</div>
             </div>
-            <div className="bg-white rounded-xl p-6 flex flex-col items-center justify-center shadow-sm">
-              <div className="text-gray-600 text-sm font-medium mb-2 tracking-wide uppercase">Avbokningsgrad</div>
-              <div className="text-[#222] text-3xl font-light mt-1">{stats ? `${stats.avbokningsgrad}%` : "-"}</div>
+            <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
+              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Avbokningsgrad</div>
+              <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">{stats ? `${stats.avbokningsgrad}%` : "-"}</div>
             </div>
           </div>
         )}
 
         {/* Diagramkort */}
-        <div ref={chartRef} className="bg-white rounded-xl p-8 flex flex-col items-center relative shadow-sm">
-          <div className="text-base font-medium text-gray-800 mb-6">Besök och kunder per insatstyp ({yearLabel})</div>
+        <div ref={chartRef} className="bg-white rounded-xl p-4 mobile:p-8 flex flex-col items-center relative shadow-sm overflow-x-auto">
+          <div className="text-sm mobile:text-base font-medium text-gray-800 mb-4 mobile:mb-6">Besök och kunder per insatstyp ({yearLabel})</div>
           {effortData && effortData.length > 0 && (
-            <div className="flex w-full h-64 mb-6">
+            <div className="flex w-full h-48 mobile:h-64 mb-4 mobile:mb-6 min-w-max">
               {/* Y-axel */}
-              <div className="flex flex-col justify-between items-end pr-4 py-2 w-12 select-none">
+              <div className="flex flex-col justify-between items-end pr-2 mobile:pr-4 py-2 w-8 mobile:w-12 select-none">
                 {[...Array(6)].map((_, i) => {
                   const maxY = Math.max(...effortData.map(d => Math.max(Number(d.antal_besok), Number(d.antal_kunder))), 1);
                   const value = Math.round((maxY / 5) * (5 - i));
@@ -351,18 +423,18 @@ export const StatistikPage = (): JSX.Element => {
                 })}
               </div>
               {/* Staplar */}
-              <div className="flex gap-20 items-end flex-1 h-full justify-center">
+              <div className="flex gap-8 mobile:gap-20 items-end flex-1 h-full justify-center">
                 {effortData.map((item, idx) => {
                   const maxY = Math.max(...effortData.map(d => Math.max(Number(d.antal_besok), Number(d.antal_kunder))), 1);
                   return (
-                    <div key={idx} className="flex flex-col items-center flex-1 max-w-[56px] min-w-[36px]">
+                    <div key={idx} className="flex flex-col items-center flex-1 max-w-[40px] mobile:max-w-[56px] min-w-[28px] mobile:min-w-[36px]">
                       {/* Staplar i container med fast höjd */}
-                      <div className="flex gap-3 items-end w-full justify-center h-44">
+                      <div className="flex gap-2 mobile:gap-3 items-end w-full justify-center h-32 mobile:h-44">
                         <div
                           className="bg-[#17694c] rounded-lg transition-all duration-700 cursor-pointer relative"
                           style={{
-                            width: '36px',
-                            height: `${Math.max((Number(item.antal_besok) / maxY) * 176, minBarHeight)}px`,
+                            width: '28px',
+                            height: `${Math.max((Number(item.antal_besok) / maxY) * 128, minBarHeight)}px`,
                             minHeight: minBarHeight,
                           }}
                           onMouseEnter={e => {
@@ -378,8 +450,8 @@ export const StatistikPage = (): JSX.Element => {
                         <div
                           className="bg-[#1769dc] rounded-lg transition-all duration-700 cursor-pointer relative"
                           style={{
-                            width: '36px',
-                            height: `${Math.max((Number(item.antal_kunder) / maxY) * 176, minBarHeight)}px`,
+                            width: '28px',
+                            height: `${Math.max((Number(item.antal_kunder) / maxY) * 128, minBarHeight)}px`,
                             minHeight: minBarHeight,
                           }}
                           onMouseEnter={e => {
@@ -394,7 +466,7 @@ export const StatistikPage = (): JSX.Element => {
                         />
                       </div>
                       {/* Etikett under staplarna */}
-                      <div className="text-gray-400 font-normal text-sm text-center mt-6 max-w-[80px] whitespace-nowrap overflow-hidden">{item.effort_name}</div>
+                      <div className="text-gray-400 font-normal text-xs mobile:text-sm text-center mt-4 mobile:mt-6 max-w-[60px] mobile:max-w-[80px] whitespace-nowrap overflow-hidden">{item.effort_name}</div>
                     </div>
                   );
                 })}
@@ -415,11 +487,15 @@ export const StatistikPage = (): JSX.Element => {
               )}
             </div>
           )}
-          <div className="flex gap-4 justify-center mt-2">
-            <Button variant="outline" className="rounded-lg text-sm font-medium" onClick={handleExportPDF}>Exportera som PDF</Button>
-            <Button className="rounded-lg text-sm font-medium" variant="outline" onClick={handleExportExcel}>Ladda ner som Excel</Button>
-          </div>
         </div>
+
+        {/* Export-knappar utanför diagrammet */}
+        <div className="flex flex-col lg:flex-row mobile:flex-col gap-3 mobile:gap-4 justify-center">
+          <Button variant="outline" className="rounded-lg text-sm font-medium w-full mobile:w-auto" onClick={handleExportPDF}>Exportera som PDF</Button>
+          <Button className="rounded-lg text-sm font-medium" variant="outline" onClick={handleExportExcel}>Ladda ner som Excel</Button>
+        </div>
+      </div>
+
       </div>
     </Layout>
   );

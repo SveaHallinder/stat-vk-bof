@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
+import crypto from "crypto";
 
 export default function handlers(pool: Pool) {
   const router = Router();
@@ -10,7 +11,7 @@ export default function handlers(pool: Pool) {
   // This endpoint will return only ID and name, and will not require 'admin' role.
   router.get('/public', authenticateToken, async (req, res) => {
     try {
-      const result = await pool.query('SELECT id, name FROM handlers ORDER BY name');
+      const result = await pool.query('SELECT id, name FROM handlers WHERE active = TRUE ORDER BY name');
       res.json(result.rows);
     } catch (error) {
       console.error('Error fetching public handlers list:', error);
@@ -94,20 +95,78 @@ export default function handlers(pool: Pool) {
     }
   });
 
-  // Radera behandlare
-  router.delete("/:id", async (req, res) => {
-    const { id } = req.params;
+  // Ingen hårdradering av behandlare – använd avaktivera istället
+  router.delete("/:id", async (_req, res) => {
+    return res.status(405).json({ error: 'Method Not Allowed: hård radering är avstängd. Använd avaktivera/återaktivera.' });
+  });
+
+  // Generera lösenordsåterställningslänk för behandlare
+  router.post("/:id/generate-reset-link", async (req, res) => {
     try {
-      const result = await pool.query("DELETE FROM handlers WHERE id = $1 RETURNING *", [id]);
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Behandlare hittades inte" });
+      const handlerId = parseInt(req.params.id);
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ 
+          error: 'validation_error',
+          message: 'E-postadress krävs' 
+        });
       }
-      res.json({ message: "Behandlare raderad", handler: result.rows[0] });
-    } catch {
-      res.status(500).json({ error: "Kunde inte radera behandlare" });
+
+      // Hitta behandlaren
+      const handlerResult = await pool.query(
+        'SELECT id, email, name FROM handlers WHERE id = $1 AND email = $2',
+        [handlerId, email]
+      );
+
+      if (handlerResult.rows.length === 0) {
+        return res.status(404).json({ 
+          error: 'handler_not_found',
+          message: 'Behandlare hittades inte' 
+        });
+      }
+
+      const handler = handlerResult.rows[0];
+
+      // Rensa gamla tokens för denna behandlare
+      await pool.query(
+        'DELETE FROM password_resets WHERE user_id = $1',
+        [handlerId]
+      );
+
+      // Generera ny token och verifieringskod
+      const token = crypto.randomBytes(32).toString('hex');
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+      const verificationCode = Math.random().toString().slice(2, 10); // 8 siffror
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 timme
+
+      // Spara i password_resets tabellen
+      await pool.query(
+        'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)',
+        [handlerId, hashedToken, expiresAt]
+      );
+
+      console.log(`✅ Admin genererade återställningslänk för behandlare: ${handler.email} (ID: ${handlerId})`);
+
+      res.json({ 
+        message: 'Återställningslänk genererad',
+        token: token,
+        verificationCode: verificationCode,
+        handler: {
+          id: handler.id,
+          email: handler.email,
+          name: handler.name
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Fel vid generering av återställningslänk:', error);
+      res.status(500).json({ 
+        error: 'internal_error',
+        message: 'Ett internt fel uppstod' 
+      });
     }
   });
 
   return router;
 }
-

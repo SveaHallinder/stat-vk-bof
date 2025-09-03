@@ -110,7 +110,7 @@ export const LoginPage = () => {
           
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-500">
-              Kontakta systemadministratören om du har problem med inloggningen
+              Glömt lösenord? Kontakta systemadministratören för att få hjälp med inloggningen
             </p>
           </div>
         </CardContent>

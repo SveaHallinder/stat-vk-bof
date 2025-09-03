@@ -1,13 +1,16 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
+import { requireRole } from "../middleware/requireRole";
+import { sanitizeTextInputs } from "../middleware/validation";
 
 export default function efforts(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
+  const adminOnly = requireRole('admin');
 
-  // Skapa insats
-  router.post("/", async (req, res) => {
+  // Helpers
+  const createEffort = async (req: Request, res: Response) => {
     const { name, available_for } = req.body;
     if (!name || !available_for) {
       return res.status(400).json({ error: "Alla fält krävs" });
@@ -21,7 +24,7 @@ export default function efforts(pool: Pool) {
     } catch {
       res.status(500).json({ error: "Kunde inte skapa insats" });
     }
-  });
+  };
 
   // Hämta alla insatser (med stöd för all=true)
   router.get("/", async (req, res) => {
@@ -32,15 +35,13 @@ export default function efforts(pool: Pool) {
       } else {
         result = await pool.query("SELECT * FROM efforts WHERE active = TRUE ORDER BY id ASC");
       }
-      console.log("Efforts data:", result.rows);
       res.json(result.rows);
     } catch {
       res.status(500).json({ error: "Kunde inte hämta insatser" });
     }
   });
 
-  // Avaktivera insats
-  router.put("/:id/deactivate", async (req, res) => {
+  const deactivateEffort = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
@@ -51,10 +52,9 @@ export default function efforts(pool: Pool) {
     } catch {
       res.status(500).json({ error: "Kunde inte avaktivera insats" });
     }
-  });
+  };
 
-  // Återaktivera insats
-  router.put("/:id/activate", async (req, res) => {
+  const activateEffort = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
@@ -65,10 +65,9 @@ export default function efforts(pool: Pool) {
     } catch {
       res.status(500).json({ error: "Kunde inte återaktivera insats" });
     }
-  });
+  };
 
-  // Uppdatera insats
-  router.put("/:id", async (req, res) => {
+  const updateEffort = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, available_for } = req.body;
     if (!name || !available_for) {
@@ -86,38 +85,23 @@ export default function efforts(pool: Pool) {
     } catch {
       res.status(500).json({ error: "Kunde inte uppdatera insats" });
     }
-  });
+  };
 
-  // Radera insats
-  router.delete("/:id", async (req, res) => {
-    const { id } = req.params;
-    try {
-      const result = await pool.query("DELETE FROM efforts WHERE id = $1 RETURNING *", [id]);
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Insats hittades inte" });
-      }
-      res.json({ message: "Insats raderad", effort: result.rows[0] });
-    } catch {
-      res.status(500).json({ error: "Kunde inte radera insats" });
-    }
-  });
+  const deleteEffort = async (_req: Request, res: Response) => {
+    // Ingen hårdradering – använd avaktivera
+    return res.status(405).json({ error: 'Method Not Allowed: hård radering är avstängd. Använd avaktivera/återaktivera.' });
+  };
 
-  // Debug: Kolla efforts-tabellen
-  router.get("/debug", async (req, res) => {
-    try {
-      const result = await pool.query("SELECT id, name, available_for, active FROM efforts ORDER BY id ASC");
-      console.log("DEBUG: Efforts table contents:", result.rows);
-      res.json({ 
-        message: "Efforts table contents", 
-        data: result.rows,
-        count: result.rows.length 
-      });
-    } catch (err) {
-      console.error("DEBUG: Error querying efforts:", err);
-      res.status(500).json({ error: "Kunde inte hämta efforts debug info" });
-    }
-  });
+  // Skrivande endpoints med admin-skydd och sanering
+  router.post("/", adminOnly, sanitizeTextInputs, createEffort);
+  router.put("/:id", adminOnly, sanitizeTextInputs, updateEffort);
+  router.post("/:id/activate", adminOnly, activateEffort);
+  router.post("/:id/deactivate", adminOnly, deactivateEffort);
+  router.delete("/:id", adminOnly, deleteEffort);
+
+  // Bakåtkompatibilitet för tidigare PUT-aktivera/inaktivera
+  router.put("/:id/activate", adminOnly, activateEffort);
+  router.put("/:id/deactivate", adminOnly, deactivateEffort);
 
   return router;
 }
-

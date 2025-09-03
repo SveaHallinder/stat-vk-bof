@@ -1,9 +1,11 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./globals.css";
+import { validateEnv } from "./config/env";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 // AdminRoute ersatt av ProtectedRoute med requiredRole
 import { DashboardRedesign } from "./screens/DashboardRedesign";
 import { KunderPage } from "./screens/KunderPage";
@@ -14,30 +16,72 @@ import { StatistikPage } from "./screens/StatistikPage";
 import { AdminPage } from "./screens/AdminPage";
 import MinProfilPage from "./screens/MinProfilPage";
 import { LoginPage } from "./screens/LoginPage";
-
 import { InviteAcceptPage } from "./screens/InviteAcceptPage";
+import { ResetPasswordPage } from "./screens/ResetPasswordPage";
 import { Toaster } from "react-hot-toast";
+import { LoadingSpinner } from "./components/ui/loading-spinner";
+
+// Loading component for Suspense fallback
+const PageLoader = () => (
+  <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center">
+    <div className="text-center">
+      <LoadingSpinner size="lg" text="Laddar sida..." />
+      <p className="mt-4 text-gray-600">Vänligen vänta...</p>
+    </div>
+  </div>
+);
+
+// Validera miljövariabler innan appen startar
+try {
+  validateEnv();
+} catch (error) {
+  console.error('Miljövalidering misslyckades:', error);
+  // I utvecklingsläge, visa felmeddelande
+  if (import.meta.env.DEV) {
+    document.body.innerHTML = `
+      <div style="padding: 20px; font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto;">
+        <h1 style="color: #dc2626;">🚨 Konfigurationsfel</h1>
+        <p>Appen kunde inte starta på grund av saknade miljövariabler.</p>
+        <pre style="background: #f3f4f6; padding: 15px; border-radius: 5px; overflow-x: auto;">
+          ${error instanceof Error ? error.message : 'Okänt fel'}
+        </pre>
+        <p><strong>Lösning:</strong> Skapa en .env-fil i projektets rot med följande variabler:</p>
+        <pre style="background: #f3f4f6; padding: 15px; border-radius: 5px;">
+VITE_API_URL=http://localhost:4000/api
+VITE_APP_NAME=Vallentuna Kommun
+        </pre>
+      </div>
+    `;
+  }
+  // Stoppa appen från att starta
+  throw error;
+}
 
 createRoot(document.getElementById("app") as HTMLElement).render(
   <StrictMode>
-    <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/invite/:token" element={<InviteAcceptPage />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<ProtectedRoute><DashboardRedesign /></ProtectedRoute>} />
-          <Route path="/kunder" element={<ProtectedRoute><KunderPage /></ProtectedRoute>} />
-          <Route path="/kunder/:id" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
-          <Route path="/registrera-tid" element={<ProtectedRoute><RegisteraTidPage /></ProtectedRoute>} />
-          <Route path="/arendelista" element={<ProtectedRoute><ArendelistaPage /></ProtectedRoute>} />
-          <Route path="/statistik" element={<ProtectedRoute><StatistikPage /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
-          <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/invite/:token" element={<InviteAcceptPage />} />
+              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<ProtectedRoute><DashboardRedesign /></ProtectedRoute>} />
+              <Route path="/kunder" element={<ProtectedRoute><KunderPage /></ProtectedRoute>} />
+              <Route path="/kunder/:id" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
+              <Route path="/registrera-tid" element={<ProtectedRoute><RegisteraTidPage /></ProtectedRoute>} />
+              <Route path="/arendelista" element={<ProtectedRoute><ArendelistaPage /></ProtectedRoute>} />
+              <Route path="/statistik" element={<ProtectedRoute><StatistikPage /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
+              <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
 
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+            </Routes>
+          </Suspense>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>
 );

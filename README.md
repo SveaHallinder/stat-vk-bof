@@ -1,29 +1,122 @@
+# Vallentuna Kommun - Tidsregistreringssystem
+
+Ett modernt webbbaserat system för hantering av kunder, ärenden och tidsregistreringar för Vallentuna kommun.
 # Statistik Vallentuna
 
-## Getting started
+## 🚀 Funktioner
 
-> **Prerequisites:**
-> The following steps require [NodeJS](https://nodejs.org/en/) to be installed on your system, so please
-> install it beforehand if you haven't already.
+- **Kundhantering**: Registrera och hantera kunder
+- **Ärendesystem**: Skapa och spåra ärenden med olika insatser
+- **Tidsregistrering**: Registrera arbetstid för olika ärenden
+- **Statistik**: Översikt och analys av aktiviteter
+- **Användarhantering**: Rollbaserad åtkomst (admin/behandlare)
+- **Responsiv design**: Fungerar på alla enheter
 
-To get started with your project, you'll first need to install the dependencies with:
+## 🛠️ Teknisk stack
 
-```
+### Frontend
+- React 18 + TypeScript
+- Vite (byggverktyg)
+- Tailwind CSS (styling)
+- Radix UI (komponenter)
+- React Router (navigering)
+
+### Backend
+- Node.js + Express
+- PostgreSQL (databas)
+- JWT-autentisering
+- Rate limiting & säkerhet
+
+## 📋 Förutsättningar
+
+- [Node.js](https://nodejs.org/) (version 18 eller senare)
+- [npm](https://www.npmjs.com/) eller [yarn](https://yarnpkg.com/)
+- PostgreSQL-databas
+
+## 🚀 Kom igång
+
+### 1. Installera beroenden
+
+```bash
+# Frontend
+npm install
+
+# Backend
+cd backend
 npm install
 ```
 
-Then, you'll be able to run a development version of the project with:
+### 2. Konfigurera miljövariabler
 
+Skapa en `.env`-fil i projektets rot (se [ENVIRONMENT_SETUP.md](./ENVIRONMENT_SETUP.md)):
+
+```bash
+VITE_API_URL=http://localhost:4000/api
+VITE_APP_NAME=Vallentuna Kommun
 ```
+
+### 3. Starta utvecklingsservern
+
+```bash
+# Frontend (port 5173)
+npm run dev
+
+# Backend (port 4000)
+cd backend
 npm run dev
 ```
 
-After a few seconds, your project should be accessible at the address
-[http://localhost:5173/](http://localhost:5173/)
+### 4. Öppna applikationen
 
+Gå till [http://localhost:5173](http://localhost:5173) i din webbläsare.
 
-If you are satisfied with the result, you can finally build the project for release with:
+## 📁 Projektstruktur
 
 ```
+src/
+├── components/          # Återanvändbara UI-komponenter
+├── contexts/           # React contexts (Auth, etc.)
+├── lib/               # API-klienter och utilities
+├── routes/            # Routning och navigation
+├── screens/           # Huvudsidor och vyer
+└── types/             # TypeScript-typer
+```
+
+## 🔧 Skript
+
+```bash
+# Utveckling
+npm run dev
+
+# Bygg för produktion
 npm run build
+
+# Backend utveckling
+cd backend && npm run dev
 ```
+
+## 📚 Dokumentation
+
+- [Miljövariabler](./ENVIRONMENT_SETUP.md)
+- [Admin-manual](./docs/ADMIN_MANUAL.md)
+- [Deployment](./docs/DEPLOYMENT.md)
+- [Onboarding](./docs/ONBOARDING_GUIDE.md)
+ - [Retention/Gallring](./docs/RETENTION_POLICY.md)
+
+## ♻️ Retention (kort)
+
+- Auditloggar gallras efter 5 år via funktionen `cleanup_old_audit_logs()` (se `create_audit_log_table.sql`).
+- Schemalägg gallring via cron/pg_cron eller anropa `/api/audit/cleanup` från ett serverjobb.
+- Verksamhetsdata (kunder/ärenden/tider/insatser/behandlare) hård‑raderas inte: avaktivera i stället. Kundinitialer anonymiseras vid avaktivering.
+
+## 🤝 Bidrag
+
+1. Forka projektet
+2. Skapa en feature branch
+3. Committa dina ändringar
+4. Pusha till branchen
+5. Öppna en Pull Request
+
+## 📄 Licens
+
+Detta projekt är utvecklat för Vallentuna kommun.

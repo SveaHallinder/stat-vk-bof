@@ -16,6 +16,12 @@ module.exports = {
   		}
   	},
   	extend: {
+  		screens: {
+  			'mobile': '390px',    // iPhone 12 Pro
+  			'mobile-sm': '375px', // iPhone SE
+  			'tablet': '640px',    // Standard tablet
+  			'laptop': '1024px',   // Standard laptop
+  		},
   		colors: {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',

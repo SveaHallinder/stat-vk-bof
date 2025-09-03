@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import dotenv from "dotenv";
 import { Pool } from "pg";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require("../package.json");
@@ -14,38 +13,31 @@ import stats from "./routes/stats";
 import shifts from "./routes/shifts";
 import users from "./routes/users";
 import invites from "./routes/invites";
+import audit from "./routes/audit";
+import auth from "./routes/auth";
+import { initAuditLogger } from "./utils/auditLogger";
+import { config } from "./config";
+import { sanitizeTextInputs } from "./middleware/validation";
 
-dotenv.config();
-
-// Tvinga rätt databasanslutning för att lösa problemet
-process.env.DATABASE_URL = 'postgres://admin@localhost:5432/vallentuna';
-
-// Validera kritiska miljövariabler
-if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'devsecret') {
-  console.error('❌ KRITISKT: JWT_SECRET måste vara en stark secret!');
-  console.error('   Använd: openssl rand -base64 32');
-  process.exit(1);
-}
-
-if (!process.env.DATABASE_URL) {
-  console.error('❌ KRITISKT: DATABASE_URL saknas!');
-  process.exit(1);
-}
+// Konfigurationen valideras automatiskt vid import av config
 
 const app = express();
-app.set("trust proxy", 1);
-const corsOrigins = process.env.CORS_ORIGIN?.split(",").map(o => o.trim()).filter(Boolean);
+app.set("trust proxy", config.trustProxy);
+
 const corsOptions: cors.CorsOptions = {
-  origin: corsOrigins,
+  origin: config.cors.origin,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Authorization", "Content-Type"],
-  credentials: false,
+  allowedHeaders: ["Authorization", "Content-Type", "X-Requested-With"],
+  credentials: config.cors.credentials,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
 app.use(helmet());
 app.use(express.json());
+app.use(sanitizeTextInputs);
 
 app.get("/api/healthz", (_req, res) => {
   res.json({ 
@@ -59,8 +51,14 @@ app.get("/api/healthz", (_req, res) => {
 
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: config.database.url,
+  min: config.database.pool.min,
+  max: config.database.pool.max,
+  idleTimeoutMillis: config.database.pool.idleTimeout,
 });
+
+// Initiera AuditLogger
+initAuditLogger(pool);
 
 
 
@@ -73,10 +71,11 @@ app.use("/api/stats", stats(pool));
 app.use("/api/shifts", shifts(pool));
 app.use("/api/users", users(pool));
 app.use("/api/invites", invites(pool));
+app.use("/api/audit", audit(pool));
+app.use("/api/auth", auth(pool));
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`🚀 API-servern kör på port ${PORT}`);
+app.listen(config.port, () => {
+  console.log(`🚀 API-servern kör på port ${config.port}`);
   console.log(`📡 API-prefix: /api/*`);
 });
 

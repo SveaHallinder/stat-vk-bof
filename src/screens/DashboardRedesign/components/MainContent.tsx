@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { BarChartStatistik } from "./BarChartStatistik";
@@ -7,30 +7,84 @@ import { PieChart as RePieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { createCustomer, createCase, getCases, addShift, getStatsSummary, getStatsByEffort } from '@/lib/api';
+import { createCustomer, createCase, getCases, addShift, getStatsSummary, getStatsByEffort, getPublicHandlers } from '@/lib/api';
 import { KundCombobox } from "@/components/ui/kund-combobox";
 import { InsatsCombobox } from "@/components/ui/insats-combobox";
 import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const MainContent = (): JSX.Element => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   // Dynamisk statistik
   const [stats, setStats] = useState<{ antal_besok: number; antal_kunder: number; genomsnittlig_tid: number; avbokningsgrad: number } | null>(null);
   const [effortData, setEffortData] = useState<any[] | null>(null);
+  const [handlers, setHandlers] = useState<any[] | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
+  // Memoized date calculations
+  const dateRange = useMemo(() => {
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
     const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
-    getStatsSummary({ from, to }).then(setStats);
-    getStatsByEffort({ from, to }).then(setEffortData);
+    return { from, to };
   }, []);
 
-  const statsCards = [
+  // Memoized data loading function
+  const loadDashboardData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // Ladda data parallellt men med bättre felhantering
+      const [statsResult, effortResult, handlersResult] = await Promise.allSettled([
+        getStatsSummary(dateRange),
+        getStatsByEffort(dateRange),
+        getPublicHandlers()
+      ]);
+      
+      // Hantera resultaten
+      if (statsResult.status === 'fulfilled') {
+        setStats(statsResult.value);
+      }
+      
+      if (effortResult.status === 'fulfilled') {
+        setEffortData(effortResult.value);
+      }
+      
+      if (handlersResult.status === 'fulfilled') {
+        setHandlers(handlersResult.value);
+      } else {
+        // Sätt fallback-data för handlers
+        setHandlers([
+          { id: "13", name: "Svea" },
+          { id: "14", name: "Anders" },
+          { id: "15", name: "Sandra" },
+          { id: "2", name: "System Admin" }
+        ]);
+      }
+    } catch (error) {
+      // Silent error handling
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dateRange]);
+
+  useEffect(() => {
+    // Vänta på att användaren är autentiserad
+    if (!user) return;
+    
+    // Ladda data med en liten fördröjning för att säkerställa att token är redo
+    const timer = setTimeout(loadDashboardData, 100);
+    return () => clearTimeout(timer);
+  }, [user, loadDashboardData]);
+
+  // Memoized stats cards
+  const statsCards = useMemo(() => [
     {
       title: "Kunder totalt",
       value: stats ? stats.antal_kunder : "-",
@@ -46,15 +100,19 @@ export const MainContent = (): JSX.Element => {
       value: stats ? stats.antal_besok : "-",
       note: "",
     },
-  ];
+  ], [stats, effortData]);
 
-  const chartData = effortData
-    ? effortData.map(d => ({
-        label: d.effort_name,
-        besok: Number(d.antal_besok),
-        kunder: Number(d.antal_kunder),
-      }))
-    : [];
+  // Memoized chart data
+  const chartData = useMemo(() => 
+    effortData
+      ? effortData.map(d => ({
+          label: d.effort_name,
+          besok: Number(d.antal_besok),
+          kunder: Number(d.antal_kunder),
+        }))
+      : [], 
+    [effortData]
+  );
 
   const [openModal, setOpenModal] = useState<null | "kund" | "tid" | "statistik" | "ny-insats">(null);
 
@@ -67,28 +125,36 @@ export const MainContent = (): JSX.Element => {
 
   const [errors, setErrors] = useState<{ initials?: string; gender?: string; birthYear?: string }>({});
 
-  function validateCustomer(c: typeof newCustomer) {
+  // Memoized validation function
+  const validateCustomer = useCallback((c: typeof newCustomer) => {
     const err: { initials?: string; gender?: string; birthYear?: string } = {};
     if (!c.initials) err.initials = "Obligatoriskt fält";
     if (!c.gender) err.gender = "Obligatoriskt fält";
     if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
     else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
     return err;
-  }
+  }, []);
 
-  const handleCustomerChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const updated = { ...newCustomer, [e.target.name]: e.target.value };
+  const handleCustomerChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    let value = e.target.value;
+    
+    // Konvertera initialer till versaler automatiskt
+    if (e.target.name === 'initials') {
+      value = value.toUpperCase();
+    }
+    
+    const updated = { ...newCustomer, [e.target.name]: value };
     setNewCustomer(updated);
     setErrors(validateCustomer(updated));
-  };
+  }, [newCustomer, validateCustomer]);
 
-  const handleCustomerCancel = () => {
+  const handleCustomerCancel = useCallback(() => {
     setOpenModal(null);
     setNewCustomer({ initials: "", gender: "", birthYear: "" });
     setErrors({});
-  };
+  }, []);
 
-  const handleCustomerSave = async () => {
+  const handleCustomerSave = useCallback(async () => {
     const newErrors = validateCustomer(newCustomer);
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
@@ -105,7 +171,7 @@ export const MainContent = (): JSX.Element => {
     } catch (err) {
       toast.error('Kunde inte spara kund');
     }
-  };
+  }, [newCustomer, validateCustomer]);
 
   // Form state för Registrera ärende
   const [newCase, setNewCase] = useState({
@@ -118,27 +184,27 @@ export const MainContent = (): JSX.Element => {
   const [newCaseErrors, setNewCaseErrors] = useState<{ customerId?: string; effortId?: string; handler1Id?: string }>({});
   const [activeCases, setActiveCases] = useState<any[]>([]);
 
+  // Memoized case loading function
+  const loadActiveCases = useCallback(async () => {
+    try {
+      const cases = await getCases(false);
+      setActiveCases(cases);
+    } catch (error) {
+      // Silent error handling
+    }
+  }, []);
+
   useEffect(() => {
     // Ladda aktiva ärenden när tid-modalen öppnas
     if (openModal === "tid") {
-      console.log("Öppnar tid-modal, laddar aktiva ärenden...");
-      getCases(false).then(cases => {
-        console.log("Aktiva ärenden laddade:", cases);
-        setActiveCases(cases);
-      }).catch(err => {
-        console.error("Fel vid laddning av aktiva ärenden:", err);
-      });
+      loadActiveCases();
     }
-  }, [openModal]);
+  }, [openModal, loadActiveCases]);
 
   // Ladda aktiva ärenden för dashboard-kortet
   useEffect(() => {
-    getCases(false).then(cases => {
-      setActiveCases(cases);
-    }).catch(err => {
-      console.error("Fel vid laddning av aktiva ärenden för dashboard:", err);
-    });
-  }, []);
+    loadActiveCases();
+  }, [loadActiveCases]);
 
   function validateNewCase(c: typeof newCase) {
     const err: { customerId?: string; effortId?: string; handler1Id?: string } = {};
@@ -153,19 +219,19 @@ export const MainContent = (): JSX.Element => {
     return Object.keys(errors).filter(key => errors[key as keyof typeof errors]).length;
   }
 
-  const handleNewCaseChange = (field: string, value: string) => {
+  const handleNewCaseChange = useCallback((field: string, value: string) => {
     const updated = { ...newCase, [field]: value };
     setNewCase(updated);
     setNewCaseErrors(prev => ({ ...prev, [field]: undefined }));
-  };
+  }, [newCase]);
 
-  const handleNewCaseCancel = () => {
+  const handleNewCaseCancel = useCallback(() => {
     setOpenModal(null);
     setNewCase({ customerId: "", effortId: "", handler1Id: "", handler2Id: "" });
     setNewCaseErrors({});
-  };
+  }, []);
 
-  const handleNewCaseSave = async () => {
+  const handleNewCaseSave = useCallback(async () => {
     const newErrors = validateNewCase(newCase);
     setNewCaseErrors(newErrors);
     
@@ -187,9 +253,7 @@ export const MainContent = (): JSX.Element => {
       toast.success('Ärende registrerat!');
       setNewCaseErrors({});
     } catch (err: any) {
-      console.log("Dashboard Debug - Fel från API:", err);
-      console.log("Dashboard Debug - err.message:", err.message);
-      console.log("Dashboard Debug - err.error:", err.error);
+      // Silent error handling
       
       if (err.error && err.error.includes('samma kombination finns redan')) {
         toast.error(err.error, { duration: 8000 }); // 8 sekunder
@@ -199,7 +263,7 @@ export const MainContent = (): JSX.Element => {
         toast.error('Kunde inte skapa ärende');
       }
     }
-  };
+  }, [newCase, validateNewCase]);
 
   // Form state för Registrera tid
   const [registerTime, setRegisterTime] = useState({
@@ -212,15 +276,14 @@ export const MainContent = (): JSX.Element => {
   });
   const [registerTimeErrors, setRegisterTimeErrors] = useState<{ customer?: string; date?: string; hours?: string }>({});
 
-  const handleRegisterTimeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleRegisterTimeChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    console.log("Ändrar registerTime:", { name, value, type });
     setRegisterTime({
       ...registerTime,
       [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     });
     setRegisterTimeErrors(prev => ({ ...prev, [name]: undefined }));
-  };
+  }, [registerTime]);
 
   function validateRegisterTime(rt: typeof registerTime) {
     const err: { customer?: string; date?: string; hours?: string } = {};
@@ -230,7 +293,7 @@ export const MainContent = (): JSX.Element => {
     return err;
   }
 
-  const handleRegisterTimeCancel = () => {
+  const handleRegisterTimeCancel = useCallback(() => {
     setOpenModal(null);
     setRegisterTime({
       customer: "",
@@ -241,19 +304,16 @@ export const MainContent = (): JSX.Element => {
       hours: "",
     });
     setRegisterTimeErrors({});
-  };
+  }, []);
 
-  const handleRegisterTimeSave = async () => {
+  const handleRegisterTimeSave = useCallback(async () => {
     const errors = validateRegisterTime(registerTime);
     setRegisterTimeErrors(errors);
     if (Object.keys(errors).length > 0) {
-      console.log("Valideringsfel:", errors);
       return;
     }
 
     try {
-      console.log("Försöker spara tid:", registerTime);
-      
       // Find the selected case to get its details
       const selectedCase = activeCases.find(c => c.id.toString() === registerTime.customer);
       if (!selectedCase) {
@@ -261,16 +321,12 @@ export const MainContent = (): JSX.Element => {
         return;
       }
 
-      console.log("Valt ärende:", selectedCase);
-
       const shiftData = {
         case_id: selectedCase.id,
         date: registerTime.date,
         hours: Number(registerTime.hours),
         status: "Utförd" as const
       };
-      
-      console.log("Skickar shift-data:", shiftData);
 
       await addShift(shiftData);
       
@@ -286,39 +342,70 @@ export const MainContent = (): JSX.Element => {
       setOpenModal(null);
       toast.success("Tid registrerad!");
     } catch (err) {
-      console.error("Fel vid sparande av tid:", err);
       toast.error("Kunde inte spara tid");
     }
-  };
+  }, [registerTime, activeCases]);
 
   // Form state för Ta ut statistik
   const [statistik, setStatistik] = useState({
-    year: "2015",
-    month: "Januari",
-    gender: "",
-    age: "",
-    effort: "",
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
+    to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10),
+    effortCategory: [] as string[],
+    handler: [] as string[],
+    gender: [] as string[],
+    effort: [] as string[],
   });
 
-  const handleStatistikChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setStatistik({ ...statistik, [e.target.name]: e.target.value });
-  };
+
 
   const [showStatistikChart, setShowStatistikChart] = useState(false);
 
-  const handleStatistikApply = (e: React.FormEvent) => {
+  const handleStatistikApply = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowStatistikChart(true);
-  };
+    
+    // Hämta ny data baserat på filter
+    try {
+      const filteredStats = await getStatsSummary({
+        from: statistik.from,
+        to: statistik.to,
+        effortCategory: statistik.effortCategory.length > 0 ? statistik.effortCategory.join(',') : undefined,
+        handler: statistik.handler.length > 0 ? statistik.handler.join(',') : undefined,
+        gender: statistik.gender.length > 0 ? statistik.gender.join(',') : undefined,
+        insats: statistik.effort.length > 0 ? statistik.effort.join(',') : undefined
+      });
+      
+      const filteredEffortData = await getStatsByEffort({
+        from: statistik.from,
+        to: statistik.to,
+        effortCategory: statistik.effortCategory.length > 0 ? statistik.effortCategory.join(',') : undefined,
+        handler: statistik.handler.length > 0 ? statistik.handler.join(',') : undefined,
+        gender: statistik.gender.length > 0 ? statistik.gender.join(',') : undefined,
+        insats: statistik.effort.length > 0 ? statistik.effort.join(',') : undefined
+      });
+      
+      setStats(filteredStats);
+      setEffortData(filteredEffortData);
+      setShowStatistikChart(true);
+    } catch (error) {
+      toast.error('Kunde inte hämta filtrerad data');
+    }
+  }, [statistik]);
 
-  const handleStatistikCancel = () => {
+  const handleStatistikCancel = useCallback(() => {
     setOpenModal(null);
-    setStatistik({ year: "2015", month: "Januari", gender: "", age: "", effort: "" });
+    setStatistik({ 
+      from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
+      to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10),
+      effortCategory: [], 
+      handler: [], 
+      gender: [], 
+      effort: [] 
+    });
     setShowStatistikChart(false);
-  };
+  }, []);
 
   // Exportfunktioner
-  const handleExportPDF = () => {
+  const handleExportPDF = useCallback(() => {
     const input = document.getElementById('statistik-export');
     if (!input) return;
     html2canvas(input).then(canvas => {
@@ -327,30 +414,23 @@ export const MainContent = (): JSX.Element => {
       pdf.addImage(imgData, 'PNG', 10, 10, 270, 150);
       pdf.save('statistik.pdf');
     });
-  };
+  }, []);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = useCallback(() => {
     const data = [
-      ['Insats', 'Antal'],
-      ['Samtal', 363],
-      ['rePULSE', 364],
-      ['Trappan', 304],
-      ['Hela Barn', 98],
-      ['KIBB', 413],
-      ['Ungdomstjänst', 182],
-      ['Familjesöd', 240],
-      ['Övrig tid', 367],
+      ['Insats', 'Antal besök', 'Antal kunder'],
+      ...chartData.map(item => [item.label, item.besok, item.kunder])
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Statistik');
     XLSX.writeFile(wb, 'statistik.xlsx');
-  };
+  }, [chartData]);
 
-  const getToday = () => new Date().toISOString().slice(0, 10);
+  const getToday = useCallback(() => new Date().toISOString().slice(0, 10), []);
 
   // Navigera till olika sidor från dashboard-korten
-  const handleCardClick = (destination: string) => {
+  const handleCardClick = useCallback((destination: string) => {
     switch (destination) {
       case 'customers':
         navigate('/kunder');
@@ -362,78 +442,98 @@ export const MainContent = (): JSX.Element => {
         navigate('/statistik');
         break;
     }
-  };
+  }, [navigate]);
 
   return (
-    <div className="flex-1 flex flex-col items-center">
+    <div className="flex-1 flex flex-col items-center min-h-screen bg-[#f5f7fa]">
       <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
       {/* Main Content Grid */}
-      <div className="w-full max-w-7xl mx-auto px-8 flex flex-col gap-8">
+      <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
         {/* Sammanfattning */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-          {statsCards.map((card, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => handleCardClick(['customers', 'cases', 'visits'][index])}
-            >
-              <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
-                {card.title}
+        <div className="grid grid-cols-1 mobile:grid-cols-1 lg:grid-cols-3 gap-4 mobile:gap-6 w-full" data-tour="stats-cards">
+          {isLoading ? (
+            // Loading state
+            Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl shadow-sm p-4 mobile:p-6 flex flex-col justify-center animate-pulse"
+              >
+                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                <div className="h-10 bg-gray-200 rounded w-16 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-32"></div>
               </div>
-              <div className="text-4xl text-[#222] font-light mt-2">
-                {card.value}
-              </div>
-              {card.note && (
-                <div className="text-gray-400 text-xs mt-2">
-                  {card.note}
+            ))
+          ) : (
+            statsCards.map((card, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl shadow-sm p-4 mobile:p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleCardClick(['customers', 'cases', 'visits'][index])}
+              >
+                <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
+                  {card.title}
                 </div>
-              )}
-            </div>
-          ))}
+                <div className="text-2xl mobile:text-3xl lg:text-4xl text-[#222] font-light mt-2">
+                  {card.value}
+                </div>
+                {card.note && (
+                  <div className="text-gray-400 text-xs mt-2">
+                    {card.note}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
         
         {/* Snabbåtgärder */}
-        <div className="bg-white rounded-xl p-6 flex flex-col shadow-sm items-start">
-          <h3 className="text-[#333] text-lg font-light mb-6 tracking-tight">Snabbåtgärder</h3>
-          <div className="flex gap-8 flex-wrap">
+        <div className="bg-white rounded-xl p-4 sm:p-6 flex flex-col shadow-sm items-start" data-tour="quick-actions">
+          <h3 className="text-[#333] text-lg font-light mb-4 sm:mb-6 tracking-tight">Snabbåtgärder</h3>
+          <div className="flex laptop:flex-row mobile:flex-col h-auto gap-3 sm:gap-4 lg:gap-8 w-auto mobile:w-full">
             <Button
               variant="outline"
-              className="rounded-lg border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-7 py-3 min-w-[180px]"
+              className="flex-1 w-auto rounded-lg border max-h-10 h-auto border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-4 sm:px-7 py-3 sm:w-full"
               onClick={() => setOpenModal("kund")}
+              data-tour="add-customer-btn"
             >
               + Lägg till kund
             </Button>
             <Button
               variant="outline"
-              className="rounded-lg border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-7 py-3 min-w-[180px]"
+              className="flex-1 mobile:h-auto max-h-10 w-auto rounded-lg border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-4 sm:px-7 py-3 sm:w-full"
               onClick={() => setOpenModal("ny-insats")}
+              data-tour="register-case-btn"
             >
               + Registrera ärende
             </Button>
             <Button
               variant="outline"
-              className="rounded-lg border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-7 py-3 min-w-[180px]"
+              className="flex-1 w-auto rounded-lg max-h-10 h-auto border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-4 sm:px-7 py-3 sm:w-full"
               onClick={() => {
                 setOpenModal("tid");
                 setRegisterTime(rt => ({ ...rt, date: getToday() }));
               }}
+              data-tour="register-time-btn"
             >
               + Registrera tid
             </Button>
             <Button
               variant="outline"
-              className="rounded-lg border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-7 py-3 min-w-[180px]"
+              className="flex-1 w-auto rounded-lg border max-h-10 h-auto border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-4 sm:px-7 py-3 sm:w-full"
               onClick={() => setOpenModal("statistik")}
+              data-tour="statistics-btn"
             >
               + Ta ut statistik
             </Button>
           </div>
         </div>
         {/* Diagram */}
-        <BarChartStatistik
-          data={chartData}
-          titel={`Besöksstatistik (${new Date().toLocaleString('sv-SE', { month: 'long' })})`}
-        />
+        <div data-tour="chart-section" className="w-full bg-white rounded-xl p-4 mobile:p-6 shadow-sm">
+          <BarChartStatistik
+            data={chartData}
+            titel={`Besöksstatistik (${new Date().toLocaleString('sv-SE', { month: 'long' })})`}
+          />
+        </div>
       </div>
 
       {/* Modals - keeping them as they were before */}
@@ -665,120 +765,158 @@ export const MainContent = (): JSX.Element => {
         </div>
       </Modal>
       <Modal open={openModal === "statistik"} onClose={handleStatistikCancel}>
-        <div className={`bg-white rounded-2xl shadow-xl p-10 w-full transition-all duration-300 ${showStatistikChart ? 'max-w-6xl min-w-[900px] flex flex-col' : 'max-w-lg'} `}>
+        <div className={`bg-white rounded-2xl shadow-xl p-16 w-full transition-all min-w-[450px] duration-300 ${showStatistikChart ? 'max-w-6xl min-w-[900px] flex flex-col' : 'max-w-4xl'} `}>
           <h2 className="text-2xl font-light mb-8">Ta ut statistik</h2>
           <div className={`flex ${showStatistikChart ? 'flex-row gap-12' : 'flex-col'}`}>
             {/* Vänsterkolumn: Filter */}
-            <form className={`flex flex-col gap-6 ${showStatistikChart ? 'w-80 max-w-sm' : ''}`} onSubmit={handleStatistikApply}>
+            <form className={`flex flex-col gap-6 ${showStatistikChart ? 'w-80 max-w-sm' : 'w-full'}`} onSubmit={handleStatistikApply}>
               <div>
-                <label className="block text-sm font-medium text-gray-700">År</label>
-                <select name="year" value={statistik.year} onChange={handleStatistikChange} className="w-full border rounded px-3 py-2">
-                  <option value="2015">2015</option>
-                  <option value="2016">2016</option>
-                  <option value="2017">2017</option>
-                  <option value="2018">2018</option>
-                  <option value="2019">2019</option>
-                  <option value="2020">2020</option>
-                  <option value="2021">2021</option>
-                  <option value="2022">2022</option>
-                  <option value="2023">2023</option>
-                  <option value="2024">2024</option>
-                  <option value="2025">2025</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700">Tidsperiod</label>
+                <DateRangePicker
+                  value={{
+                    from: statistik.from ? new Date(statistik.from) : null,
+                    to: statistik.to ? new Date(statistik.to) : null
+                  }}
+                  onChange={(range) => {
+                    setStatistik({
+                      ...statistik,
+                      from: range.from ? range.from.toISOString().slice(0, 10) : '',
+                      to: range.to ? range.to.toISOString().slice(0, 10) : ''
+                    });
+                  }}
+                />
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-700">Månad</label>
-                <select name="month" value={statistik.month} onChange={handleStatistikChange} className="w-full border rounded px-3 py-2">
-                  <option>Januari</option>
-                  <option>Februari</option>
-                  <option>Mars</option>
-                  <option>April</option>
-                  <option>Maj</option>
-                  <option>Juni</option>
-                  <option>Juli</option>
-                  <option>Augusti</option>
-                  <option>September</option>
-                  <option>Oktober</option>
-                  <option>November</option>
-                  <option>December</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700">Insatskategori</label>
+                <MultiSelectCombobox
+                  options={[
+                    { value: "Biståndsbedömda", label: "Biståndsbedömda" },
+                    { value: "Förebyggande", label: "Förebyggande" }
+                  ]}
+                  value={statistik.effortCategory}
+                  onChange={(values) => setStatistik({ ...statistik, effortCategory: values })}
+                  placeholder="Välj insatskategori"
+                />
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Behandlare</label>
+                <MultiSelectCombobox
+                  options={handlers?.map(handler => ({ value: handler.id, label: handler.name })) || [
+                    { value: "13", label: "Svea" },
+                    { value: "14", label: "Anders" },
+                    { value: "15", label: "Sandra" },
+                    { value: "2", label: "System Admin" }
+                  ]}
+                  value={statistik.handler}
+                  onChange={(values) => setStatistik({ ...statistik, handler: values })}
+                  placeholder="Välj behandlare"
+                />
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700">Kön</label>
-                <select name="gender" value={statistik.gender} onChange={handleStatistikChange} className="w-full border rounded px-3 py-2">
-                  <option value="">Välj kön</option>
-                  <option value="Flicka">Flicka</option>
-                  <option value="Pojke">Pojke</option>
-                  <option value="Icke-binär">Icke-binär</option>
-                </select>
+                <MultiSelectCombobox
+                  options={[
+                    { value: "Pojke", label: "Pojke" },
+                    { value: "Flicka", label: "Flicka" },
+                    { value: "Icke-binär", label: "Icke-binär" }
+                  ]}
+                  value={statistik.gender}
+                  onChange={(values) => setStatistik({ ...statistik, gender: values })}
+                  placeholder="Välj kön"
+                />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Ålder</label>
-                <input name="age" value={statistik.age} onChange={handleStatistikChange} className="w-full border rounded px-3 py-2" placeholder="T.Ex. 2009" />
-              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700">Insats</label>
-                <select name="effort" value={statistik.effort} onChange={handleStatistikChange} className="w-full border rounded px-3 py-2">
-                  <option value="">Välj insats</option>
-                  <option value="Samtal">Samtal</option>
-                  <option value="rePULSE">rePULSE</option>
-                  <option value="Trappan">Trappan</option>
-                  <option value="Hela Barn">Hela Barn</option>
-                  <option value="KIBB">KIBB</option>
-                  <option value="Ungdomstjänst/kontrakt">Ungdomstjänst/kontrakt</option>
-                  <option value="Familjesöd">Familjesöd</option>
-                  <option value="Övrig tid">Övrig tid</option>
-                </select>
+                <MultiSelectCombobox
+                  options={effortData?.map(effort => ({ value: effort.effort_name, label: effort.effort_name })) || []}
+                  value={statistik.effort}
+                  onChange={(values) => setStatistik({ ...statistik, effort: values })}
+                  placeholder="Välj insats"
+                />
               </div>
-              <div className="flex gap-4 mt-4">
-                <Button variant="outline" type="button" onClick={handleStatistikCancel}>Avbryt</Button>
-                <Button variant="default" type="submit">{showStatistikChart ? 'Applicera filter' : 'Visa diagram'}</Button>
+              <div className="flex gap-4 mt-6">
+                <Button variant="outline" type="button" onClick={handleStatistikCancel} className="flex-1 py-3">Avbryt</Button>
+                <Button variant="default" type="submit" className="flex-1 py-3 bg-[#17694c] hover:bg-[#145c41]">{showStatistikChart ? 'Applicera filter' : 'Visa diagram'}</Button>
               </div>
             </form>
             {/* Högerkolumn: Diagram och export */}
             {showStatistikChart && (
               <div className="flex-1 flex flex-col gap-8 justify-center items-center" id="statistik-export">
                 <div className="w-full flex flex-col items-center">
-                  <h3 className="text-xl font-light mb-4">Besök och kunder per insatstyp ({statistik.year})</h3>
-                  <div className="w-full h-96 flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RePieChart>
-                        <Pie
-                          data={[
-                            { name: 'Samtal', value: 363 },
-                            { name: 'rePULSE', value: 364 },
-                            { name: 'Trappan', value: 304 },
-                            { name: 'Hela Barn', value: 98 },
-                            { name: 'KIBB', value: 413 },
-                            { name: 'Ungdomstjänst', value: 182 },
-                            { name: 'Familjesöd', value: 240 },
-                            { name: 'Övrig tid', value: 367 },
-                          ]}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={110}
-                          fill="#17694c"
-                          label={({ value }) => `${value}`}
-                          labelLine={true}
+                  <h3 className="text-xl font-light mb-4">Besök och kunder per insatstyp</h3>
+                  
+                  {chartData.length === 0 ? (
+                    <div className="w-full h-96 flex flex-col items-center justify-center text-center">
+                      <div className="text-gray-400 text-lg mb-4">
+                        Ingen data hittades med de valda filtren
+                      </div>
+                      <div className="text-gray-500 text-sm mb-6 max-w-md">
+                        Prova att ändra eller ta bort några filter. De valda filtren kan vara för strikta.
+                      </div>
+                      <div className="flex gap-4">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            setStatistik({ 
+                              from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
+                              to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10),
+                              effortCategory: [], 
+                              handler: [], 
+                              gender: [], 
+                              effort: [] 
+                            });
+                            setShowStatistikChart(false);
+                          }}
                         >
-                          {[
-                            '#17694c', '#4bbf73', '#e6a100', '#e64a19', '#1769dc', '#b36ae2', '#f59e42', '#6b7280'
-                          ].map((color, idx) => (
-                            <Cell key={`cell-${idx}`} fill={color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend layout="horizontal" verticalAlign="bottom" align="center" />
-                      </RePieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex gap-6 mt-8">
-                    <Button variant="outline" onClick={handleExportPDF}>Exportera som PDF</Button>
-                    <Button variant="outline" onClick={handleExportExcel}>Ladda ner som Excel</Button>
-                  </div>
+                          Nollställ filter
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setShowStatistikChart(false)}
+                        >
+                          Ändra filter
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-full h-96 flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RePieChart>
+                            <Pie
+                              data={chartData}
+                              dataKey="besok"
+                              nameKey="label"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={110}
+                              fill="#17694c"
+                              label={({ label, value }) => `${label}: ${value}`}
+                              labelLine={true}
+                            >
+                              {chartData.map((_entry, index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={['#17694c', '#4bbf73', '#e6a100', '#e64a19', '#1769dc', '#b36ae2', '#f59e42', '#6b7280'][index % 8]} 
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+                          </RePieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="flex gap-6 mt-8">
+                        <Button variant="outline" onClick={handleExportPDF}>Exportera som PDF</Button>
+                        <Button variant="outline" onClick={handleExportExcel}>Ladda ner som Excel</Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

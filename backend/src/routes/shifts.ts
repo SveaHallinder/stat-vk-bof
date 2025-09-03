@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
+import { validateShiftData, sanitizeTextInputs } from "../middleware/validation";
 
 export default function shifts(pool: Pool) {
   const router = Router();
@@ -49,6 +50,7 @@ export default function shifts(pool: Pool) {
         `SELECT shifts.id, shifts.date, shifts.hours, shifts.status,
                 cases.id AS case_id,
                 customers.initials AS customer_name,
+                customers.active AS customer_active,
                 efforts.name AS effort_name,
                 h1.name AS handler1_name,
                 h2.name AS handler2_name
@@ -77,7 +79,7 @@ export default function shifts(pool: Pool) {
   });
 
   // Skapa ny shift och säkerställ att ett case finns
-  router.post("/", async (req, res) => {
+  router.post("/", sanitizeTextInputs, validateShiftData, async (req, res) => {
     const { case_id, customer_id, effort_id, handler1_id, handler2_id, date, hours, status } = req.body;
     if ((!case_id && (!customer_id || !effort_id || !handler1_id)) || !date || hours === undefined) {
       return res.status(400).json({ error: "Obligatoriska fält saknas" });
@@ -116,7 +118,7 @@ export default function shifts(pool: Pool) {
   });
 
   // Uppdatera befintlig shift
-  router.put("/:id", async (req, res) => {
+  router.put("/:id", sanitizeTextInputs, async (req, res) => {
     const { id } = req.params;
     const { date, hours, status } = req.body;
     
@@ -145,7 +147,7 @@ export default function shifts(pool: Pool) {
   });
 
   // Inaktivera shifts som tillhör ett specifikt case (soft delete - INGEN permanent radering!)
-  router.put("/case/:caseId/deactivate", async (req, res) => {
+  router.put("/case/:caseId/deactivate", sanitizeTextInputs, async (req, res) => {
     const { caseId } = req.params;
     
     try {
@@ -166,4 +168,3 @@ export default function shifts(pool: Pool) {
 
   return router;
 }
-
