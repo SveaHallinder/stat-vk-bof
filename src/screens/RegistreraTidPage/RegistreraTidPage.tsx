@@ -368,7 +368,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                         <SelectContent>
                           {activeCases.map((caseItem) => (
                             <SelectItem key={caseItem.id} value={caseItem.id.toString()}>
-                              {caseItem.customer_name} - {caseItem.effort_name} ({caseItem.handler1_name})
+                              {(caseItem as any).customer_active === false || caseItem.customer_name === 'ANONYM' ? '—' : caseItem.customer_name} - {caseItem.effort_name} ({caseItem.handler1_name})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -689,7 +689,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                         className={`hover:bg-blue-50 border-t border-gray-200 transition-colors cursor-pointer`}
                         onClick={() => handleShiftClick(shift)}
                       >
-                        <td className="px-6 py-4 font-medium text-gray-800">{shift.customer_name}</td>
+                        <td className="px-6 py-4 font-medium text-gray-800">{(shift as any).customer_active === false || shift.customer_name === 'ANONYM' ? '—' : shift.customer_name}</td>
                         <td className="px-6 py-4 text-gray-600">{shift.handler1_name}</td>
                         <td className="px-6 py-4 text-gray-600">{shift.handler2_name || "-"}</td>
                         <td className="px-6 py-4 text-gray-600">{shift.effort_name}</td>
@@ -786,4 +786,3 @@ export const RegisteraTidPage = (): JSX.Element => {
     </Layout>
   );
 };
-

@@ -66,6 +66,7 @@ export interface ShiftEntry {
   active: boolean;
   // bekvämlighetsfält i listor
   customer_name?: string;
+  customer_active?: boolean;
   effort_name?: string;
   handler1_name?: string;
   handler2_name?: string | null;

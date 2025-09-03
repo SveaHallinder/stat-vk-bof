@@ -50,6 +50,7 @@ export default function shifts(pool: Pool) {
         `SELECT shifts.id, shifts.date, shifts.hours, shifts.status,
                 cases.id AS case_id,
                 customers.initials AS customer_name,
+                customers.active AS customer_active,
                 efforts.name AS effort_name,
                 h1.name AS handler1_name,
                 h2.name AS handler2_name
