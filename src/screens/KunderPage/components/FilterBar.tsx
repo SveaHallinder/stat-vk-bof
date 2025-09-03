@@ -1,4 +1,4 @@
-import React from "react";
+// React import removed - not needed with modern React
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchIcon, FilterIcon } from "lucide-react";

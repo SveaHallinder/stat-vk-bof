@@ -12,7 +12,7 @@ export const useKeyboardNavigation = () => {
     
     focusableElements.current = Array.from(elements).filter(el => 
       el.offsetParent !== null && // Synlig
-      !el.disabled && // Inte inaktiverad
+      !(el as any).disabled && // Inte inaktiverad
       el.style.display !== 'none' // Inte dold
     );
   }, []);

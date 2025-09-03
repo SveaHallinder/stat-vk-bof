@@ -17,12 +17,12 @@ export const validateEnv = (): void => {
     const errorMessage = `Saknade miljövariabler: ${missingVars.join(', ')}. 
     Kontrollera att du har en .env-fil med rätt konfiguration.`;
     
-    console.warn('⚠️ Miljövariabler saknas:', missingVars);
+    console.warn('Miljövariabler saknas:', missingVars);
     
     // I utvecklingsläge, visa en varning men låt appen starta
     if (import.meta.env.DEV) {
-      console.warn('🚨 Appen startar med standardvärden för utveckling');
-      console.warn('📝 Skapa en .env-fil för att undvika denna varning');
+      console.warn('Appen startar med standardvärden för utveckling');
+      console.warn('Skapa en .env-fil för att undvika denna varning');
       return; // Låt appen starta ändå
     }
     
