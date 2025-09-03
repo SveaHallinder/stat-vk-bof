@@ -50,7 +50,6 @@ export const RegisteraTidPage = (): JSX.Element => {
   // Loading states
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isLoadingCases, setIsLoadingCases] = useState(false);
-  const [isLoadingShifts, setIsLoadingShifts] = useState(false);
   
   // State för att registrera ärende
   const [showCreateCase, setShowCreateCase] = useState(false);
@@ -68,7 +67,7 @@ export const RegisteraTidPage = (): JSX.Element => {
   const [showEditModal, setShowEditModal] = useState(false);
   
   // Keyboard navigation
-  const { focusFirst } = useKeyboardNavigation();
+  const { focusFirst: _focusFirst } = useKeyboardNavigation();
   
   // Focus trap för modal
   const modalFocusTrapRef = useFocusTrap(showEditModal);
@@ -255,15 +254,12 @@ export const RegisteraTidPage = (): JSX.Element => {
       });
       
       // Ladda om shifts
-      setIsLoadingShifts(true);
       try {
         const updatedShifts = await getShifts();
         setShifts(updatedShifts);
       } catch (error) {
         console.error("Kunde inte ladda om tidsregistreringar:", error);
         enhancedToast.error("Tidsregistreringar sparades men kunde inte ladda om listan");
-      } finally {
-        setIsLoadingShifts(false);
       }
       
       // Återställ formuläret
