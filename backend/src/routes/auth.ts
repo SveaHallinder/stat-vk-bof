@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { sanitizeTextInputs } from '../middleware/validation';
+import { isPasswordPwned } from '../utils/pwned';
 
 const router = express.Router();
 
@@ -94,6 +95,19 @@ export default function authRoutes(pool: Pool) {
           error: 'validation_error',
           message: 'Lösenord måste innehålla stor bokstav, liten bokstav, siffra och specialtecken' 
         });
+      }
+
+      // Kontrollera mot kända läckor (HIBP) om aktiverat
+      try {
+        const pwned = await isPasswordPwned(password);
+        if (pwned) {
+          return res.status(400).json({
+            error: 'weak_password',
+            message: 'Lösenordet förekommer i kända dataläckor. Välj ett annat lösenord.'
+          });
+        }
+      } catch {
+        // Vid fel, fortsätt – policyn hanteras i util med required-flagga
       }
 
       const hashedToken = hashToken(token);

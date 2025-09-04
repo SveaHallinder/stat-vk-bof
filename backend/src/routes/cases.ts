@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
-import { validateCaseData, sanitizeTextInputs } from "../middleware/validation";
+import { validateCaseData, sanitizeTextInputs, validateSearchParams } from "../middleware/validation";
 
 export default function cases(pool: Pool) {
   const router = Router();
@@ -84,7 +84,7 @@ export default function cases(pool: Pool) {
   });
 
   // Hämta ärenden (med namn) + FILTER: all, customer_id, effort_id, active
-  router.get("/", async (req, res) => {
+  router.get("/", sanitizeTextInputs, validateSearchParams, async (req, res) => {
     try {
       const { all, customer_id, effort_id, active } = req.query as {
         all?: string; customer_id?: string; effort_id?: string; active?: string;
@@ -114,7 +114,7 @@ export default function cases(pool: Pool) {
 
       const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
-      const sql = `
+      let sql = `
         SELECT
           cases.id,
           cases.customer_id,
@@ -135,6 +135,13 @@ export default function cases(pool: Pool) {
         LEFT JOIN handlers h2 ON cases.handler2_id  = h2.id
         ${whereSql}
         ORDER BY cases.id DESC`;
+
+      const page = (req.query as any).page ? Math.max(1, parseInt(String((req.query as any).page))) : undefined;
+      const limit = (req.query as any).limit ? Math.min(1000, Math.max(1, parseInt(String((req.query as any).limit)))) : undefined;
+      if (page && limit) {
+        params.push(limit, (page - 1) * limit);
+        sql += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
+      }
 
       const r = await pool.query(sql, params);
       res.json(r.rows);

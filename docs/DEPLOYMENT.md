@@ -35,3 +35,52 @@ curl -i -H "Origin: http://localhost:5173" -X OPTIONS http://localhost:4000/api/
 ## ENV-exempel
 
 Kontrollera att `BCRYPT_ROUNDS` finns i `.env.example` och `.env.local`. Lägg till vid behov utan att ta bort andra variabler.
+
+## Nginx reverse proxy (rekommenderad)
+
+Exempel på Nginx‑konfiguration med TLS, HSTS och korrekta proxy‑headers:
+
+```
+server {
+  listen 443 ssl http2;
+  server_name app.vallentuna.se;
+
+  # TLS
+  ssl_certificate     /etc/letsencrypt/live/app.vallentuna.se/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/app.vallentuna.se/privkey.pem;
+  add_header Strict-Transport-Security "max-age=15552000; includeSubDomains" always;
+
+  # Static caching
+  location /assets/ {
+    root /var/www/frontend; # där Vite build:ade filer ligger
+    expires 30d;
+    add_header Cache-Control "public, max-age=2592000, immutable";
+  }
+
+  # Frontend (single page app)
+  location / {
+    root /var/www/frontend;
+    try_files $uri /index.html;
+  }
+
+  # Backend API proxy
+  location /api/ {
+    proxy_pass http://127.0.0.1:4000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+  }
+}
+
+server {
+  listen 80;
+  server_name app.vallentuna.se;
+  return 301 https://$host$request_uri;
+}
+```
+
+Se till att `TRUST_PROXY=true` i backend‑miljön (om du behöver korrekta klient‑IP i loggar). Sätt `CORS_ORIGIN` till exakt domän (t.ex. `https://app.vallentuna.se`).

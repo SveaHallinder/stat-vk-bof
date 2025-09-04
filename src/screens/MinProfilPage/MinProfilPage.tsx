@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { api } from '@/lib/apiClient';
 import { getCustomers, getCases } from '../../lib/api';
 import { Layout } from '../../components/Layout';
 import { LogOut } from 'lucide-react';
@@ -118,6 +119,7 @@ const MinProfilPage: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cases, setCases] = useState<CaseWithNames[]>([]);
   const [loading, setLoading] = useState(true);
+  const [version, setVersion] = useState<string | null>(null);
 
   // Memoized callback functions to prevent unnecessary re-renders
   const handleViewProfile = useCallback((customerId: number) => {
@@ -147,6 +149,16 @@ const MinProfilPage: React.FC = () => {
       fetchUserData();
     }
   }, [user]);
+
+  useEffect(() => {
+    // Hämta version från backend för felsökning
+    api('/healthz').then(async (res) => {
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.version) setVersion(data.version);
+      }
+    }).catch(() => {});
+  }, []);
 
   const fetchUserData = async () => {
     try {
@@ -198,6 +210,9 @@ const MinProfilPage: React.FC = () => {
 
           {/* Huvudinnehåll */}
           <div className="lg:col-span-2 space-y-6">
+            {version && (
+              <div className="text-xs text-gray-400">Systemversion: {version}</div>
+            )}
             {/* Mina kunder */}
             <CustomersTable customers={userCustomers} onViewProfile={handleViewProfile} />
           </div>

@@ -1,9 +1,13 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 import { Customer, Handler, Effort, CaseWithNames, ShiftEntry } from "@/types/types";
 import { api } from "./apiClient";
 
-export async function getCustomers(all = false): Promise<Customer[]> {
-  const res = await api(`/customers${all ? '?all=true' : ''}`);
+export async function getCustomers(all = false, options?: RequestInit & { page?: number; limit?: number }): Promise<Customer[]> {
+  let url = `/customers${all ? '?all=true' : ''}`;
+  const qp: string[] = [];
+  if (options?.page) qp.push(`page=${options.page}`);
+  if (options?.limit) qp.push(`limit=${options.limit}`);
+  if (qp.length) url += (url.includes('?') ? '&' : '?') + qp.join('&');
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta kunder");
   const data = await res.json();
   return data.map((c: Customer) => ({
@@ -80,14 +84,22 @@ export async function updateCustomer(id: string, data: { initials: string; gende
   return res.json();
 }
 
-export async function getEfforts(): Promise<Effort[]> {
-  const res = await api(`/efforts`);
+export async function getEfforts(options?: RequestInit & { page?: number; limit?: number }): Promise<Effort[]> {
+  let url = `/efforts`;
+  const qp: string[] = [];
+  if (options?.page) qp.push(`page=${options.page}`);
+  if (options?.limit) qp.push(`limit=${options.limit}`);
+  if (qp.length) url += `?` + qp.join('&');
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta insatser");
   return res.json();
 }
 
-export async function getCustomerEfforts(customerId: number) {
-  const res = await api(`/cases?customer_id=${customerId}`);
+export async function getCustomerEfforts(customerId: number, options?: RequestInit & { page?: number; limit?: number }) {
+  let url = `/cases?customer_id=${customerId}`;
+  if (options?.page) url += `&page=${options.page}`;
+  if (options?.limit) url += `&limit=${options.limit}`;
+  const res = await api(url, options);
   if (!res.ok) {
     throw new Error(`Kunde inte hämta insatser för kund ${customerId}`);
   }
@@ -95,8 +107,11 @@ export async function getCustomerEfforts(customerId: number) {
   return data;
 }
 
-export async function getCustomerCases(customerId: number) {
-  const res = await api(`/cases?customer_id=${customerId}`);
+export async function getCustomerCases(customerId: number, options?: RequestInit & { page?: number; limit?: number }) {
+  let url = `/cases?customer_id=${customerId}`;
+  if (options?.page) url += `&page=${options.page}`;
+  if (options?.limit) url += `&limit=${options.limit}`;
+  const res = await api(url, options);
   if (!res.ok) {
     throw new Error(`Kunde inte hämta ärenden för kund ${customerId}`);
   }
@@ -109,8 +124,13 @@ export async function getCasesForCustomerEffort(customerId: string, effortId: st
   return res.json();
 }
 
-export async function getCases(all = false): Promise<CaseWithNames[]> {
-  const res = await api(`/cases${all ? '?all=true' : ''}`);
+export async function getCases(all = false, options?: RequestInit & { page?: number; limit?: number }): Promise<CaseWithNames[]> {
+  let url = `/cases${all ? '?all=true' : ''}`;
+  const qp: string[] = [];
+  if (options?.page) qp.push(`page=${options.page}`);
+  if (options?.limit) qp.push(`limit=${options.limit}`);
+  if (qp.length) url += (url.includes('?') ? '&' : '?') + qp.join('&');
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta ärenden");
   const data = await res.json();
   return data;
@@ -172,8 +192,13 @@ export async function addShift(data: { case_id: number; date: string; hours: num
   return res.json();
 }
 
-export async function getShifts(): Promise<ShiftEntry[]> {
-  const res = await api(`/shifts`);
+export async function getShifts(options?: RequestInit & { page?: number; limit?: number }): Promise<ShiftEntry[]> {
+  let url = `/shifts`;
+  const qp: string[] = [];
+  if (options?.page) qp.push(`page=${options.page}`);
+  if (options?.limit) qp.push(`limit=${options.limit}`);
+  if (qp.length) url += `?` + qp.join('&');
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta besök");
   return res.json();
 }
@@ -216,7 +241,7 @@ export async function deactivateShiftsForCase(caseId: string): Promise<{ message
   return res.json();
 }
 
-export async function getStatsSummary(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }): Promise<any> {
+export async function getStatsSummary(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }, options?: RequestInit): Promise<any> {
   let url = `/stats/summary`;
   if (params) {
     const search = new URLSearchParams();
@@ -232,12 +257,12 @@ export async function getStatsSummary(params?: { from?: string; to?: string; ins
     if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
-  const res = await api(url);
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik");
   return res.json();
 }
 
-export async function getStatsByEffort(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }): Promise<any> {
+export async function getStatsByEffort(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }, options?: RequestInit): Promise<any> {
   let url = `/stats/by-effort`;
   if (params) {
     const search = new URLSearchParams();
@@ -253,12 +278,12 @@ export async function getStatsByEffort(params?: { from?: string; to?: string; in
     if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
-  const res = await api(url);
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per insats");
   return res.json();
 }
 
-export async function getStatsByMonth(params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean }): Promise<any> {
+export async function getStatsByMonth(params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean }, options?: RequestInit): Promise<any> {
   let url = `/stats/by-month`;
   if (params) {
     const search = new URLSearchParams();
@@ -268,12 +293,12 @@ export async function getStatsByMonth(params?: { from?: string; to?: string; ins
     if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
-  const res = await api(url);
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per månad");
   return res.json();
 }
 
-export async function getStatsByHandler(params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }): Promise<any> {
+export async function getStatsByHandler(params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }, options?: RequestInit): Promise<any> {
   let url = `/stats/by-handler`;
   if (params) {
     const search = new URLSearchParams();
@@ -284,13 +309,18 @@ export async function getStatsByHandler(params?: { from?: string; to?: string; i
     if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
-  const res = await api(url);
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per behandlare");
   return res.json();
 }
 
-export async function getHandlers(all = false): Promise<Handler[]> {
-  const res = await api(`/handlers${all ? '?all=true' : ''}`);
+export async function getHandlers(all = false, options?: RequestInit & { page?: number; limit?: number }): Promise<Handler[]> {
+  let url = `/handlers${all ? '?all=true' : ''}`;
+  const qp: string[] = [];
+  if (options?.page) qp.push(`page=${options.page}`);
+  if (options?.limit) qp.push(`limit=${options.limit}`);
+  if (qp.length) url += (url.includes('?') ? '&' : '?') + qp.join('&');
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta behandlare");
   return res.json();
 }

@@ -14,7 +14,6 @@ import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
-import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,13 +58,9 @@ export const MainContent = (): JSX.Element => {
       if (handlersResult.status === 'fulfilled') {
         setHandlers(handlersResult.value);
       } else {
-        // Sätt fallback-data för handlers
-        setHandlers([
-          { id: "13", name: "Svea" },
-          { id: "14", name: "Anders" },
-          { id: "15", name: "Sandra" },
-          { id: "2", name: "System Admin" }
-        ]);
+        // Visa fel och visa ingen fallback‑data
+        toast.error('Kunde inte hämta behandlare');
+        setHandlers([]);
       }
     } catch (error) {
       // Silent error handling
@@ -446,7 +441,7 @@ export const MainContent = (): JSX.Element => {
 
   return (
     <div className="flex-1 flex flex-col items-center min-h-screen bg-[#f5f7fa]">
-      <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
+      {/* Toaster finns globalt i src/index.tsx */}
       {/* Main Content Grid */}
       <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
         {/* Sammanfattning */}

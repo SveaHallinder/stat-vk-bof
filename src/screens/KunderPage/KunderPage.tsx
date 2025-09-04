@@ -19,6 +19,9 @@ type NewCustomer = {
 
 export const KunderPage = (): JSX.Element => {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(50);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [newCustomers, setNewCustomers] = useState<NewCustomer[]>([]);
   const [errors, setErrors] = useState<{ [idx: number]: { initials?: string; gender?: string; birth_year?: string } }>({});
@@ -38,7 +41,7 @@ export const KunderPage = (): JSX.Element => {
     setDeleting(true);
     try {
       await softDeleteCustomer(id.toString());
-      const updated = await getCustomers(includeInactive);
+      const updated = await getCustomers(includeInactive, { page, limit });
       setCustomers(updated);
       setDeleteId(null);
       toast.success("Kund avaktiverad!");
@@ -53,7 +56,7 @@ export const KunderPage = (): JSX.Element => {
     setReactivating(true);
     try {
       await reactivateCustomer(id.toString());
-      const updated = await getCustomers(includeInactive);
+      const updated = await getCustomers(includeInactive, { page, limit });
       setCustomers(updated);
       toast.success("Kund återaktiverad!");
     } catch (err: any) {
@@ -129,7 +132,7 @@ export const KunderPage = (): JSX.Element => {
           })
         )
       );
-      const updated = await getCustomers(includeInactive);
+      const updated = await getCustomers(includeInactive, { page, limit });
       setCustomers(updated);
       setNewCustomers([]);
       setErrors({});
@@ -142,10 +145,12 @@ export const KunderPage = (): JSX.Element => {
   };
 
   useEffect(() => {
-    getCustomers(includeInactive)
+    setIsLoading(true);
+    getCustomers(includeInactive, { page, limit })
       .then(setCustomers)
-      .catch(() => toast.error("Kunde inte hämta kunder"));
-  }, [includeInactive]);
+      .catch(() => toast.error("Kunde inte hämta kunder"))
+      .finally(() => setIsLoading(false));
+  }, [includeInactive, page, limit]);
 
   // Sortera kunder
   const sortedCustomers = [...customers].sort((a, b) => {
@@ -340,6 +345,40 @@ export const KunderPage = (): JSX.Element => {
                 ))}
               </tbody>
             </table>
+          </div>
+          {/* Pagination controls */}
+          <div className="flex items-center justify-between p-3 border-t border-gray-100">
+            <div className="text-sm text-gray-500">
+              Sida {page} • Visar {customers.length} rader
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Per sida</label>
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                value={limit}
+                onChange={(e) => { setPage(1); setLimit(parseInt(e.target.value) || 25); }}
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={isLoading || page === 1}
+              >
+                Föregående
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => p + 1)}
+                disabled={isLoading || customers.length < limit}
+              >
+                Nästa
+              </Button>
+            </div>
           </div>
           {/* Popup för radering */}
           {deleteId && (

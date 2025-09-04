@@ -1,4 +1,4 @@
-import { StrictMode, Suspense } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./globals.css";
@@ -20,6 +20,7 @@ import { InviteAcceptPage } from "./screens/InviteAcceptPage";
 import { ResetPasswordPage } from "./screens/ResetPasswordPage";
 import { Toaster } from "react-hot-toast";
 import { LoadingSpinner } from "./components/ui/loading-spinner";
+import { RoutePrefetcher } from "./components/RoutePrefetcher";
 
 // Loading component for Suspense fallback
 const PageLoader = () => (
@@ -63,23 +64,22 @@ createRoot(document.getElementById("app") as HTMLElement).render(
       <BrowserRouter>
         <AuthProvider>
           <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/invite/:token" element={<InviteAcceptPage />} />
-              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<ProtectedRoute><DashboardRedesign /></ProtectedRoute>} />
-              <Route path="/kunder" element={<ProtectedRoute><KunderPage /></ProtectedRoute>} />
-              <Route path="/kunder/:id" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
-              <Route path="/registrera-tid" element={<ProtectedRoute><RegisteraTidPage /></ProtectedRoute>} />
-              <Route path="/arendelista" element={<ProtectedRoute><ArendelistaPage /></ProtectedRoute>} />
-              <Route path="/statistik" element={<ProtectedRoute><StatistikPage /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
-              <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
-
-            </Routes>
-          </Suspense>
+          <RoutePrefetcher />
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/invite/:token" element={<InviteAcceptPage />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardRedesign /></ProtectedRoute>} />
+            <Route path="/kunder" element={<ProtectedRoute><KunderPage /></ProtectedRoute>} />
+            <Route path="/kunder/:id" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
+            <Route path="/registrera-tid" element={<ProtectedRoute><RegisteraTidPage /></ProtectedRoute>} />
+            <Route path="/arendelista" element={<ProtectedRoute><ArendelistaPage /></ProtectedRoute>} />
+            <Route path="/statistik" element={<ProtectedRoute><StatistikPage /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
+            <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
+            <Route path="*" element={<div className="min-h-screen flex items-center justify-center text-gray-600">Sidan kunde inte hittas (404)</div>} />
+          </Routes>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

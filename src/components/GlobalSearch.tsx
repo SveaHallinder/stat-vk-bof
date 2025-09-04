@@ -25,6 +25,8 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
   const [isLoading, setIsLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const performSearch = async (query: string) => {
     if (!query.trim()) {
       setResults([]);
@@ -32,6 +34,9 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
     }
 
     setIsLoading(true);
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     
     try {
       const searchResults: SearchResult[] = [];
@@ -40,13 +45,13 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
       // Sök parallellt i alla datatyper
       const [customers, handlers, efforts, cases, shifts] = await Promise.all([
         // Endast aktiva kunder i global sök
-        getCustomers().catch(() => []),
+        getCustomers(false, { signal: controller.signal }).catch(() => []),
         // Endast aktiva behandlare
-        getHandlers().catch(() => []),
-        getEfforts().catch(() => []),
+        getHandlers(false, { signal: controller.signal }).catch(() => []),
+        getEfforts({ signal: controller.signal }).catch(() => []),
         // Endast aktiva ärenden
-        getCases().catch(() => []),
-        getShifts().catch(() => [])
+        getCases(false, { signal: controller.signal }).catch(() => []),
+        getShifts({ signal: controller.signal }).catch(() => [])
       ]);
 
       // Sök i kunder

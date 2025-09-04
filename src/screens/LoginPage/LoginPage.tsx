@@ -28,8 +28,10 @@ export const LoginPage = () => {
     
     try {
       await login(email, password);
-      toast.success('Inloggning lyckades!');
+      const id = toast.success('Inloggning lyckades!', { duration: 2000 });
       navigate('/dashboard');
+      // Säkerställ att toasten försvinner även efter navigering
+      setTimeout(() => toast.dismiss(id), 2200);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Inloggning misslyckades');
     } finally {

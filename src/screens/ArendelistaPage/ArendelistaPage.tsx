@@ -12,6 +12,9 @@ import { useNavigate } from "react-router-dom";
 export const ArendelistaPage = (): JSX.Element => {
   const navigate = useNavigate();
   const [cases, setCases] = useState<CaseWithNames[]>([]);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(50);
+  const [loading, setLoading] = useState<boolean>(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -21,15 +24,18 @@ export const ArendelistaPage = (): JSX.Element => {
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
       try {
-        const data = await getCases(includeInactive); // styr via checkbox
+        const data = await getCases(includeInactive, { page, limit }); // styr via checkbox
         setCases(data);
       } catch {
         toast.error("Kunde inte hämta ärenden");
+      } finally {
+        setLoading(false);
       }
     }
     load();
-  }, [includeInactive]);
+  }, [includeInactive, page, limit]);
 
   const statusOptions = ["Aktivt", "Inaktivt"];
 
@@ -156,6 +162,36 @@ export const ArendelistaPage = (): JSX.Element => {
                 ))}
               </tbody>
             </table>
+          </div>
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-3">
+            <div className="text-sm text-gray-500">Sida {page} • Visar {cases.length} rader</div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Per sida</label>
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                value={limit}
+                onChange={(e) => { setPage(1); setLimit(parseInt(e.target.value) || 25); }}
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <button
+                className="px-3 py-1 border rounded text-sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={loading || page === 1}
+              >
+                Föregående
+              </button>
+              <button
+                className="px-3 py-1 border rounded text-sm"
+                onClick={() => setPage(p => p + 1)}
+                disabled={loading || cases.length < limit}
+              >
+                Nästa
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>

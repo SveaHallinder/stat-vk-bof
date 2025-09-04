@@ -1,7 +1,8 @@
 -- Skapa audit_log tabell för att logga användaraktivitet
 CREATE TABLE IF NOT EXISTS audit_log (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
+    -- I produktionen används tabellen 'handlers' för användare
+    user_id INTEGER REFERENCES handlers(id),
     username VARCHAR(255) NOT NULL,
     action VARCHAR(100) NOT NULL,
     entity_type VARCHAR(50) NOT NULL,

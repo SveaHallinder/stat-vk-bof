@@ -60,6 +60,7 @@ export interface Shift {
 export interface ShiftEntry {
   id: number;
   case_id: number;
+  customer_id?: number;
   date: string;         // 'YYYY-MM-DD'
   hours: number;
   status: string;       // 'Utförd' | 'Avbokad' | ...

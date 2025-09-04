@@ -16,29 +16,35 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleSearchResult = (result: any) => {
-    
-    // Navigera till befintliga sidor baserat på resultattyp
+    // Navigera direkt till rätt sida baserat på typ
     switch (result.type) {
-      case 'customer':
-        // Navigera till kundersida
-        navigate('/kunder');
+      case 'customer': {
+        navigate(`/kunder/${result.id}`);
         break;
-      case 'handler':
-        // Navigera till min profil-sida för vanliga behandlare
-        navigate('/min-profil');
+      }
+      case 'handler': {
+        // Det finns ingen separat handler-profil, gå till Admin (eller Min profil om det är du själv)
+        if (user && user.id === result.id) navigate('/min-profil');
+        else navigate(`/admin?handlerId=${result.id}`);
         break;
-      case 'effort':
-        // Navigera till admin-sida (där insatser hanteras)
-        navigate('/admin');
+      }
+      case 'effort': {
+        navigate(`/admin?effortId=${result.id}`);
         break;
-      case 'case':
-        // Navigera till ärendelista
-        navigate('/arendelista');
+      }
+      case 'case': {
+        const c = result.data;
+        if (c?.customer_id) navigate(`/kunder/${c.customer_id}?caseId=${result.id}`);
+        else navigate('/arendelista');
         break;
-      case 'shift':
-        // Navigera till tidregistrering
-        navigate('/registrera-tid');
+      }
+      case 'shift': {
+        const s = result.data;
+        if (s?.customer_id) navigate(`/kunder/${s.customer_id}?caseId=${s.case_id}`);
+        else if (s?.case_id) navigate(`/arendelista?caseId=${s.case_id}`);
+        else navigate('/registrera-tid');
         break;
+      }
       default:
         console.warn('Okänd resultattyp:', result.type);
     }
@@ -88,6 +94,7 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
                 <button
                   onClick={() => navigate('/min-profil')}
                   className="group flex items-center gap-2 lg:gap-2.5 p-2 lg:p-2.5 rounded-lg hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-200 hover:shadow-sm hover:border-gray-200"
+                  aria-label="Visa min profil"
                 >
                   <div className="w-8 h-8 lg:w-9 lg:h-9 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200">
                     <User className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-green-600" />

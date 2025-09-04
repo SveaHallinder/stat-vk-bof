@@ -159,6 +159,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setAccessToken(data.accessToken);
         setUser(data.user);
         localStorage.setItem('accessToken', data.accessToken);
+        if (data.refreshToken) {
+          setRefreshToken(data.refreshToken);
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
         return true;
       } else {
         // Refresh token är ogiltig
@@ -172,6 +176,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Försök informera backend (ignorera fel)
+    try {
+      api(`/users/logout`, { method: 'POST' }).catch(() => {});
+    } catch {}
     setUser(null);
     setAccessToken(null);
     setRefreshToken(null);

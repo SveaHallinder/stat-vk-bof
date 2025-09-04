@@ -12,12 +12,30 @@ export const Sidebar = ({ onClose }: SidebarProps): JSX.Element => {
   const { user } = useAuth();
   
   const navItems = [
-    { id: 1, name: "Startsida", path: "/", active: location.pathname === "/" || location.pathname === "/dashboard", icon: Home },
+    { id: 1, name: "Startsida", path: "/dashboard", active: location.pathname === "/dashboard", icon: Home },
     { id: 2, name: "Kunder", path: "/kunder", active: location.pathname === "/kunder", icon: Users },
     { id: 3, name: "Registrera tid", path: "/registrera-tid", active: location.pathname === "/registrera-tid", icon: Clock },
     { id: 4, name: "Ärendelista", path: "/arendelista", active: location.pathname === "/arendelista", icon: FileText },
     { id: 5, name: "Statistik", path: "/statistik", active: location.pathname === "/statistik", icon: BarChart3 },
   ];
+
+  const prefetchRoute = (path: string) => {
+    switch (path) {
+      case '/':
+      case '/dashboard':
+        import('@/screens/DashboardRedesign'); break;
+      case '/kunder':
+        import('@/screens/KunderPage'); break;
+      case '/registrera-tid':
+        import('@/screens/RegistreraTidPage'); break;
+      case '/arendelista':
+        import('@/screens/ArendelistaPage'); break;
+      case '/statistik':
+        import('@/screens/StatistikPage'); break;
+      default:
+        break;
+    }
+  };
 
   const handleNavClick = () => {
     // Stäng mobilmenyn om den finns
@@ -66,7 +84,15 @@ export const Sidebar = ({ onClose }: SidebarProps): JSX.Element => {
           {navItems.map((item) => {
             const IconComponent = item.icon;
             return (
-              <Link key={item.id} to={item.path} onClick={handleNavClick}>
+              <Link
+                key={item.id}
+                to={item.path}
+                onClick={handleNavClick}
+                onMouseEnter={() => prefetchRoute(item.path)}
+                onFocus={() => prefetchRoute(item.path)}
+                onPointerEnter={() => prefetchRoute(item.path)}
+                onTouchStart={() => prefetchRoute(item.path)}
+              >
                 <Button
                   variant="ghost"
                   className={`group w-full h-12 flex items-center justify-start px-4 text-base font-['Arial-${

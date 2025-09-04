@@ -1,14 +1,14 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
-import { validateShiftData, sanitizeTextInputs } from "../middleware/validation";
+import { validateShiftData, sanitizeTextInputs, validateSearchParams } from "../middleware/validation";
 
 export default function shifts(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
 
   // Hämta alla shifts med relaterad information och filter
-  router.get("/", async (req, res) => {
+  router.get("/", sanitizeTextInputs, validateSearchParams, async (req, res) => {
     try {
       const { case_id, customer_id, effort_id, from, to } = req.query;
       
@@ -46,9 +46,10 @@ export default function shifts(pool: Pool) {
         paramIndex++;
       }
       
-      const result = await pool.query(
+      let query =
         `SELECT shifts.id, shifts.date, shifts.hours, shifts.status,
                 cases.id AS case_id,
+                customers.id AS customer_id,
                 customers.initials AS customer_name,
                 customers.active AS customer_active,
                 efforts.name AS effort_name,
@@ -61,9 +62,16 @@ export default function shifts(pool: Pool) {
          LEFT JOIN handlers h1 ON cases.handler1_id = h1.id
          LEFT JOIN handlers h2 ON cases.handler2_id = h2.id
          ${whereClause}
-         ORDER BY shifts.date DESC, shifts.id DESC`,
-        params
-      );
+         ORDER BY shifts.date DESC, shifts.id DESC`;
+
+      const page = (req.query as any).page ? Math.max(1, parseInt(String((req.query as any).page))) : undefined;
+      const limit = (req.query as any).limit ? Math.min(1000, Math.max(1, parseInt(String((req.query as any).limit)))) : undefined;
+      if (page && limit) {
+        query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        params.push(limit, (page - 1) * limit);
+      }
+
+      const result = await pool.query(query, params);
       
       // Konvertera datum till YYYY-MM-DD format för att undvika tidszonsproblem
       const rows = result.rows.map(row => ({

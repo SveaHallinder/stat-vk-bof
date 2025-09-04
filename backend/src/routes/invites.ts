@@ -5,6 +5,7 @@ import { authenticateToken } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import rateLimit from "express-rate-limit";
 import bcrypt from "bcrypt";
+import { isPasswordPwned } from "../utils/pwned";
 // emailService borttagen - e-post skickas manuellt
 
 // Rate limiting för invite-accept
@@ -21,7 +22,14 @@ export default function invites(pool: Pool) {
   const ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
 
   // Skapa ny invite (endast admin)
-  router.post("/", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
+  const createLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'För många inbjudningar. Försök igen senare.' }
+  });
+  router.post("/", authenticateToken, requireRole("admin"), createLimiter, async (req: Request, res: Response) => {
     const { email, role = 'handler' } = req.body;
     const adminId = (req.user as any).id;
 
@@ -196,6 +204,14 @@ export default function invites(pool: Pool) {
       if (!invite.email_verified) {
         return res.status(400).json({ error: "E-postadressen måste verifieras först" });
       }
+
+      // HIBP-kontroll
+      try {
+        const pwned = await isPasswordPwned(password);
+        if (pwned) {
+          return res.status(400).json({ error: 'weak_password', message: 'Lösenordet förekommer i kända dataläckor. Välj ett annat lösenord.' });
+        }
+      } catch {}
 
       // Hasha lösenord med bcrypt
       const hashedPassword = await bcrypt.hash(password, ROUNDS);

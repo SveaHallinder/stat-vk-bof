@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
 import { getAuditLogger } from "../utils/auditLogger";
-import { validateCustomerData, sanitizeTextInputs} from "../middleware/validation";
+import { validateCustomerData, sanitizeTextInputs, validateSearchParams} from "../middleware/validation";
 
 export default function customers(pool: Pool) {
   const router = Router();
@@ -48,13 +48,25 @@ export default function customers(pool: Pool) {
   });
 
   // Hämta alla kunder (med stöd för all=true)
-  router.get("/", async (req, res) => {
+  router.get("/", sanitizeTextInputs, validateSearchParams, async (req, res) => {
     try {
       let result;
+      const page = req.query.page ? Math.max(1, parseInt(String(req.query.page))) : undefined;
+      const limit = req.query.limit ? Math.min(1000, Math.max(1, parseInt(String(req.query.limit)))) : undefined;
+      const usePaging = page && limit;
+      const offset = usePaging ? (page! - 1) * limit! : 0;
       if (req.query.all === "true") {
-        result = await pool.query("SELECT * FROM customers ORDER BY id ASC");
+        if (usePaging) {
+          result = await pool.query("SELECT * FROM customers ORDER BY id ASC LIMIT $1 OFFSET $2", [limit, offset]);
+        } else {
+          result = await pool.query("SELECT * FROM customers ORDER BY id ASC");
+        }
       } else {
-        result = await pool.query("SELECT * FROM customers WHERE active = TRUE ORDER BY id ASC");
+        if (usePaging) {
+          result = await pool.query("SELECT * FROM customers WHERE active = TRUE ORDER BY id ASC LIMIT $1 OFFSET $2", [limit, offset]);
+        } else {
+          result = await pool.query("SELECT * FROM customers WHERE active = TRUE ORDER BY id ASC");
+        }
       }
       res.json(result.rows);
     } catch {

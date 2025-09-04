@@ -112,7 +112,7 @@ export default function stats(pool: Pool) {
   });
 
   // Statistik: per insats
-  router.get("/by-effort", async (req, res) => {
+  router.get("/by-effort", sanitizeTextInputs, validateSearchParams, async (req, res) => {
     const { from, to, insats, effortCategory, gender, birthYear, customer, handler, includeInactive, shiftStatus } = req.query as any;
     let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
@@ -192,7 +192,7 @@ export default function stats(pool: Pool) {
   });
 
   // Statistik: per månad
-  router.get("/by-month", async (req, res) => {
+  router.get("/by-month", sanitizeTextInputs, validateSearchParams, async (req, res) => {
     const { from, to, insats, includeInactive } = req.query as any;
     let where = "WHERE 1=1";
     const params: any[] = [];
@@ -231,7 +231,7 @@ export default function stats(pool: Pool) {
   });
 
   // Statistik: per behandlare
-  router.get("/by-handler", async (req, res) => {
+  router.get("/by-handler", sanitizeTextInputs, validateSearchParams, async (req, res) => {
     const { from, to, insats, includeInactive, shiftStatus } = req.query as any;
     let where = "WHERE 1=1";
     const params: any[] = [];

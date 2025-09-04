@@ -8,7 +8,12 @@ export function validateEmail(email: string): boolean {
 
 // Validera lösenord (minst 8 tecken, minst en bokstav och en siffra)
 export function validatePassword(password: string): boolean {
-  return password.length >= 8 && /[a-zA-Z]/.test(password) && /\d/.test(password);
+  const hasMin = password.length >= 8;
+  const hasLower = /[a-z]/.test(password);
+  const hasUpper = /[A-Z]/.test(password);
+  const hasDigit = /\d/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  return hasMin && hasLower && hasUpper && hasDigit && hasSpecial;
 }
 
 // Validera namn (endast bokstäver, mellanslag och bindestreck)

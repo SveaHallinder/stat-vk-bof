@@ -3,11 +3,21 @@ import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import { getAuditLogger } from "../utils/auditLogger";
+import rateLimit from "express-rate-limit";
 
 export default function audit(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
   router.use(requireRole('admin'));
+
+  // Rate limit för export (skydd mot överanvändning även för admin)
+  const exportLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many export requests, please try again later.' }
+  });
 
   // Hämta alla audit loggar med filtrering
   router.get("/", async (req, res) => {
@@ -158,7 +168,7 @@ export default function audit(pool: Pool) {
   });
 
   // Logga export (adminkrav p.g.a. globalt requireRole ovan)
-  router.post("/export", async (req, res) => {
+  router.post("/export", exportLimiter, async (req, res) => {
     try {
       const user = req.user!;
       const payload = req.body || {};

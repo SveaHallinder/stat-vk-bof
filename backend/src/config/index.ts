@@ -1,12 +1,29 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
 // Bestäm vilken miljö vi kör i
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Ladda rätt .env-fil baserat på miljön
-const envFile = path.resolve(process.cwd(), `.env.${NODE_ENV}`);
-dotenv.config({ path: envFile });
+// Robust env-laddning: försök flera källor i prioriterad ordning
+const tryLoad = (p: string) => {
+  try {
+    if (fs.existsSync(p)) {
+      dotenv.config({ path: p });
+    }
+  } catch {
+    // Ignorera om fil inte finns
+  }
+};
+
+// 1) backend/.env.<NODE_ENV>
+tryLoad(path.resolve(process.cwd(), `.env.${NODE_ENV}`));
+// 2) projektrot/.env.<NODE_ENV>
+tryLoad(path.resolve(process.cwd(), `../.env.${NODE_ENV}`));
+// 3) backend/.env
+tryLoad(path.resolve(process.cwd(), `.env`));
+// 4) projektrot/.env
+tryLoad(path.resolve(process.cwd(), `../.env`));
 
 // Validera att alla kritiska variabler finns
 function validateRequiredEnvVars() {
@@ -116,6 +133,13 @@ export const config = {
     schedule: process.env.BACKUP_SCHEDULE || '0 2 * * *',
     retentionDays: parseInt(process.env.BACKUP_RETENTION_DAYS || '30', 10),
   },
+
+  // Pwned Passwords (HIBP) kontroll
+  pwnedPasswords: {
+    enabled: process.env.PWNED_PASSWORDS_ENABLED === 'true',
+    required: process.env.PWNED_PASSWORDS_REQUIRED === 'true',
+    timeoutMs: parseInt(process.env.PWNED_PASSWORDS_TIMEOUT_MS || '3000', 10),
+  }
 };
 
 // Validera konfigurationen vid import

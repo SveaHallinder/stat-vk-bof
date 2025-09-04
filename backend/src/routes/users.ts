@@ -2,9 +2,11 @@ import { Router, Request, Response } from "express";
 import { Pool } from "pg";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { authenticateToken } from "../middleware/auth";
 import rateLimit from "express-rate-limit";
 import { validateUserRegistration, sanitizeTextInputs } from "../middleware/validation";
+import { isPasswordPwned } from "../utils/pwned";
 
 const ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
 
@@ -21,6 +23,9 @@ const users = (pool: Pool) => {
   const router = Router();
 
 
+
+  // Hjälpfunktion för att hasha tokens (lagras i DB)
+  const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
 
   // Login endpoint med rate limiting
   router.post('/login', loginLimiter, async (req: Request, res: Response) => {
@@ -73,10 +78,10 @@ const users = (pool: Pool) => {
         { expiresIn: '7d' } // 7 dagar för refresh token
       );
 
-      // Spara refresh token i databasen (för att kunna invalidera vid behov)
+      // Spara hash av refresh token i databasen (för att kunna invalidera vid behov)
       await pool.query(
         'UPDATE handlers SET refresh_token = $1, last_login = NOW() WHERE id = $2',
-        [refreshToken, user.id]
+        [hashToken(refreshToken), user.id]
       );
 
       // Returnera användardata och tokens
@@ -93,7 +98,9 @@ const users = (pool: Pool) => {
 
     } catch (error) {
       console.error('Login error:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
+      if (process.env.NODE_ENV !== 'production') {
+        try { console.error('Error details:', JSON.stringify(error, null, 2)); } catch {}
+      }
       res.status(500).json({ error: 'Internt serverfel' });
     }
   });
@@ -111,6 +118,14 @@ const users = (pool: Pool) => {
       if (!name || !email || !password) {
         return res.status(400).json({ error: 'Namn, email och lösenord krävs' });
       }
+
+      // HIBP-kontroll
+      try {
+        const pwned = await isPasswordPwned(password);
+        if (pwned) {
+          return res.status(400).json({ error: 'weak_password', message: 'Lösenordet förekommer i kända dataläckor. Välj ett annat lösenord.' });
+        }
+      } catch {}
 
       // Hasha lösenord med bcrypt
       const hashedPassword = await bcrypt.hash(password, ROUNDS);
@@ -153,7 +168,7 @@ const users = (pool: Pool) => {
     }
   });
 
-  // Refresh token endpoint
+  // Refresh token endpoint (rotating refresh tokens)
   router.post('/refresh', async (req: Request, res: Response) => {
     try {
       const { refreshToken } = req.body;
@@ -169,10 +184,10 @@ const users = (pool: Pool) => {
         return res.status(401).json({ error: 'Ogiltig token typ' });
       }
 
-      // Kontrollera att token finns i databasen
+      // Kontrollera att hash av token finns i databasen
       const result = await pool.query(
         'SELECT id, name, email, role FROM handlers WHERE id = $1 AND refresh_token = $2 AND active = true',
-        [decoded.id, refreshToken]
+        [decoded.id, hashToken(refreshToken)]
       );
 
       if (result.rows.length === 0) {
@@ -194,8 +209,24 @@ const users = (pool: Pool) => {
         { expiresIn: '15m' }
       );
 
+      // Rotera refresh token: skapa ny och spara dess hash i DB
+      const newRefreshToken = jwt.sign(
+        {
+          id: user.id,
+          email: user.email,
+          type: 'refresh'
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: '7d' }
+      );
+      await pool.query(
+        'UPDATE handlers SET refresh_token = $1 WHERE id = $2',
+        [hashToken(newRefreshToken), user.id]
+      );
+
       res.json({
         accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
         user: {
           id: user.id,
           name: user.name,

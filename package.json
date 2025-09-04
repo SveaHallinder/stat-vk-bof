@@ -4,9 +4,14 @@
   "type": "module",
   "name": "stat-vk",
   "description": "Vallentuna Kommun - Statistik och tidsregistrering system",
+  "engines": {
+    "node": ">=18 <21"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "typecheck": "tsc -p tsconfig.typecheck.json --noEmit"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
