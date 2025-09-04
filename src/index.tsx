@@ -18,6 +18,7 @@ import MinProfilPage from "./screens/MinProfilPage";
 import { LoginPage } from "./screens/LoginPage";
 import { InviteAcceptPage } from "./screens/InviteAcceptPage";
 import { ResetPasswordPage } from "./screens/ResetPasswordPage";
+import { Forbidden } from "./components/Forbidden";
 import { Toaster } from "react-hot-toast";
 import { LoadingSpinner } from "./components/ui/loading-spinner";
 
@@ -66,6 +67,7 @@ createRoot(document.getElementById("app") as HTMLElement).render(
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/forbidden" element={<Forbidden />} />
               <Route path="/invite/:token" element={<InviteAcceptPage />} />
               <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

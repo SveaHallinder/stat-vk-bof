@@ -1,7 +1,7 @@
 import { API_URL } from "./api";
 
 export function api(path: string, options: RequestInit = {}) {
-  const accessToken = localStorage.getItem('accessToken');
+  const accessToken = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
   const headers = {
     ...(options.headers || {}),
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})

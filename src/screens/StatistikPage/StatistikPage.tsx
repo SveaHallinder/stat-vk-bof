@@ -94,21 +94,39 @@ export const StatistikPage = (): JSX.Element => {
     return params;
   }
 
+  const abortRef = useRef<AbortController | null>(null);
+
   function loadStats() {
     setLoading(true);
     const params = buildParams();
+    // Avbryt ev. pågående hämtningar
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     Promise.all([
-      getStatsSummary(params).catch(_err => { toast.error("Kunde inte hämta statistik"); return null; }),
-      getStatsByEffort(params).catch(_err => { toast.error("Kunde inte hämta diagramdata"); return null; })
+      getStatsSummary(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta statistik"); return null; }),
+      getStatsByEffort(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta diagramdata"); return null; })
     ]).then(([statsData, effortData]) => {
-      setStats(statsData);
-      setEffortData(effortData);
+      if (!controller.signal.aborted) {
+        setStats(statsData);
+        setEffortData(effortData);
+      }
     }).finally(() => setLoading(false));
   }
 
   useEffect(() => {
     loadStats();
-  }, [dateRange, selectedEfforts, selectedEffortCategories, selectedGenders, selectedYears, selectedHandlers, selectedCustomers]);
+  }, [
+    dateRange,
+    selectedEfforts,
+    selectedEffortCategories,
+    selectedGenders,
+    selectedYears,
+    selectedHandlers,
+    selectedCustomers,
+    includeInactive,
+    shiftStatus,
+  ]);
 
   // Logga export
   const logExport = async (exportType: string, filters: any) => {
@@ -358,25 +376,36 @@ export const StatistikPage = (): JSX.Element => {
                 Inkludera inaktiva
               </label>
             </div>
-            {/* Rensa alla filter-knapp */}
-              <div className="flex justify-center mobile:justify-end w-full mobile:w-full">
-                <Button
-                  variant="outline"
-                  size="default"
-                  className="text-sm font-normal w-full mobile:w-auto"
-                  onClick={() => {
-                    setDateRange({ from: null, to: null });
-                    setSelectedGenders([]);
-                    setSelectedYears([]);
-                    setSelectedEfforts([]);
-                    setSelectedEffortCategories([]);
-                    setSelectedHandlers([]);
-                    setSelectedCustomers([]);
-                  }}
-                >
-                  Rensa alla filter
-                </Button>
-              </div>
+            {/* Uppdatera och Rensa */}
+            <div className="flex justify-center mobile:justify-end w-full mobile:w-full gap-2">
+              <Button
+                variant="default"
+                size="default"
+                className="text-sm font-medium w-full mobile:w-auto"
+                onClick={() => loadStats()}
+                disabled={loading}
+              >
+                {loading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uppdaterar...</>) : 'Uppdatera'}
+              </Button>
+              <Button
+                variant="outline"
+                size="default"
+                className="text-sm font-normal w-full mobile:w-auto"
+                onClick={() => {
+                  setDateRange({ from: null, to: null });
+                  setSelectedGenders([]);
+                  setSelectedYears([]);
+                  setSelectedEfforts([]);
+                  setSelectedEffortCategories([]);
+                  setSelectedHandlers([]);
+                  setSelectedCustomers([]);
+                  setIncludeInactive(false);
+                  setShiftStatus('Alla');
+                }}
+              >
+                Rensa alla filter
+              </Button>
+            </div>
           </div>
         </div>
 

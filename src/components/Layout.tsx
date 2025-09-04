@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "@/screens/DashboardRedesign/components/Sidebar";
 import { GlobalSearch } from "./GlobalSearch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,31 +14,42 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const [fadeKey, setFadeKey] = useState(0);
+
+  useEffect(() => {
+    // Bump key på varje route‑byte för att trigga mjuk fade‑in
+    setFadeKey(k => k + 1);
+  }, [location.pathname]);
 
   const handleSearchResult = (result: any) => {
-    
-    // Navigera till befintliga sidor baserat på resultattyp
     switch (result.type) {
-      case 'customer':
-        // Navigera till kundersida
-        navigate('/kunder');
+      case 'customer': {
+        navigate(`/kunder/${result.id}`);
         break;
-      case 'handler':
-        // Navigera till min profil-sida för vanliga behandlare
-        navigate('/min-profil');
+      }
+      case 'handler': {
+        if (user && user.id === result.id) navigate('/min-profil');
+        else navigate(`/admin?handlerId=${result.id}`);
         break;
-      case 'effort':
-        // Navigera till admin-sida (där insatser hanteras)
-        navigate('/admin');
+      }
+      case 'effort': {
+        navigate(`/admin?effortId=${result.id}`);
         break;
-      case 'case':
-        // Navigera till ärendelista
-        navigate('/arendelista');
+      }
+      case 'case': {
+        const c = result.data;
+        if (c?.customer_id) navigate(`/kunder/${c.customer_id}?caseId=${result.id}`);
+        else navigate('/arendelista');
         break;
-      case 'shift':
-        // Navigera till tidregistrering
-        navigate('/registrera-tid');
+      }
+      case 'shift': {
+        const s = result.data;
+        if (s?.customer_id) navigate(`/kunder/${s.customer_id}?caseId=${s.case_id}`);
+        else if (s?.case_id) navigate(`/arendelista?caseId=${s.case_id}`);
+        else navigate('/registrera-tid');
         break;
+      }
       default:
         console.warn('Okänd resultattyp:', result.type);
     }
@@ -112,7 +123,7 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
           </div>
         </header>
         <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-6xl mx-auto">
+          <div key={fadeKey} className="max-w-6xl mx-auto route-fade">
             {children}
           </div>
         </main>

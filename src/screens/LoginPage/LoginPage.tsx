@@ -12,6 +12,7 @@ export const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [remember, setRemember] = useState(true);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -28,6 +29,15 @@ export const LoginPage = () => {
     
     try {
       await login(email, password);
+      // Hantera "Kom ihåg mig"
+      const access = localStorage.getItem('accessToken');
+      const refresh = localStorage.getItem('refreshToken');
+      if (!remember) {
+        if (access) sessionStorage.setItem('accessToken', access);
+        if (refresh) sessionStorage.setItem('refreshToken', refresh);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      }
       toast.success('Inloggning lyckades!');
       navigate('/dashboard');
     } catch (error) {
@@ -90,6 +100,13 @@ export const LoginPage = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+          </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} disabled={isLoading} />
+                Kom ihåg mig
+              </label>
             </div>
 
             <Button

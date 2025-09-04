@@ -216,7 +216,10 @@ export async function deactivateShiftsForCase(caseId: string): Promise<{ message
   return res.json();
 }
 
-export async function getStatsSummary(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }): Promise<any> {
+export async function getStatsSummary(
+  params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
+  options?: RequestInit
+): Promise<any> {
   let url = `/stats/summary`;
   if (params) {
     const search = new URLSearchParams();
@@ -232,12 +235,15 @@ export async function getStatsSummary(params?: { from?: string; to?: string; ins
     if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
-  const res = await api(url);
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik");
   return res.json();
 }
 
-export async function getStatsByEffort(params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }): Promise<any> {
+export async function getStatsByEffort(
+  params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
+  options?: RequestInit
+): Promise<any> {
   let url = `/stats/by-effort`;
   if (params) {
     const search = new URLSearchParams();
@@ -253,12 +259,15 @@ export async function getStatsByEffort(params?: { from?: string; to?: string; in
     if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
-  const res = await api(url);
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per insats");
   return res.json();
 }
 
-export async function getStatsByMonth(params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean }): Promise<any> {
+export async function getStatsByMonth(
+  params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean },
+  options?: RequestInit
+): Promise<any> {
   let url = `/stats/by-month`;
   if (params) {
     const search = new URLSearchParams();
@@ -268,12 +277,15 @@ export async function getStatsByMonth(params?: { from?: string; to?: string; ins
     if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
-  const res = await api(url);
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per månad");
   return res.json();
 }
 
-export async function getStatsByHandler(params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' }): Promise<any> {
+export async function getStatsByHandler(
+  params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
+  options?: RequestInit
+): Promise<any> {
   let url = `/stats/by-handler`;
   if (params) {
     const search = new URLSearchParams();
@@ -284,7 +296,7 @@ export async function getStatsByHandler(params?: { from?: string; to?: string; i
     if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
     if ([...search].length > 0) url += `?${search.toString()}`;
   }
-  const res = await api(url);
+  const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per behandlare");
   return res.json();
 }
