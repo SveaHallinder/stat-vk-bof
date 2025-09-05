@@ -22,8 +22,16 @@ export default function stats(pool: Pool) {
       where += ` AND shifts.date <= $${params.length}::date`;
     }
     if (insats && insats !== "alla") {
-      params.push(insats);
-      where += ` AND cases.effort_id = $${params.length}`;
+      const parts = String(insats).split(",").map(s => s.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        const ids = parts.map(Number).filter(n => !isNaN(n));
+        where += ` AND cases.effort_id = ANY($${params.length + 1})`;
+        params.push(ids);
+      } else {
+        const id = Number(parts[0]);
+        params.push(id);
+        where += ` AND cases.effort_id = $${params.length}`;
+      }
     }
     if (effortCategory) {
       const categories = String(effortCategory).split(",");
@@ -125,8 +133,16 @@ export default function stats(pool: Pool) {
       where += ` AND shifts.date <= $${params.length}::date`;
     }
     if (insats && insats !== "alla") {
-      params.push(insats);
-      where += ` AND cases.effort_id = $${params.length}`;
+      const parts = String(insats).split(",").map(s => s.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        const ids = parts.map(Number).filter(n => !isNaN(n));
+        where += ` AND cases.effort_id = ANY($${params.length + 1})`;
+        params.push(ids);
+      } else {
+        const id = Number(parts[0]);
+        params.push(id);
+        where += ` AND cases.effort_id = $${params.length}`;
+      }
     }
     if (effortCategory) {
       const categories = String(effortCategory).split(",");
@@ -194,30 +210,43 @@ export default function stats(pool: Pool) {
   // Statistik: per månad
   router.get("/by-month", async (req, res) => {
     const { from, to, insats, includeInactive } = req.query as any;
-    let where = "WHERE 1=1";
+    // Basera på skiftens datum och aktiva skift
+    let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
     const includeInactiveBool = String(includeInactive) === 'true';
     if (!includeInactiveBool) {
-      where += " AND cases.active = TRUE";
+      where += " AND (cases.active = TRUE AND efforts.active = TRUE AND customers.active = TRUE)";
     }
     if (from) {
       params.push(from);
-      where += ` AND cases.created_at >= $${params.length}::date`;
+      where += ` AND shifts.date >= $${params.length}::date`;
     }
     if (to) {
       params.push(to);
-      where += ` AND cases.created_at <= $${params.length}::date`;
+      where += ` AND shifts.date <= $${params.length}::date`;
     }
     if (insats && insats !== "alla") {
-      params.push(insats);
-      where += ` AND cases.effort_id = $${params.length}`;
+      const parts = String(insats).split(",").map(s => s.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        const ids = parts.map(Number).filter(n => !isNaN(n));
+        where += ` AND cases.effort_id = ANY($${params.length + 1})`;
+        params.push(ids);
+      } else {
+        const id = Number(parts[0]);
+        params.push(id);
+        where += ` AND cases.effort_id = $${params.length}`;
+      }
     }
     try {
       const result = await pool.query(
-        `SELECT EXTRACT(YEAR FROM cases.created_at) AS year, EXTRACT(MONTH FROM cases.created_at) AS month,
-          COUNT(cases.id) AS antal_besok,
+        `SELECT EXTRACT(YEAR FROM shifts.date) AS year, EXTRACT(MONTH FROM shifts.date) AS month,
+          COUNT(shifts.id) AS antal_besok,
+          COALESCE(SUM(shifts.hours), 0) AS antal_timmar,
           COUNT(DISTINCT cases.customer_id) AS antal_kunder
-        FROM cases
+        FROM shifts
+        LEFT JOIN cases ON shifts.case_id = cases.id
+        LEFT JOIN efforts ON cases.effort_id = efforts.id
+        LEFT JOIN customers ON cases.customer_id = customers.id
         ${where}
         GROUP BY year, month
         ORDER BY year, month`,
@@ -248,8 +277,16 @@ export default function stats(pool: Pool) {
       where += ` AND cases.created_at <= $${params.length}::date`;
     }
     if (insats && insats !== "alla") {
-      params.push(insats);
-      where += ` AND cases.effort_id = $${params.length}`;
+      const parts = String(insats).split(",").map(s => s.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        const ids = parts.map(Number).filter(n => !isNaN(n));
+        where += ` AND cases.effort_id = ANY($${params.length + 1})`;
+        params.push(ids);
+      } else {
+        const id = Number(parts[0]);
+        params.push(id);
+        where += ` AND cases.effort_id = $${params.length}`;
+      }
     }
     try {
       let join = "LEFT JOIN shifts ON cases.id = shifts.case_id AND shifts.active = TRUE";
@@ -260,7 +297,7 @@ export default function stats(pool: Pool) {
 
       const result = await pool.query(
         `SELECT h.id AS handler_id, h.name AS handler_name,
-          COUNT(cases.id) AS antal_besok,
+          COUNT(shifts.id) AS antal_besok,
           COALESCE(SUM(shifts.hours), 0) AS antal_timmar
         FROM cases
         LEFT JOIN handlers h ON cases.handler1_id = h.id

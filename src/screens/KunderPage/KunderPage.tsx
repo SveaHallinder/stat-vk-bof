@@ -208,7 +208,7 @@ export const KunderPage = (): JSX.Element => {
                     { label: "Kund-ID", field: "id" },
                     { label: "Initialer", field: "initials" },
                     { label: "Kön", field: "gender" },
-                    { label: "Födelseår", field: "birthYear" },
+                  { label: "Födelseår", field: "birth_year" },
                     { label: "Status", field: "status" },
                     { label: "Startdatum", field: "created_at" },
                   ].map(col => (

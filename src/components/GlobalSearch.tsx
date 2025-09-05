@@ -3,7 +3,7 @@ import { Search, X, User, Clock, FileText, Users, Calendar } from "lucide-react"
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getCustomers, getHandlers, getEfforts, getCases, getShifts } from "@/lib/api";
+import { getCustomers, getPublicHandlers, getEfforts, getCases, getShifts } from "@/lib/api";
 
 interface SearchResult {
   id: number;
@@ -41,8 +41,8 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
       const [customers, handlers, efforts, cases, shifts] = await Promise.all([
         // Endast aktiva kunder i global sök
         getCustomers().catch(() => []),
-        // Endast aktiva behandlare
-        getHandlers().catch(() => []),
+        // Endast aktiva behandlare (publik lista, ej admin-krav)
+        getPublicHandlers().catch(() => []),
         getEfforts().catch(() => []),
         // Endast aktiva ärenden
         getCases().catch(() => []),
@@ -227,7 +227,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={22} />
         <Input
-          className="w-64 pl-12 pr-4 py-2 h-11 rounded-full border-1,75 border-gray-300 text-base placeholder:text-[#888888] focus:border-[#17694c] focus:ring-0"
+          className="w-64 pl-12 pr-4 py-2 h-11 rounded-full border border-gray-300 text-base placeholder:text-[#888888] focus:border-[#17694c] focus:ring-0"
           placeholder="Sök allt..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
