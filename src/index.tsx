@@ -18,6 +18,7 @@ import MinProfilPage from "./screens/MinProfilPage";
 import { LoginPage } from "./screens/LoginPage";
 import { InviteAcceptPage } from "./screens/InviteAcceptPage";
 import { ResetPasswordPage } from "./screens/ResetPasswordPage";
+import { Forbidden } from "./components/Forbidden";
 import { Toaster } from "react-hot-toast";
 import { LoadingSpinner } from "./components/ui/loading-spinner";
 import { RoutePrefetcher } from "./components/RoutePrefetcher";
@@ -80,6 +81,24 @@ createRoot(document.getElementById("app") as HTMLElement).render(
             <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
             <Route path="*" element={<div className="min-h-screen flex items-center justify-center text-gray-600">Sidan kunde inte hittas (404)</div>} />
           </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/forbidden" element={<Forbidden />} />
+              <Route path="/invite/:token" element={<InviteAcceptPage />} />
+              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<ProtectedRoute><DashboardRedesign /></ProtectedRoute>} />
+              <Route path="/kunder" element={<ProtectedRoute><KunderPage /></ProtectedRoute>} />
+              <Route path="/kunder/:id" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
+              <Route path="/registrera-tid" element={<ProtectedRoute><RegisteraTidPage /></ProtectedRoute>} />
+              <Route path="/arendelista" element={<ProtectedRoute><ArendelistaPage /></ProtectedRoute>} />
+              <Route path="/statistik" element={<ProtectedRoute><StatistikPage /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
+              <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
+
+            </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

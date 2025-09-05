@@ -87,7 +87,7 @@ export function validateCustomerData(req: Request, res: Response, next: NextFunc
   }
 
   if (!['Flicka', 'Pojke', 'Icke-binär'].includes(gender)) {
-    return res.status(400).json({ error: 'Kön måste vara Flicka/Kvinna, Pojke/Man eller Icke-binär' });
+    return res.status(400).json({ error: 'Kön måste vara Flicka, Pojke eller Icke-binär' });
   }
 
   const currentYear = new Date().getFullYear();

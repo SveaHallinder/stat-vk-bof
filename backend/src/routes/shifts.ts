@@ -133,6 +133,11 @@ export default function shifts(pool: Pool) {
     if (!date || hours === undefined || hours <= 0) {
       return res.status(400).json({ error: "Obligatoriska fält saknas eller ogiltiga värden" });
     }
+
+    // Validera status om den skickas
+    if (typeof status !== 'undefined' && !['Utförd', 'Avbokad'].includes(String(status))) {
+      return res.status(400).json({ error: "Ogiltig status. Tillåtna: Utförd, Avbokad" });
+    }
     
     try {
       const result = await pool.query(

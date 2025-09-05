@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,8 @@ export const ArendelistaPage = (): JSX.Element => {
   const [sortField, setSortField] = useState<keyof CaseWithNames>("created_at");
   const [sortAsc, setSortAsc] = useState(false);
   const [includeInactive, setIncludeInactive] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -30,6 +32,14 @@ export const ArendelistaPage = (): JSX.Element => {
         setCases(data);
       } catch {
         toast.error("Kunde inte hämta ärenden");
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      try {
+        const data = await getCases(includeInactive, { signal: controller.signal }); // styr via checkbox
+        setCases(data);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') toast.error("Kunde inte hämta ärenden");
       } finally {
         setLoading(false);
       }

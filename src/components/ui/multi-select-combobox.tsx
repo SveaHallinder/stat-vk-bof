@@ -19,6 +19,7 @@ export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ option
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [internalValue, setInternalValue] = React.useState<string[]>(value);
+  const listboxId = React.useId();
 
   React.useEffect(() => {
     if (!open) setInternalValue(value);
@@ -62,11 +63,17 @@ export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ option
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full justify-between font-normal overflow-hidden">
+        <Button
+          variant="outline"
+          className="w-full justify-between font-normal overflow-hidden"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+        >
           {displayText()}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-2 w-[260px]">
+      <PopoverContent className="p-2 w-[260px]" role="listbox" aria-multiselectable="true" id={listboxId}>
         <button
           type="button"
           className="flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 mb-2 ml-1 text-gray-700 transition-colors"
@@ -85,7 +92,19 @@ export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ option
         <div className="max-h-48 overflow-auto flex flex-col gap-1">
           {filtered.length === 0 && <div className="text-gray-400 px-2 py-1 text-sm">Inga alternativ</div>}
           {filtered.map(opt => (
-            <label key={opt.value} className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-accent rounded">
+            <label
+              key={opt.value}
+              className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-accent rounded"
+              role="option"
+              aria-selected={isChecked(opt.value)}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggle(opt.value);
+                }
+              }}
+            >
               <input
                 type="checkbox"
                 checked={isChecked(opt.value)}
@@ -99,4 +118,4 @@ export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ option
       </PopoverContent>
     </Popover>
   );
-}; 
+};

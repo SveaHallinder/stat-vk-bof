@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "@/screens/DashboardRedesign/components/Sidebar";
 import { GlobalSearch } from "./GlobalSearch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,16 +14,21 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const [fadeKey, setFadeKey] = useState(0);
+
+  useEffect(() => {
+    // Bump key på varje route‑byte för att trigga mjuk fade‑in
+    setFadeKey(k => k + 1);
+  }, [location.pathname]);
 
   const handleSearchResult = (result: any) => {
-    // Navigera direkt till rätt sida baserat på typ
     switch (result.type) {
       case 'customer': {
         navigate(`/kunder/${result.id}`);
         break;
       }
       case 'handler': {
-        // Det finns ingen separat handler-profil, gå till Admin (eller Min profil om det är du själv)
         if (user && user.id === result.id) navigate('/min-profil');
         else navigate(`/admin?handlerId=${result.id}`);
         break;
@@ -119,7 +124,7 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
           </div>
         </header>
         <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-6xl mx-auto">
+          <div key={fadeKey} className="max-w-6xl mx-auto route-fade">
             {children}
           </div>
         </main>

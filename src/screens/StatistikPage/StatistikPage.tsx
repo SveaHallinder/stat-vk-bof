@@ -99,13 +99,13 @@ export const StatistikPage = (): JSX.Element => {
   function loadStats() {
     setLoading(true);
     const params = buildParams();
-    // Avbryt pågående
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     Promise.all([
       getStatsSummary(params, { signal: controller.signal }).catch(_err => { if (_err?.name !== 'AbortError') toast.error("Kunde inte hämta statistik"); return null; }),
       getStatsByEffort(params, { signal: controller.signal }).catch(_err => { if (_err?.name !== 'AbortError') toast.error("Kunde inte hämta diagramdata"); return null; })
+
     ]).then(([statsData, effortData]) => {
       if (!controller.signal.aborted) {
         setStats(statsData);
@@ -376,7 +376,7 @@ export const StatistikPage = (): JSX.Element => {
                 Inkludera inaktiva
               </label>
             </div>
-            {/* Uppdatera och Rensa filter */}
+
             <div className="flex justify-center mobile:justify-end w-full mobile:w-full gap-2">
               <Button
                 variant="default"
@@ -393,6 +393,8 @@ export const StatistikPage = (): JSX.Element => {
                 ) : (
                   'Uppdatera'
                 )}
+              >
+                {loading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uppdaterar...</>) : 'Uppdatera'}
               </Button>
               <Button
                 variant="outline"
