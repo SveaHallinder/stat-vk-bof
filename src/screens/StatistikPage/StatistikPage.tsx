@@ -383,8 +383,7 @@ export const StatistikPage = (): JSX.Element => {
                 size="default"
                 className="text-sm font-medium w-full mobile:w-auto"
                 onClick={() => loadStats()}
-                disabled={loading}
-              >
+                disabled={loading}>
                 {loading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uppdaterar...</>) : 'Uppdatera'}
               </Button>
               <Button
