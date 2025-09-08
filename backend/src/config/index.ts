@@ -2,7 +2,11 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Bestäm vilken miljö vi kör i
-const NODE_ENV = process.env.NODE_ENV || 'development';
+// Jest sätter JEST_WORKER_ID – använd det som robust indikator för test.
+const IS_JEST = typeof process.env.JEST_WORKER_ID !== 'undefined';
+const RAW_ENV = process.env.NODE_ENV || 'development';
+const NODE_ENV = IS_JEST ? 'test' : RAW_ENV;
+const IS_TEST = NODE_ENV === 'test';
 
 // Ladda rätt .env-fil baserat på miljön
 const envFile = path.resolve(process.cwd(), `.env.${NODE_ENV}`);
@@ -10,11 +14,10 @@ dotenv.config({ path: envFile });
 
 // Validera att alla kritiska variabler finns
 function validateRequiredEnvVars() {
-  const required = [
-    'DATABASE_URL',
-    'JWT_SECRET',
-    'CORS_ORIGIN'
-  ];
+  // I testmiljö räcker det med JWT_SECRET; övriga kan mockas/inte användas
+  const required = IS_TEST
+    ? ['JWT_SECRET']
+    : ['DATABASE_URL', 'JWT_SECRET', 'CORS_ORIGIN'];
 
   const missing: string[] = [];
   
@@ -74,7 +77,10 @@ export const config = {
 
   // CORS
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',').map(o => o.trim()).filter(Boolean) || [],
+    // Hantera avsaknad av CORS_ORIGIN säkert (särskilt i test)
+    origin: (process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
+      : []),
     credentials: process.env.CORS_CREDENTIALS === 'true',
   },
 
@@ -128,6 +134,10 @@ console.log(`🔒 HTTPS: ${config.https.enabled ? 'AKTIVERAT' : 'INAKTIVERAT'}`)
 console.log(`🗄️  Database pool: ${config.database.pool.min}-${config.database.pool.max} connections`);
 console.log(`🌐 CORS origins: ${config.cors.origin.length} tillåtna`);
 console.log(`⚡ Rate limiting: ${config.rateLimit.maxRequests} requests per ${config.rateLimit.windowMs / 1000 / 60} minuter`);
-console.log(`🔗 Database URL: ${config.database.url.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`);
+// Skydda mot undefined i test där DATABASE_URL kan saknas
+const dbUrlLog = config.database.url
+  ? config.database.url.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
+  : '(unset)';
+console.log(`🔗 Database URL: ${dbUrlLog}`);
 
 export default config;
