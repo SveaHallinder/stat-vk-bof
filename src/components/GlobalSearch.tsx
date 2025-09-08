@@ -67,13 +67,13 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
 
       // Sök i behandlare (visa endast aktiva)
       handlers.forEach(handler => {
-        if (handler.active === false) return;
+        // Public endpoint returnerar endast aktiva behandlare (id, name)
         if (handler.name.toLowerCase().includes(lowerQuery)) {
           searchResults.push({
-            id: handler.id,
+            id: Number((handler as any).id),
             type: 'handler',
             title: `Behandlare: ${handler.name}`,
-            subtitle: handler.email,
+            subtitle: '',
             icon: 'Users',
             data: handler,
           });

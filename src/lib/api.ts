@@ -109,8 +109,8 @@ export async function getCasesForCustomerEffort(customerId: string, effortId: st
   return res.json();
 }
 
-export async function getCases(all = false): Promise<CaseWithNames[]> {
-  const res = await api(`/cases${all ? '?all=true' : ''}`);
+export async function getCases(all = false, options?: RequestInit): Promise<CaseWithNames[]> {
+  const res = await api(`/cases${all ? '?all=true' : ''}`, options);
   if (!res.ok) throw new Error("Kunde inte hämta ärenden");
   const data = await res.json();
   return data;

@@ -19,11 +19,11 @@ export const ArendelistaPage = (): JSX.Element => {
   const [sortAsc, setSortAsc] = useState(false);
   const [includeInactive, setIncludeInactive] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const [loading, setLoading] = useState(false);
+  // loading state not used in UI; remove to satisfy typecheck
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
+      // start load
       if (abortRef.current) abortRef.current.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -33,7 +33,7 @@ export const ArendelistaPage = (): JSX.Element => {
       } catch (err: any) {
         if (err?.name !== 'AbortError') toast.error("Kunde inte hämta ärenden");
       } finally {
-        setLoading(false);
+        // finished
       }
     }
     load();
