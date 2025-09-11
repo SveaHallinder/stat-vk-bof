@@ -3,7 +3,7 @@
 Ett modernt webbbaserat system för hantering av kunder, ärenden och tidsregistreringar för Vallentuna kommun.
 # Statistik Vallentuna
 
-## 🚀 Funktioner
+## Funktioner
 
 - **Kundhantering**: Registrera och hantera kunder
 - **Ärendesystem**: Skapa och spåra ärenden med olika insatser
@@ -12,7 +12,7 @@ Ett modernt webbbaserat system för hantering av kunder, ärenden och tidsregist
 - **Användarhantering**: Rollbaserad åtkomst (admin/behandlare)
 - **Responsiv design**: Fungerar på alla enheter
 
-## 🛠️ Teknisk stack
+## Teknisk stack
 
 ### Frontend
 - React 18 + TypeScript
@@ -27,13 +27,13 @@ Ett modernt webbbaserat system för hantering av kunder, ärenden och tidsregist
 - JWT-autentisering
 - Rate limiting & säkerhet
 
-## 📋 Förutsättningar
+## Förutsättningar
 
 - [Node.js](https://nodejs.org/) (version 18 eller senare)
 - [npm](https://www.npmjs.com/) eller [yarn](https://yarnpkg.com/)
 - PostgreSQL-databas
 
-## 🚀 Kom igång
+## Kom igång
 
 ### 1. Installera beroenden
 
@@ -70,7 +70,7 @@ npm run dev
 
 Gå till [http://localhost:5173](http://localhost:5173) i din webbläsare.
 
-## 📁 Projektstruktur
+## Projektstruktur
 
 ```
 src/
@@ -82,7 +82,7 @@ src/
 └── types/             # TypeScript-typer
 ```
 
-## 🔧 Skript
+## Skript
 
 ```bash
 # Utveckling
@@ -95,7 +95,7 @@ npm run build
 cd backend && npm run dev
 ```
 
-## 📚 Dokumentation
+## Dokumentation
 
 - [Miljövariabler](./ENVIRONMENT_SETUP.md)
 - [Admin-manual](./docs/ADMIN_MANUAL.md)
@@ -103,13 +103,13 @@ cd backend && npm run dev
 - [Onboarding](./docs/ONBOARDING_GUIDE.md)
  - [Retention/Gallring](./docs/RETENTION_POLICY.md)
 
-## ♻️ Retention (kort)
+## Retention (kort)
 
 - Auditloggar gallras efter 5 år via funktionen `cleanup_old_audit_logs()` (se `create_audit_log_table.sql`).
 - Schemalägg gallring via cron/pg_cron eller anropa `/api/audit/cleanup` från ett serverjobb.
 - Verksamhetsdata (kunder/ärenden/tider/insatser/behandlare) hård‑raderas inte: avaktivera i stället. Kundinitialer anonymiseras vid avaktivering.
 
-## 🤝 Bidrag
+## Bidrag
 
 1. Forka projektet
 2. Skapa en feature branch
@@ -117,6 +117,6 @@ cd backend && npm run dev
 4. Pusha till branchen
 5. Öppna en Pull Request
 
-## 📄 Licens
+## Licens
 
 Detta projekt är utvecklat för Vallentuna kommun.
