@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import { getStatsSummary, getStatsByEffort, getEfforts, getHandlers, getPublicHandlers, getCustomers } from "@/lib/api";
@@ -6,9 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
-import * as XLSX from "xlsx";
+// Tunga export-bibliotek laddas dynamiskt vid behov för att minska bundle-storlek
 import { Customer, Handler, Effort } from "@/types/types";
 import { api } from "@/lib/apiClient";
 import toast from "react-hot-toast";
@@ -27,6 +25,15 @@ export const StatistikPage = (): JSX.Element => {
   // Stapeldiagram-data
   const [effortData, setEffortData] = useState<any[] | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
+
+  // Memoisera maxY för stapeldiagram baserat på effortData
+  const maxY = useMemo(() => {
+    if (!effortData || effortData.length === 0) return 1;
+    return Math.max(
+      ...effortData.map((d) => Math.max(Number(d.antal_besok) || 0, Number(d.antal_kunder) || 0)),
+      1
+    );
+  }, [effortData]);
 
   // Filter state
   const [selectedGenders, setSelectedGenders] = useState<string[]>([]);
@@ -115,7 +122,10 @@ export const StatistikPage = (): JSX.Element => {
   }
 
   useEffect(() => {
-    loadStats();
+    const t = setTimeout(() => {
+      loadStats();
+    }, 300);
+    return () => clearTimeout(t);
   }, [
     dateRange,
     selectedEfforts,
@@ -148,10 +158,15 @@ export const StatistikPage = (): JSX.Element => {
   };
 
   // Exportfunktioner
-  const handleExportPDF = () => {
-    const input = chartRef.current; // diagramkortet
-    if (!input) return toast.error("Kunde inte hitta diagrammet för export");
-    html2canvas(input).then(canvas => {
+  const handleExportPDF = async () => {
+    try {
+      const input = chartRef.current; // diagramkortet
+      if (!input) return toast.error("Kunde inte hitta diagrammet för export");
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ]);
+      const canvas = await html2canvas(input);
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({ orientation: 'landscape' });
       // Rubrik och datum
@@ -203,7 +218,7 @@ export const StatistikPage = (): JSX.Element => {
       pdf.text(String(totalTimmar), 114, y);
       pdf.text(String(totalKunder), 164, y);
       pdf.save('statistik.pdf');
-      
+
       // Logga export
       logExport('PDF', {
         filters: {
@@ -216,13 +231,15 @@ export const StatistikPage = (): JSX.Element => {
           selectedCustomers: selectedCustomers.length > 0 ? customerOptions.filter(c => selectedCustomers.includes(String(c.id))).map(c => `${c.initials} (${c.birthYear})`).join(", ") : "Alla"
         }
       });
-      
       toast.success("PDF exporterad!");
-    }).catch(() => toast.error("Kunde inte exportera PDF"));
+    } catch {
+      toast.error("Kunde inte exportera PDF");
+    }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
+      const XLSX = await import('xlsx');
       // Bygg filterinfo
       const filterRows = [
         ["Exportdatum:", new Date().toLocaleString("sv-SE")],
@@ -293,10 +310,10 @@ export const StatistikPage = (): JSX.Element => {
 
       <div className="space-y-6 mobile:space-y-8">
         {/* Filterrad */}
-        <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col gap-4 mobile:gap-6 shadow-sm border border-gray-200">
+        <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col gap-4 mobile:gap-6 shadow-sm border border-gray-200" data-tour="stats-filter">
         <label className="font-normal text-base mobile:text-lg m-0 p-0 text-black">Filtrera</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-2 items-end">
-            <div className="gap-1 w-full flex flex-col">
+            <div className="gap-1 w-full flex flex-col" data-tour="stats-filter-daterange">
               <label className="font-normal text-xs text-gray-500">Tidsperiod</label>
               <DateRangePicker value={dateRange} onChange={setDateRange} />
             </div>
@@ -383,6 +400,7 @@ export const StatistikPage = (): JSX.Element => {
                 size="default"
                 className="text-sm font-medium w-full mobile:w-auto"
                 onClick={() => loadStats()}
+                data-tour="stats-update-btn"
                 disabled={loading}>
                 {loading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uppdaterar...</>) : 'Uppdatera'}
               </Button>
@@ -401,6 +419,7 @@ export const StatistikPage = (): JSX.Element => {
                   setIncludeInactive(false);
                   setShiftStatus('Alla');
                 }}
+                data-tour="stats-reset-btn"
               >
                 Rensa alla filter
               </Button>
@@ -415,7 +434,7 @@ export const StatistikPage = (): JSX.Element => {
             <span className="text-lg text-[#17694c]">Laddar statistik...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mobile:gap-6 text-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mobile:gap-6 text-center" data-tour="stats-summary-cards">
             <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
               <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Totalt antal besök</div>
               <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">{stats ? stats.antal_besok.toLocaleString() : "-"}</div>
@@ -436,14 +455,13 @@ export const StatistikPage = (): JSX.Element => {
         )}
 
         {/* Diagramkort */}
-        <div ref={chartRef} className="bg-white rounded-xl p-4 mobile:p-8 flex flex-col items-center relative shadow-sm overflow-x-auto">
+        <div ref={chartRef} className="bg-white rounded-xl p-4 mobile:p-8 flex flex-col items-center relative shadow-sm overflow-x-auto" data-tour="stats-chart">
           <div className="text-sm mobile:text-base font-medium text-gray-800 mb-4 mobile:mb-6">Besök och kunder per insatstyp ({yearLabel})</div>
           {effortData && effortData.length > 0 && (
             <div className="flex w-full h-48 mobile:h-64 mb-4 mobile:mb-6 min-w-max">
               {/* Y-axel */}
               <div className="flex flex-col justify-between items-end pr-2 mobile:pr-4 py-2 w-8 mobile:w-12 select-none">
                 {[...Array(6)].map((_, i) => {
-                  const maxY = Math.max(...effortData.map(d => Math.max(Number(d.antal_besok), Number(d.antal_kunder))), 1);
                   const value = Math.round((maxY / 5) * (5 - i));
                   return (
                     <span key={i} className="text-xs text-gray-400">{value}</span>
@@ -453,7 +471,6 @@ export const StatistikPage = (): JSX.Element => {
               {/* Staplar */}
               <div className="flex gap-8 mobile:gap-20 items-end flex-1 h-full justify-center">
                 {effortData.map((item, idx) => {
-                  const maxY = Math.max(...effortData.map(d => Math.max(Number(d.antal_besok), Number(d.antal_kunder))), 1);
                   return (
                     <div key={idx} className="flex flex-col items-center flex-1 max-w-[40px] mobile:max-w-[56px] min-w-[28px] mobile:min-w-[36px]">
                       {/* Staplar i container med fast höjd */}
@@ -519,8 +536,8 @@ export const StatistikPage = (): JSX.Element => {
 
         {/* Export-knappar utanför diagrammet */}
         <div className="flex flex-col lg:flex-row mobile:flex-col gap-3 mobile:gap-4 justify-center">
-          <Button variant="outline" className="rounded-lg text-sm font-medium w-full mobile:w-auto" onClick={handleExportPDF}>Exportera som PDF</Button>
-          <Button className="rounded-lg text-sm font-medium" variant="outline" onClick={handleExportExcel}>Ladda ner som Excel</Button>
+          <Button variant="outline" className="rounded-lg text-sm font-medium w-full mobile:w-auto" onClick={handleExportPDF} data-tour="stats-export-pdf">Exportera som PDF</Button>
+          <Button className="rounded-lg text-sm font-medium" variant="outline" onClick={handleExportExcel} data-tour="stats-export-excel">Ladda ner som Excel</Button>
         </div>
       </div>
 

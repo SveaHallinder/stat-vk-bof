@@ -320,7 +320,7 @@ export const RegisteraTidPage = (): JSX.Element => {
       <div className="w-full w-auto min-w-full mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
 
       {/* Tidsregistreringar - nu först eftersom det är huvudsyftet */}
-      <Card className="mb-8">
+      <Card className="mb-8" data-tour="time-section">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -352,7 +352,7 @@ export const RegisteraTidPage = (): JSX.Element => {
               <div className="space-y-1 mobile:space-y-2">
                 {timeEntries.map((entry) => (
                   <div key={entry.id} className="flex flex-col gap-4 p-4 bg-white rounded-lg lg:flex-row" style={{ gridTemplateColumns: '1.75fr auto auto auto' }}>
-                    <div className="space-y-2 mobile:flex-1">
+                    <div className="space-y-2 mobile:flex-1" data-tour="time-case-select">
                       <Label className="text-sm font-medium text-gray-700">Ärende *</Label>
                       <Select 
                         value={entry.caseId?.toString() || ""} 
@@ -371,7 +371,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                       </Select>
                     </div>
                     
-                    <div className="space-y-2 mobile:flex-1">
+                    <div className="space-y-2 mobile:flex-1" data-tour="time-date-input">
                       <Label className="text-sm font-medium text-gray-700">Datum *</Label>
                       <Input
                         type="date"
@@ -381,7 +381,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                       />
                     </div>
                     
-                    <div className="space-y-2 mobile:flex-1">
+                    <div className="space-y-2 mobile:flex-1" data-tour="time-hours-input">
                       <Label className="text-sm font-medium text-gray-700">Timmar *</Label>
                       <Input
                         type="number"
@@ -395,7 +395,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                     </div>
                     
                     <div className="flex items-end gap-2">
-                      <div className="w-32">
+                      <div className="w-32" data-tour="time-status-select">
                         <Select 
                           value={entry.status} 
                           onValueChange={(value) => updateTimeEntry(entry.id, 'status', value)}
@@ -421,6 +421,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                                 ? 'bg-blue-600 hover:bg-blue-700' 
                                 : 'bg-gray-300 cursor-not-allowed'
                           } text-white transition-colors mb-1 max-h-9 h-full mobile:w-full mobile:min-h-10 mobile:mb-0`}
+                          data-tour="time-save-btn"
                         >
                           {isSaving ? (
                             <>
@@ -455,6 +456,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                     variant="outline" 
                     size="sm" 
                     className="bg-white hover:bg-gray-50 border-blue-200 text-blue-700 hover:text-blue-800"
+                    data-tour="time-add-btn"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Registrera fler tider
@@ -474,6 +476,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                             ? 'bg-blue-600 hover:bg-blue-700' 
                             : 'bg-gray-300 cursor-not-allowed'
                       } text-white px-6 py-2`}
+                      data-tour="time-save-all-btn"
                     >
                       {isSaving ? (
                         <>
@@ -527,6 +530,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                 variant="outline"
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700 px-4 py-2 font-medium cursor-pointer z-10 relative mobile:w-full mobile:mx-6 mobile:min-h-10 mobile:mb-0 lg:max-w-fit float-left lg:ml-0"
+                data-tour="create-case-toggle"
                 type="button"
               >
                 {showCreateCase ? 'Dölj formulär' : 'Registrera ärende'}
@@ -603,6 +607,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                   onClick={handleCreateCase} 
                   disabled={isLoadingCases}
                   className="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  data-tour="create-case-save"
                 >
                   {isLoadingCases ? (
                     <>
@@ -642,7 +647,7 @@ export const RegisteraTidPage = (): JSX.Element => {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left" data-tour="time-history-table">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Kund</th>

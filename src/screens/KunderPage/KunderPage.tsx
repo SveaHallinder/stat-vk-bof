@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { XCircle, Plus, ArrowUpDown, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { createCustomer, getCustomers, softDeleteCustomer, reactivateCustomer } from "@/lib/api";
+import { createCustomer, getCustomers, softDeleteCustomer, reactivateCustomer, protectCustomer, unprotectCustomer } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Customer } from "@/types/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 type NewCustomer = {
@@ -29,8 +30,15 @@ export const KunderPage = (): JSX.Element => {
   const [savingNew, setSavingNew] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [reactivating, setReactivating] = useState(false);
+  const [protecting, setProtecting] = useState<number | null>(null);
+  const { user } = useAuth();
 
   const handleRowClick = (customer: Customer) => {
+    if (customer.is_protected && customer.can_view === false) {
+      // för icke-tilldelade: blockera navigering
+      toast.error('Åtkomst nekad till skyddad kund');
+      return;
+    }
     navigate(`/kunder/${customer.id}`);
   };
 
@@ -60,6 +68,26 @@ export const KunderPage = (): JSX.Element => {
       toast.error(err?.message || "Kunde inte återaktivera kund");
     } finally {
       setReactivating(false);
+    }
+  };
+
+  const handleToggleProtected = async (c: Customer) => {
+    if (!user || user.role !== 'admin') return;
+    setProtecting(c.id);
+    try {
+      if (c.is_protected) {
+        await unprotectCustomer(c.id);
+        toast.success('Skyddad identitet avmarkerad');
+      } else {
+        await protectCustomer(c.id);
+        toast.success('Kund markerad som skyddad');
+      }
+      const updated = await getCustomers(includeInactive);
+      setCustomers(updated);
+    } catch (e: any) {
+      toast.error(e?.message || 'Kunde inte ändra skyddsstatus');
+    } finally {
+      setProtecting(null);
     }
   };
 
@@ -174,6 +202,7 @@ export const KunderPage = (): JSX.Element => {
           variant="outline"
           className="w-full max-w-[350px] mobile:w-full flex items-center justify-center gap-3 px-4 mobile:px-7 py-3 rounded-lg text-base mobile:text-lg text-[#17694c] font-semibold bg-white hover:bg-[#eaf6f1] hover:shadow-md transition"
           onClick={handleAddCustomer}
+          data-tour="customers-add-btn"
         >
           <Plus className="w-5 h-5 mobile:w-6 mobile:h-6 font-bold" />
           <span>Lägg till ny kund</span>
@@ -187,7 +216,7 @@ export const KunderPage = (): JSX.Element => {
             {savingNew ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Sparar...</> : "Spara alla"}
           </Button>
         )}
-        <label className="flex items-center gap-2 text-sm mt-2 mobile:mt-0">
+        <label className="flex items-center gap-2 text-sm mt-2 mobile:mt-0" data-tour="customers-include-inactive">
           <input
             type="checkbox"
             checked={includeInactive}
@@ -201,7 +230,7 @@ export const KunderPage = (): JSX.Element => {
       <Card className="flex-1 w-full w-auto min-w-full bg-white rounded-xl shadow-sm mobile:w-full mobile:max-w-[350px]">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left" data-tour="customers-table">
               <thead>
                 <tr className="border-b border-gray-200">
                   {[
@@ -332,6 +361,22 @@ export const KunderPage = (): JSX.Element => {
                             disabled={reactivating}
                           >
                             {reactivating ? <Loader2 className="animate-spin w-3 h-3 mobile:w-4 mobile:h-4 inline"/> : <span className="text-green-600 font-semibold text-xs mobile:text-sm">Återaktivera</span>}
+                          </button>
+                        )}
+                        {user?.role === 'admin' && (
+                          <button
+                            className="p-1.5 mobile:p-2 hover:bg-gray-200 rounded-full"
+                            title={customer.is_protected ? "Avmarkera skydd" : "Markera som skyddad"}
+                            onClick={() => handleToggleProtected(customer)}
+                            disabled={protecting === customer.id}
+                          >
+                            {protecting === customer.id ? (
+                              <Loader2 className="animate-spin w-4 h-4" />
+                            ) : (
+                              <span className="text-purple-700 font-semibold text-xs mobile:text-sm">
+                                {customer.is_protected ? 'Avskydda' : 'Skydda'}
+                              </span>
+                            )}
                           </button>
                         )}
                       </div>

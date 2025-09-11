@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
+import { generateAlias } from "../utils/alias";
 import { validateShiftData, sanitizeTextInputs } from "../middleware/validation";
 
 export default function shifts(pool: Pool) {
@@ -46,10 +47,15 @@ export default function shifts(pool: Pool) {
         paramIndex++;
       }
       
-      const result = await pool.query(
+      let result;
+      try {
+        result = await pool.query(
         `SELECT shifts.id, shifts.date, shifts.hours, shifts.status,
                 cases.id AS case_id,
-                customers.initials AS customer_name,
+                cases.handler1_id, cases.handler2_id,
+                customers.id AS customer_id,
+                customers.initials AS customer_initials,
+                customers.is_protected,
                 customers.active AS customer_active,
                 efforts.name AS effort_name,
                 h1.name AS handler1_name,
@@ -64,12 +70,71 @@ export default function shifts(pool: Pool) {
          ORDER BY shifts.date DESC, shifts.id DESC`,
         params
       );
+      } catch (err: any) {
+        if (err?.code === '42703') {
+          // Fallback utan is_protected
+          result = await pool.query(
+            `SELECT shifts.id, shifts.date, shifts.hours, shifts.status,
+                cases.id AS case_id,
+                cases.handler1_id, cases.handler2_id,
+                customers.id AS customer_id,
+                customers.initials AS customer_initials,
+                customers.active AS customer_active,
+                efforts.name AS effort_name,
+                h1.name AS handler1_name,
+                h2.name AS handler2_name
+           FROM shifts
+           LEFT JOIN cases ON shifts.case_id = cases.id
+           LEFT JOIN customers ON cases.customer_id = customers.id
+           LEFT JOIN efforts ON cases.effort_id = efforts.id
+           LEFT JOIN handlers h1 ON cases.handler1_id = h1.id
+           LEFT JOIN handlers h2 ON cases.handler2_id = h2.id
+           ${whereClause}
+           ORDER BY shifts.date DESC, shifts.id DESC`,
+            params
+          );
+          // tillför pseudo-kolumn
+          result.rows = result.rows.map((r: any) => ({ ...r, is_protected: false }));
+        } else {
+          throw err;
+        }
+      }
       
       // Konvertera datum till YYYY-MM-DD format för att undvika tidszonsproblem
-      const rows = result.rows.map(row => ({
-        ...row,
-        date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date
-      }));
+      const viewerId = req.user?.id || 0;
+      const viewerRole = req.user?.role || '';
+      let rows = result.rows.map(row => {
+        const date = row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date;
+        // Compute safe customer name
+        const isProtected = !!row.is_protected;
+        let safeName = row.customer_initials as string;
+        if (isProtected) {
+          const assigned = row.handler1_id === viewerId || row.handler2_id === viewerId;
+          if (String(viewerRole).toLowerCase() === 'admin' || assigned) {
+            safeName = generateAlias(row.customer_id, viewerId);
+          } else {
+            safeName = 'Anonym kund';
+          }
+        }
+        return {
+          id: row.id,
+          case_id: row.case_id,
+          date,
+          hours: row.hours,
+          status: row.status,
+          customer_name: safeName,
+          customer_active: row.customer_active,
+          effort_name: row.effort_name,
+          handler1_name: row.handler1_name,
+          handler2_name: row.handler2_name
+        };
+      });
+
+      // Dölj skyddade tider helt för icke-admin och icke-tilldelade
+      const isAdmin = String(viewerRole).toLowerCase() === 'admin';
+      if (!isAdmin) {
+        rows = rows.filter((row: any) => row.customer_name !== 'Anonym kund');
+      }
       
       res.json(rows);
     } catch (e) {
@@ -87,6 +152,21 @@ export default function shifts(pool: Pool) {
     try {
       let caseId: number = case_id;
       if (!caseId) {
+        // Om vi riskerar att skapa ett nytt ärende: stoppa om kunden är skyddad och användaren inte är admin
+        try {
+          let custRow: any;
+          try {
+            const r = await pool.query('SELECT is_protected FROM customers WHERE id = $1', [Number(customer_id)]);
+            custRow = r.rows[0];
+          } catch (err: any) {
+            if (err?.code === '42703') {
+              custRow = { is_protected: false };
+            } else { throw err; }
+          }
+          if (custRow?.is_protected && String(req.user?.role).toLowerCase() !== 'admin') {
+            return res.status(403).json({ error: 'Endast admin kan skapa nya ärenden för skyddad kund' });
+          }
+        } catch {}
         const existing = await pool.query(
           `SELECT id FROM cases WHERE customer_id = $1 AND effort_id = $2 AND handler1_id = $3 AND (handler2_id = $4 OR (handler2_id IS NULL AND $4 IS NULL)) LIMIT 1`,
           [customer_id, effort_id, handler1_id, handler2_id || null]

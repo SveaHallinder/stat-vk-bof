@@ -1,12 +1,93 @@
 import { API_URL } from "./api";
 
-export function api(path: string, options: RequestInit = {}) {
-  const accessToken = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-  const headers = {
-    ...(options.headers || {}),
-    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-  } as Record<string, string>;
-  return fetch(`${API_URL}${path}`, { ...options, headers });
+// Single-flight refresh to prevent multiple concurrent refresh requests
+let refreshPromise: Promise<string | null> | null = null;
+
+async function tryRefreshAccessToken(): Promise<string | null> {
+  // Reuse in-flight refresh
+  if (refreshPromise) return refreshPromise;
+
+  const storedRefresh = sessionStorage.getItem('refreshToken') || localStorage.getItem('refreshToken');
+  if (!storedRefresh) return null;
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_URL}/users/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: storedRefresh })
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const newAccess = data?.accessToken as string | undefined;
+      if (!newAccess) return null;
+
+      // Respect where refresh token is stored (session vs local)
+      if (sessionStorage.getItem('refreshToken')) {
+        sessionStorage.setItem('accessToken', newAccess);
+      } else {
+        localStorage.setItem('accessToken', newAccess);
+      }
+      return newAccess;
+    } catch {
+      return null;
+    } finally {
+      // allow next refresh
+      setTimeout(() => { refreshPromise = null; }, 0);
+    }
+  })();
+
+  return refreshPromise;
+}
+
+export async function api(path: string, options: RequestInit = {}): Promise<Response> {
+  const url = `${API_URL}${path}`;
+
+  // Prepare headers with latest access token
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const headers: Record<string, string> = {
+    ...(options.headers as any || {}),
+    ...getAuthHeaders(),
+  };
+
+  // Default timeout if no signal provided
+  let controller: AbortController | undefined;
+  let signal = options.signal;
+  if (!signal) {
+    controller = new AbortController();
+    signal = controller.signal;
+    // 10s default timeout
+    const t = setTimeout(() => controller?.abort(), 10000);
+    // Ensure timeout cleared after first attempt completes
+    // We'll clear it below by tracking controller existence only
+    // (No-op if aborted earlier)
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    (controller.signal as any).addEventListener?.('abort', () => clearTimeout(t));
+  }
+
+  const doFetch = () => fetch(url, { ...options, headers, signal });
+
+  // First attempt
+  let res = await doFetch();
+
+  // If unauthorized and not already hitting refresh/login, try refresh once
+  if (res.status === 401 && !path.startsWith('/users/refresh') && !path.startsWith('/users/login')) {
+    const newAccess = await tryRefreshAccessToken();
+    if (newAccess) {
+      // retry with new token
+      const retryHeaders: Record<string, string> = {
+        ...(options.headers as any || {}),
+        Authorization: `Bearer ${newAccess}`,
+      };
+      res = await fetch(url, { ...options, headers: retryHeaders, signal });
+    }
+  }
+
+  return res;
 }
 
 // Backwards compatibility

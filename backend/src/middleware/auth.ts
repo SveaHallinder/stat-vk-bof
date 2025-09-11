@@ -27,6 +27,10 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
 
   try {
     const user = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    // Endast access-tokens får användas för API-åtkomst
+    if (!user || user.type !== 'access') {
+      return res.status(401).json({ error: "invalid_token" });
+    }
     req.user = {
       ...user,
       username: user.name // Lägg till username för kompatibilitet

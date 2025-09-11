@@ -12,7 +12,8 @@ export const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [remember, setRemember] = useState(true);
+  // Standard: spara inte tokens mellan sessions för bättre säkerhet
+  const [remember, setRemember] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -38,7 +39,9 @@ export const LoginPage = () => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
       }
-      toast.success('Inloggning lyckades!');
+      toast.success('Inloggning lyckades!', {
+        duration: 2000,
+      });
       navigate('/dashboard');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Inloggning misslyckades');

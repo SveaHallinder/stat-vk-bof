@@ -12,6 +12,32 @@ export async function getCustomers(all = false): Promise<Customer[]> {
   }));
 }
 
+export async function protectCustomer(id: number): Promise<{ id: number; is_protected: boolean }> {
+  const res = await api(`/customers/${id}/protect`, { method: 'POST' });
+  if (!res.ok) {
+    try {
+      const err = await res.json();
+      throw new Error(err?.message || err?.error || 'Kunde inte märka kund som skyddad');
+    } catch {
+      throw new Error('Kunde inte märka kund som skyddad');
+    }
+  }
+  return res.json();
+}
+
+export async function unprotectCustomer(id: number): Promise<{ id: number; is_protected: boolean }> {
+  const res = await api(`/customers/${id}/unprotect`, { method: 'POST' });
+  if (!res.ok) {
+    try {
+      const err = await res.json();
+      throw new Error(err?.message || err?.error || 'Kunde inte ta bort skyddad markering');
+    } catch {
+      throw new Error('Kunde inte ta bort skyddad markering');
+    }
+  }
+  return res.json();
+}
+
 export async function createCustomer(data: { initials: string; gender: string; birthYear: number; startDate?: string }): Promise<Customer> {
   const res = await api(`/customers`, {
     method: "POST",

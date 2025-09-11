@@ -5,6 +5,8 @@ export interface Customer {
   birth_year: number;
   created_at: string;
   active: boolean;
+  is_protected?: boolean;
+  can_view?: boolean;
 }
 
 export interface Effort {

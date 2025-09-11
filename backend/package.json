@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "build:staging": "NODE_ENV=staging tsc -p tsconfig.json",
     "build:production": "NODE_ENV=production tsc -p tsconfig.json",
+    "migrate": "bash scripts/migrate.sh",
     "start": "NODE_ENV=production node dist/index.js",
     "start:staging": "NODE_ENV=staging node dist/index.js",
     "start:dev": "NODE_ENV=development node dist/index.js"

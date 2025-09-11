@@ -171,14 +171,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setAccessToken(null);
-    setRefreshToken(null);
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
+  const logout = async () => {
+    try {
+      // Försök informera backend så refresh token i DB tas bort
+      await api(`/users/logout`, { method: 'POST' });
+    } catch {
+      // Ignorera fel vid utloggning
+    } finally {
+      setUser(null);
+      setAccessToken(null);
+      setRefreshToken(null);
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      sessionStorage.removeItem('accessToken');
+      sessionStorage.removeItem('refreshToken');
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
     }
   };
 

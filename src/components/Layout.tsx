@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "@/screens/DashboardRedesign/components/Sidebar";
 import { GlobalSearch } from "./GlobalSearch";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, Menu } from "lucide-react";
+import { User, Menu, HelpCircle } from "lucide-react";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ interface LayoutProps {
 export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { reset: startOnboarding } = useOnboarding();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const [fadeKey, setFadeKey] = useState(0);
@@ -93,6 +95,16 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
               <div className="hidden sm:block">
                 <GlobalSearch onResultSelect={handleSearchResult} />
               </div>
+              {/* Onboarding Guide trigger */}
+              <button
+                onClick={() => startOnboarding()}
+                className="hidden sm:flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Öppna guide"
+                aria-label="Öppna guide"
+              >
+                <HelpCircle className="w-5 h-5 text-gray-600" />
+                <span className="text-sm text-gray-700">Guide</span>
+              </button>
               
               {/* User profile section */}
               <div className="flex items-center gap-2 lg:gap-3">

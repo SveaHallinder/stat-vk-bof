@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
+import { generateAlias } from "../utils/alias";
 import { validateCaseData, sanitizeTextInputs } from "../middleware/validation";
 
 export default function cases(pool: Pool) {
@@ -23,11 +24,25 @@ export default function cases(pool: Pool) {
       return res.status(400).json({ error: "Ogiltigt handler2_id värde" });
     }
 
-    // Kontrollera att kunden är aktiv
+    // Kontrollera att kunden är aktiv och om skyddad – begränsa skapande till admin
     try {
-      const cust = await pool.query('SELECT active FROM customers WHERE id = $1', [Number(customer_id)]);
-      if (cust.rows.length === 0 || cust.rows[0].active === false) {
+      let custRow: any;
+      try {
+        const cust = await pool.query('SELECT active, is_protected FROM customers WHERE id = $1', [Number(customer_id)]);
+        custRow = cust.rows[0];
+      } catch (err: any) {
+        if (err?.code === '42703') {
+          const cust = await pool.query('SELECT active FROM customers WHERE id = $1', [Number(customer_id)]);
+          custRow = { ...cust.rows[0], is_protected: false };
+        } else {
+          throw err;
+        }
+      }
+      if (!custRow || custRow.active === false) {
         return res.status(400).json({ error: 'Kunden är inaktiv eller saknas' });
+      }
+      if (custRow.is_protected && String(req.user?.role).toLowerCase() !== 'admin') {
+        return res.status(403).json({ error: 'Endast admin kan skapa ärenden för skyddad kund' });
       }
     } catch {}
 
@@ -123,7 +138,8 @@ export default function cases(pool: Pool) {
           cases.handler2_id,
           cases.active,
           cases.created_at,
-          customers.initials AS customer_name,
+          customers.initials AS customer_initials,
+          customers.is_protected,
           customers.active  AS customer_active,
           efforts.name       AS effort_name,
           h1.name            AS handler1_name,
@@ -136,8 +152,68 @@ export default function cases(pool: Pool) {
         ${whereSql}
         ORDER BY cases.id DESC`;
 
-      const r = await pool.query(sql, params);
-      res.json(r.rows);
+      let r;
+      try {
+        r = await pool.query(sql, params);
+      } catch (err: any) {
+        if (err?.code === '42703') {
+          // Fallback: kolumnen is_protected saknas
+          const sqlFallback = `
+        SELECT
+          cases.id,
+          cases.customer_id,
+          cases.effort_id,
+          cases.handler1_id,
+          cases.handler2_id,
+          cases.active,
+          cases.created_at,
+          customers.initials AS customer_initials,
+          customers.active  AS customer_active,
+          efforts.name       AS effort_name,
+          h1.name            AS handler1_name,
+          h2.name            AS handler2_name
+        FROM cases
+        LEFT JOIN customers ON cases.customer_id = customers.id
+        LEFT JOIN efforts ON cases.effort_id = efforts.id
+        LEFT JOIN handlers h1 ON cases.handler1_id  = h1.id
+        LEFT JOIN handlers h2 ON cases.handler2_id  = h2.id
+        ${whereSql}
+        ORDER BY cases.id DESC`;
+          r = await pool.query(sqlFallback, params);
+          // Markera alla som oskyddade i bearbetning nedan
+          r.rows = r.rows.map((row: any) => ({ ...row, is_protected: false }));
+        } else {
+          throw err;
+        }
+      }
+
+      const viewerId = req.user?.id || 0;
+      const viewerRole = req.user?.role || '';
+
+      let rows = r.rows.map((row: any) => {
+        const isProtected = !!row.is_protected;
+        let safeCustomerName = row.customer_initials as string;
+        if (isProtected) {
+          const assigned = row.handler1_id === viewerId || row.handler2_id === viewerId;
+          if (String(viewerRole).toLowerCase() === 'admin' || assigned) {
+            safeCustomerName = generateAlias(row.customer_id, viewerId);
+          } else {
+            safeCustomerName = 'Anonym kund';
+          }
+        }
+        return {
+          ...row,
+          customer_name: safeCustomerName,
+        };
+      });
+
+      // Dölj skyddade ärenden helt för icke-admin och icke-tilldelade
+      const isAdmin = String(viewerRole).toLowerCase() === 'admin';
+      if (!isAdmin) {
+        rows = rows.filter((row: any) => !row.is_protected || row.handler1_id === viewerId || row.handler2_id === viewerId);
+      }
+
+      res.json(rows);
     } catch (e) {
       console.error("Error fetching cases:", e);
       res.status(500).json({ error: "Kunde inte hämta ärenden" });
@@ -207,10 +283,24 @@ export default function cases(pool: Pool) {
     }
 
     try {
-      // Kontrollera att kunden är aktiv
-      const cust = await pool.query('SELECT active FROM customers WHERE id = $1', [Number(customer_id)]);
-      if (cust.rows.length === 0 || cust.rows[0].active === false) {
+      // Kontrollera att kunden är aktiv och om skyddad – begränsa uppdateringar till admin
+      let custRow: any;
+      try {
+        const cust = await pool.query('SELECT active, is_protected FROM customers WHERE id = $1', [Number(customer_id)]);
+        custRow = cust.rows[0];
+      } catch (err: any) {
+        if (err?.code === '42703') {
+          const cust = await pool.query('SELECT active FROM customers WHERE id = $1', [Number(customer_id)]);
+          custRow = { ...cust.rows[0], is_protected: false };
+        } else {
+          throw err;
+        }
+      }
+      if (!custRow || custRow.active === false) {
         return res.status(400).json({ error: 'Kunden är inaktiv eller saknas' });
+      }
+      if (custRow.is_protected && String(req.user?.role).toLowerCase() !== 'admin') {
+        return res.status(403).json({ error: 'Endast admin kan uppdatera ärenden för skyddad kund' });
       }
 
       // Validera att insats och behandlare är aktiva

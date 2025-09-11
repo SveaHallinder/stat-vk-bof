@@ -3,10 +3,12 @@ import { Layout } from "@/components/Layout";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Loader2, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { getCustomer, updateCustomer, getCustomerEfforts, getShiftsForCase, updateCase, updateShift, addShift, getEfforts, getPublicHandlers, createCase } from "@/lib/api";
+import { api } from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
 import type { CaseWithNames, ShiftEntry, ShiftStatus, Effort } from "@/types/types";
 import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
 import toast from "react-hot-toast";
@@ -47,6 +49,8 @@ export const CustomerProfile = () => {
   const [savingCase, setSavingCase] = useState(false);
   const [efforts, setEfforts] = useState<Effort[]>([]);
   const [handlers, setHandlers] = useState<any[]>([]);
+  const [pii, setPii] = useState<{ initials: string; gender: string } | null>(null);
+  const { user } = useAuth();
   
   // Toggle för att visa/dölja avslutade ärenden
   const [showClosedCases, setShowClosedCases] = useState(false);
@@ -116,6 +120,7 @@ export const CustomerProfile = () => {
 
   const displayInitials = customer?.active ? customer.initials : '—';
   const customerTitle = `${displayInitials} - ${customer.gender} (${customer.birthYear})`;
+  const effectiveTitle = pii ? `${pii.initials} - ${pii.gender ?? customer.gender} (${customer.birthYear})` : customerTitle;
 
   function validateEditCustomer(c: any) {
     const err: { initials?: string; birthYear?: string; gender?: string } = {};
@@ -392,12 +397,48 @@ export const CustomerProfile = () => {
           <Button variant="outline" size="icon" onClick={() => navigate('/kunder')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-4xl font-light text-[#333]">{customerTitle}</h1>
+          <h1 className="text-4xl font-light text-[#333] float-left flex ml-0">{effectiveTitle}</h1>
+          </div>
+          <div className="flex gap-3 items-center float-right h-full">
           <Badge variant={customer.active ? "default" : "destructive"}>{customer.active ? "Aktiv" : "Avslutad"}</Badge>
-        </div>
+          {customer.is_protected && (
+            <Badge className="bg-purple-100 text-purple-800 border border-purple-300 whitespace-nowrap">Skyddad identitet</Badge>
+          )}
+          {customer.is_protected && user?.role === 'admin' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-2"
+              onClick={async () => {
+                if (pii) {
+                  setPii(null);
+                  return;
+                }
+                try {
+                  const res = await api(`/customers/${customer.id}/pii`);
+                  if (!res.ok) throw new Error('Åtkomst nekad');
+                  const data = await res.json();
+                  setPii({ initials: data.initials, gender: data.gender });
+                } catch (e) {
+                  // tyst fel
+                }
+              }}
+            >
+              {pii ? (
+                <>
+                  <EyeOff className="w-4 h-4 mr-1" /> Göm uppgifter
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4 mr-1" /> Visa kunds uppgifter
+                </>
+              )}
+            </Button>
+          )}
         <Button variant="outline" className="gap-2" onClick={handleOpenEdit}>
           <Edit className="w-4 h-4" /> Redigera kund
         </Button>
+        </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Vänsterkolumn: kunduppgifter */}

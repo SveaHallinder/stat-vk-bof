@@ -76,7 +76,7 @@ export const ArendelistaPage = (): JSX.Element => {
 
       <Card className="flex-1 bg-white rounded-xl">
         <CardContent className="p-4 mobile:p-6">
-          <div className="flex flex-col mobile:flex-row gap-4 mb-4 items-start mobile:items-center">
+          <div className="flex flex-col mobile:flex-row gap-4 mb-4 items-start mobile:items-center" data-tour="cases-filter">
             <Input
               placeholder="Sök kund eller insats"
               value={search}
@@ -94,7 +94,7 @@ export const ArendelistaPage = (): JSX.Element => {
                 ))}
               </SelectContent>
             </Select>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm" data-tour="cases-include-inactive">
               <input
                 type="checkbox"
                 checked={includeInactive}
@@ -104,7 +104,7 @@ export const ArendelistaPage = (): JSX.Element => {
             </label>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left" data-tour="cases-table">
               <thead>
                 <tr className="border-b">
                   {[

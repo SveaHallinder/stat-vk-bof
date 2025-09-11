@@ -21,6 +21,8 @@ import { ResetPasswordPage } from "./screens/ResetPasswordPage";
 import { Forbidden } from "./components/Forbidden";
 import { Toaster } from "react-hot-toast";
 import { LoadingSpinner } from "./components/ui/loading-spinner";
+import { OnboardingProvider } from "./contexts/OnboardingContext";
+import { OnboardingTour } from "./components/Onboarding/OnboardingTour";
 
 // Loading component for Suspense fallback
 const PageLoader = () => (
@@ -63,9 +65,10 @@ createRoot(document.getElementById("app") as HTMLElement).render(
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
-          <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
+          <OnboardingProvider>
+            <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/forbidden" element={<Forbidden />} />
               <Route path="/invite/:token" element={<InviteAcceptPage />} />
@@ -79,9 +82,10 @@ createRoot(document.getElementById("app") as HTMLElement).render(
               <Route path="/statistik" element={<ProtectedRoute><StatistikPage /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
               <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
-
-            </Routes>
-          </Suspense>
+              </Routes>
+              <OnboardingTour />
+            </Suspense>
+          </OnboardingProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

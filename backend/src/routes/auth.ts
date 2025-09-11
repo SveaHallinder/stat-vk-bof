@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { sanitizeTextInputs } from '../middleware/validation';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
@@ -13,8 +14,16 @@ function hashToken(token: string): string {
 
 export default function authRoutes(pool: Pool) {
   const ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
+  // Rate limiting för reset-flöden
+  const resetLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minuter
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'För många försök. Försök igen senare.' },
+  });
   // POST /api/auth/validate-reset-token
-  router.post('/validate-reset-token', sanitizeTextInputs, async (req: Request, res: Response) => {
+  router.post('/validate-reset-token', resetLimiter, sanitizeTextInputs, async (req: Request, res: Response) => {
     try {
       const { token } = req.body;
 
@@ -64,7 +73,7 @@ export default function authRoutes(pool: Pool) {
   });
 
   // POST /api/auth/reset-password
-  router.post('/reset-password', sanitizeTextInputs, async (req: Request, res: Response) => {
+  router.post('/reset-password', resetLimiter, sanitizeTextInputs, async (req: Request, res: Response) => {
     try {
       const { token, password } = req.body;
 

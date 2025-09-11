@@ -2,6 +2,8 @@ import { Router } from "express";
 import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
 import { getAuditLogger } from "../utils/auditLogger";
+import { getSafeInitials } from "../utils/alias";
+import { requireRole } from "../middleware/requireRole";
 import { validateCustomerData, sanitizeTextInputs} from "../middleware/validation";
 
 export default function customers(pool: Pool) {
@@ -28,15 +30,16 @@ export default function customers(pool: Pool) {
         );
       }
       
-      // Logga skapandet av kund
+      // Logga skapandet av kund (PII minimerad)
       if (req.user) {
         const auditLogger = getAuditLogger(pool);
+        const safeName = `${initials} (${birthYear})`;
         await auditLogger.logCreate(
           req.user.id,
           req.user.name, // Använd name istället för username
           'customer',
           result.rows[0].id,
-          `${initials} (${birthYear})`,
+          safeName,
           { initials, gender, birthYear, startDate }
         );
       }
@@ -47,17 +50,50 @@ export default function customers(pool: Pool) {
     }
   });
 
-  // Hämta alla kunder (med stöd för all=true)
+  // Hämta alla kunder (med stöd för all=true) med säker visning av initialer
   router.get("/", async (req, res) => {
     try {
-      let result;
-      if (req.query.all === "true") {
-        result = await pool.query("SELECT * FROM customers ORDER BY id ASC");
-      } else {
-        result = await pool.query("SELECT * FROM customers WHERE active = TRUE ORDER BY id ASC");
+      const all = req.query.all === "true";
+      const sqlWith = all
+        ? "SELECT id, initials, gender, birth_year, active, created_at, is_protected FROM customers ORDER BY id ASC"
+        : "SELECT id, initials, gender, birth_year, active, created_at, is_protected FROM customers WHERE active = TRUE ORDER BY id ASC";
+      let rows: any[];
+      try {
+        const result = await pool.query(sqlWith);
+        rows = result.rows;
+      } catch (err: any) {
+        if (err?.code === '42703') {
+          // Fallback: kolumnen finns inte ännu – hämta utan den och anta false
+          const sqlWithout = all
+            ? "SELECT id, initials, gender, birth_year, active, created_at FROM customers ORDER BY id ASC"
+            : "SELECT id, initials, gender, birth_year, active, created_at FROM customers WHERE active = TRUE ORDER BY id ASC";
+          const result = await pool.query(sqlWithout);
+          rows = result.rows.map((r: any) => ({ ...r, is_protected: false }));
+        } else {
+          throw err;
+        }
       }
-      res.json(result.rows);
-    } catch {
+
+      const viewerId = req.user?.id || 0;
+      const viewerRole = req.user?.role || '';
+      const assigned = await pool.query(
+        `SELECT DISTINCT customer_id FROM cases WHERE active = TRUE AND (handler1_id = $1 OR handler2_id = $1)`,
+        [viewerId]
+      );
+      const assignedSet = new Set<number>(assigned.rows.map((r: any) => Number(r.customer_id)));
+
+      const safe = rows.map((row: any) => {
+        const initials = getSafeInitials(row, { viewerId, viewerRole, assignedCustomerIds: assignedSet });
+        const isAdmin = String(viewerRole).toLowerCase() === 'admin';
+        const isAssigned = assignedSet.has(Number(row.id));
+        const protectedView = !!row.is_protected && !isAdmin && !isAssigned;
+        const gender = protectedView ? null : row.gender;
+        const can_view = !row.is_protected || isAdmin || isAssigned;
+        return { ...row, initials, gender, can_view };
+      });
+      res.json(safe);
+    } catch (e) {
+      console.error('Error fetching customers:', e);
       res.status(500).json({ error: "Kunde inte hämta kunder" });
     }
   });
@@ -101,16 +137,43 @@ export default function customers(pool: Pool) {
     }
   });
 
-  // Hämta en specifik kund
+  // Hämta en specifik kund (säker visning av initialer)
   router.get("/:id", async (req, res) => {
     const { id } = req.params;
     try {
-      const result = await pool.query("SELECT * FROM customers WHERE id = $1", [id]);
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Kund hittades inte" });
+      let row: any;
+      try {
+        const result = await pool.query("SELECT id, initials, gender, birth_year, active, created_at, is_protected FROM customers WHERE id = $1", [id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: "Kund hittades inte" });
+        row = result.rows[0];
+      } catch (err: any) {
+        if (err?.code === '42703') {
+          const result = await pool.query("SELECT id, initials, gender, birth_year, active, created_at FROM customers WHERE id = $1", [id]);
+          if (result.rows.length === 0) return res.status(404).json({ error: "Kund hittades inte" });
+          row = { ...result.rows[0], is_protected: false };
+        } else {
+          throw err;
+        }
       }
-      res.json(result.rows[0]);
-    } catch {
+      const viewerId = req.user?.id || 0;
+      const viewerRole = req.user?.role || '';
+      const assigned = await pool.query(
+        `SELECT 1 FROM cases WHERE customer_id = $1 AND active = TRUE AND (handler1_id = $2 OR handler2_id = $2) LIMIT 1`,
+        [id, viewerId]
+      );
+      const isAdmin = String(viewerRole).toLowerCase() === 'admin';
+      const isAssigned = assigned.rows.length > 0;
+      if (row.is_protected && !isAdmin && !isAssigned) {
+        return res.status(403).json({ error: 'forbidden_protected_customer' });
+      }
+      const safe = {
+        ...row,
+        initials: getSafeInitials(row, { viewerId, viewerRole, assignedCustomerIds: new Set<number>(isAssigned ? [Number(id)] : []) }),
+        gender: row.is_protected && !isAdmin && !isAssigned ? null : row.gender
+      };
+      res.json(safe);
+    } catch (e) {
+      console.error('Error fetching customer:', e);
       res.status(500).json({ error: "Kunde inte hämta kund" });
     }
   });
@@ -173,11 +236,80 @@ export default function customers(pool: Pool) {
   });
 
   // Ingen hårdradering av kunder — historik/statistik ska bevaras.
+  
+  // Markera kund som skyddad (admin)
+  router.post("/:id/protect", requireRole('admin'), async (req, res) => {
+    try {
+      const r = await pool.query("UPDATE customers SET is_protected = TRUE WHERE id = $1 RETURNING id, is_protected", [req.params.id]);
+      if (r.rows.length === 0) return res.status(404).json({ error: "Kund hittades inte" });
+      return res.json({ id: r.rows[0].id, is_protected: r.rows[0].is_protected });
+    } catch (e: any) {
+      if (e?.code === '42703') {
+        // Kolumnen saknas – guida utvecklaren istället för 500
+        return res.status(409).json({
+          error: 'migration_required',
+          message: 'Funktionen kräver databas-migration (customers.is_protected). Kör backend/scripts/migrate.sh och försök igen.'
+        });
+      }
+      console.error('Error protecting customer:', e);
+      return res.status(500).json({ error: 'Kunde inte markera kund som skyddad' });
+    }
+  });
+
+  // Avmarkera kund som skyddad (admin)
+  router.post("/:id/unprotect", requireRole('admin'), async (req, res) => {
+    try {
+      const r = await pool.query("UPDATE customers SET is_protected = FALSE WHERE id = $1 RETURNING id, is_protected", [req.params.id]);
+      if (r.rows.length === 0) return res.status(404).json({ error: "Kund hittades inte" });
+      return res.json({ id: r.rows[0].id, is_protected: r.rows[0].is_protected });
+    } catch (e: any) {
+      if (e?.code === '42703') {
+        return res.status(409).json({
+          error: 'migration_required',
+          message: 'Funktionen kräver databas-migration (customers.is_protected). Kör backend/scripts/migrate.sh och försök igen.'
+        });
+      }
+      console.error('Error unprotecting customer:', e);
+      return res.status(500).json({ error: 'Kunde inte avmarkera kund som skyddad' });
+    }
+  });
+
+  // Admin: Hämta PII (initialer/kön) för anonym kund
+  router.get('/:id/pii', requireRole('admin'), async (req, res) => {
+    try {
+      const r = await pool.query('SELECT id, initials, gender, birth_year, created_at FROM customers WHERE id = $1', [req.params.id]);
+      if (r.rows.length === 0) return res.status(404).json({ error: 'Kund hittades inte' });
+      try {
+        const audit = getAuditLogger(pool);
+        await audit.logAccess(req.user!.id, req.user!.name, `/customers/${req.params.id}/pii`, 'GET');
+      } catch {}
+      return res.json(r.rows[0]);
+    } catch (e) {
+      console.error('Error fetching customer PII:', e);
+      return res.status(500).json({ error: 'Kunde inte hämta kunduppgifter' });
+    }
+  });
 
   // Hämta alla insatser för en viss kund
   router.get("/:id/efforts", async (req, res) => {
     const { id } = req.params;
     try {
+      // Åtkomst: skyddad kund kräver admin eller tilldelad behandlare
+      let isProtected = false;
+      try {
+        const p = await pool.query('SELECT is_protected FROM customers WHERE id = $1', [id]);
+        isProtected = !!p.rows[0]?.is_protected;
+      } catch (err: any) {
+        if (err?.code !== '42703') throw err;
+      }
+      if (isProtected) {
+        const isAdmin = String(req.user?.role || '').toLowerCase() === 'admin';
+        if (!isAdmin) {
+          const viewerId = req.user?.id || 0;
+          const asg = await pool.query('SELECT 1 FROM cases WHERE customer_id=$1 AND active=TRUE AND (handler1_id=$2 OR handler2_id=$2) LIMIT 1', [id, viewerId]);
+          if (asg.rows.length === 0) return res.status(403).json({ error: 'forbidden_protected_customer' });
+        }
+      }
       const result = await pool.query(
         `SELECT
           efforts.id AS effort_id,
@@ -206,6 +338,22 @@ export default function customers(pool: Pool) {
   router.get("/:customerId/efforts/:effortId/cases", async (req, res) => {
     const { customerId, effortId } = req.params;
     try {
+      // Åtkomst: skyddad kund kräver admin eller tilldelad behandlare
+      let isProtected = false;
+      try {
+        const p = await pool.query('SELECT is_protected FROM customers WHERE id = $1', [customerId]);
+        isProtected = !!p.rows[0]?.is_protected;
+      } catch (err: any) {
+        if (err?.code !== '42703') throw err;
+      }
+      if (isProtected) {
+        const isAdmin = String(req.user?.role || '').toLowerCase() === 'admin';
+        if (!isAdmin) {
+          const viewerId = req.user?.id || 0;
+          const asg = await pool.query('SELECT 1 FROM cases WHERE customer_id=$1 AND active=TRUE AND (handler1_id=$2 OR handler2_id=$2) LIMIT 1', [customerId, viewerId]);
+          if (asg.rows.length === 0) return res.status(403).json({ error: 'forbidden_protected_customer' });
+        }
+      }
       const result = await pool.query(
         `SELECT
           cases.id,

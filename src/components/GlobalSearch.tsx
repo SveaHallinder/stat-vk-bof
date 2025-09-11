@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCustomers, getPublicHandlers, getEfforts, getCases, getShifts } from "@/lib/api";
+import toast from "react-hot-toast";
 
 interface SearchResult {
   id: number;
@@ -53,12 +54,15 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
       customers.forEach(customer => {
         // Visa bara aktiva kunder i global sök
         if (!customer.active) return;
+        // Dölj skyddade kunder för icke-behöriga
+        if ((customer as any).is_protected && (customer as any).can_view === false) return;
         if (customer.initials.toLowerCase().includes(lowerQuery)) {
+          const subtitle = (customer as any).gender ? `${(customer as any).gender}, född ${customer.birth_year}` : `Född ${customer.birth_year}`;
           searchResults.push({
             id: customer.id,
             type: 'customer',
             title: `Kund: ${customer.initials}`,
-            subtitle: `${customer.gender}, född ${customer.birth_year}`,
+            subtitle,
             icon: 'User',
             data: customer,
           });
@@ -182,6 +186,14 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
   }, [searchQuery]);
 
   const handleResultClick = (result: SearchResult) => {
+    // Blockera åtkomst till skyddad kund för icke-behöriga
+    if (result.type === 'customer') {
+      const c: any = result.data;
+      if (c?.is_protected && c?.can_view === false) {
+        toast.error('Åtkomst nekad till skyddad kund');
+        return;
+      }
+    }
     if (onResultSelect) {
       onResultSelect(result);
     }
