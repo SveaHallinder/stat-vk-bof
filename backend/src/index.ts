@@ -50,13 +50,22 @@ app.use(helmet());
 if (compression) {
   app.use(compression());
 }
+// Add X-Request-ID for correlation
+app.use((req, res, next) => {
+  const incoming = req.header('x-request-id');
+  const id = incoming && incoming.length > 0 ? incoming : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  res.setHeader('x-request-id', id);
+  (req as any).requestId = id;
+  next();
+});
 // Lightweight request logging
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     if (req.path === '/api/healthz') return; // reduce noise
     const ms = Date.now() - start;
-    console.log(`${req.method} ${req.originalUrl} -> ${res.statusCode} ${ms}ms`);
+    const id = (req as any).requestId || '-';
+    console.log(`${id} ${req.method} ${req.originalUrl} -> ${res.statusCode} ${ms}ms`);
   });
   next();
 });
@@ -143,7 +152,23 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(500).json({ error: 'internal_error' });
 });
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(`🚀 API-servern kör på port ${config.port}`);
   console.log(`📡 API-prefix: /api/*`);
 });
+
+function shutdown(signal: string) {
+  console.log(`\n${signal} mottaget. Stänger ner...`);
+  server.close(async () => {
+    try {
+      await pool.end();
+      console.log('✅ DB pool stängd');
+    } catch (e) {
+      console.error('Fel vid stängning av DB pool', e);
+    } finally {
+      process.exit(0);
+    }
+  });
+}
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
