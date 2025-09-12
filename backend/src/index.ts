@@ -2,6 +2,15 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { Pool } from "pg";
+import rateLimit from "express-rate-limit";
+// Optional compression (graceful if package missing)
+let compression: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  compression = require('compression');
+} catch {
+  compression = null;
+}
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require("../package.json");
 
@@ -37,6 +46,31 @@ app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
 app.use(helmet());
+// Response compression if available
+if (compression) {
+  app.use(compression());
+}
+// Lightweight request logging
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    if (req.path === '/api/healthz') return; // reduce noise
+    const ms = Date.now() - start;
+    console.log(`${req.method} ${req.originalUrl} -> ${res.statusCode} ${ms}ms`);
+  });
+  next();
+});
+// Global API rate limit (disabled in development)
+if (config.env !== 'development') {
+  const apiLimiter = rateLimit({
+    windowMs: config.rateLimit.windowMs,
+    max: config.rateLimit.maxRequests,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'too_many_requests' },
+  });
+  app.use('/api', apiLimiter);
+}
 // Begränsa body-storlek (basic skydd) och använd JSON parser
 app.use(express.json({ limit: '1mb' }));
 app.use(sanitizeTextInputs);
@@ -100,6 +134,14 @@ app.use("/api/users", users(pool));
 app.use("/api/invites", invites(pool));
 app.use("/api/audit", audit(pool));
 app.use("/api/auth", auth(pool));
+
+// Central error handler (keep last)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled error:', err?.message || err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: 'internal_error' });
+});
 
 app.listen(config.port, () => {
   console.log(`🚀 API-servern kör på port ${config.port}`);

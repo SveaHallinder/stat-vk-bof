@@ -4,9 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { BarChartStatistik } from "./BarChartStatistik";
 import { PieChart as RePieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import * as XLSX from 'xlsx';
 import { createCustomer, createCase, getCases, addShift, getStatsSummary, getStatsByEffort, getPublicHandlers } from '@/lib/api';
 import { KundCombobox } from "@/components/ui/kund-combobox";
 import { InsatsCombobox } from "@/components/ui/insats-combobox";
@@ -404,22 +401,26 @@ export const MainContent = (): JSX.Element => {
   }, []);
 
   // Exportfunktioner
-  const handleExportPDF = useCallback(() => {
+  const handleExportPDF = useCallback(async () => {
     const input = document.getElementById('statistik-export');
     if (!input) return;
-    html2canvas(input).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'landscape' });
-      pdf.addImage(imgData, 'PNG', 10, 10, 270, 150);
-      pdf.save('statistik.pdf');
-    });
+    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ]);
+    const canvas = await html2canvas(input);
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation: 'landscape' });
+    pdf.addImage(imgData, 'PNG', 10, 10, 270, 150);
+    pdf.save('statistik.pdf');
   }, []);
 
-  const handleExportExcel = useCallback(() => {
+  const handleExportExcel = useCallback(async () => {
     const data = [
       ['Insats', 'Antal besök', 'Antal kunder'],
       ...chartData.map(item => [item.label, item.besok, item.kunder])
     ];
+    const XLSX = await import('xlsx');
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Statistik');

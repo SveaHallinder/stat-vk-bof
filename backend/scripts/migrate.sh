@@ -9,4 +9,6 @@ psql "$DATABASE_URL" -f "$(dirname "$0")/../add_refresh_token_column.sql"
 psql "$DATABASE_URL" -f "$(dirname "$0")/../create_audit_log_table.sql"
 # Add is_protected column for anonymous customers
 psql "$DATABASE_URL" -f "$(dirname "$0")/../add_is_protected_column.sql"
+# Create performance indexes
+psql "$DATABASE_URL" -f "$(dirname "$0")/../create_indexes.sql"
 echo "Migration OK"
