@@ -1,14 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" || true
-# Uppdatera invites-tabell och index
-psql "$DATABASE_URL" -f "$(dirname "$0")/../fix_invites_table.sql"
-# Lägg till refresh_token-kolumn
+
+# 1) Create base schema (tables) if missing
+psql "$DATABASE_URL" -f "$(dirname "$0")/../create_base_schema.sql"
+
+# 2) Add/align optional columns (idempotent)
 psql "$DATABASE_URL" -f "$(dirname "$0")/../add_refresh_token_column.sql"
-# Skapa audit_log och cleanup-funktion (idempotent)
+
+# 3) Audit log table and cleanup function (requires handlers)
 psql "$DATABASE_URL" -f "$(dirname "$0")/../create_audit_log_table.sql"
-# Add is_protected column for anonymous customers
+
+# 4) Ensure customers.is_protected exists
 psql "$DATABASE_URL" -f "$(dirname "$0")/../add_is_protected_column.sql"
-# Create performance indexes
+
+# 5) Update invites table, view and indexes (requires invites & handlers)
+psql "$DATABASE_URL" -f "$(dirname "$0")/../fix_invites_table.sql"
+
+# 6) Create performance indexes
 psql "$DATABASE_URL" -f "$(dirname "$0")/../create_indexes.sql"
 echo "Migration OK"
