@@ -103,6 +103,58 @@ cd backend && npm run dev
 - [Onboarding](./docs/ONBOARDING_GUIDE.md)
  - [Retention/Gallring](./docs/RETENTION_POLICY.md)
 
+## Snabbguide: Migration i produktion
+
+Om backend svarar 500 p.g.a. saknade tabeller/kolumner, kör den inbyggda, idempotenta migrationen i backend:
+
+- Filer:
+  - `backend/create_base_schema.sql` – skapar alla nödvändiga tabeller om de saknas
+  - `backend/scripts/migrate.sh` – kör bas‑schema först och sedan övriga uppgraderingar
+
+Steg för drift (på servern):
+
+1) Uppdatera kod och bygg backend
+
+```
+cd /srv/vallentuna/backend
+git pull
+npm ci
+npm run build
+```
+
+2) Sätt `DATABASE_URL` (eller ladda `.env.production`)
+
+```
+export DATABASE_URL='postgresql://USER:PASS@HOST:5432/DB'
+# eller
+set -a; source .env.production; set +a
+```
+
+3) Kör migrationerna
+
+```
+npm run migrate
+# → ska sluta med "Migration OK"
+```
+
+4) Starta om backend
+
+```
+pm2 reload vallentuna-backend
+```
+
+5) Verifiera
+
+```
+GET /api/healthz            → 200
+GET /api/customers?all=true → 200
+GET /api/cases              → 200
+GET /api/shifts             → 200
+GET /api/stats/summary      → 200
+```
+
+Om databasen är helt ny: skapa en första admin‑användare (exempel) genom att generera en bcrypt‑hash (t.ex. för `admin123`) och köra en `INSERT` i `handlers`.
+
 ## Retention (kort)
 
 - Auditloggar gallras efter 5 år via funktionen `cleanup_old_audit_logs()` (se `create_audit_log_table.sql`).
