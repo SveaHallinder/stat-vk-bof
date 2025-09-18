@@ -7,13 +7,6 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   base: "./",
-  server: {
-    host: '127.0.0.1', // do not expose dev server externally
-    strictPort: true,
-    fs: {
-      strict: true,
-    },
-  },
   css: {
     postcss: {
       plugins: [tailwind()],
