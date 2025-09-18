@@ -62,41 +62,6 @@ CREATE TABLE IF NOT EXISTS visits (
   active BOOLEAN DEFAULT true
 );
 
--- 6. Invites tabell (redan skapad men lägger till här för kompletthet)
--- CREATE TABLE IF NOT EXISTS invites (redan finns)
-
--- Lägg till exempeldata för att testa dashboard
-INSERT INTO customers (initials, gender, birth_year, start_date, active) VALUES 
-('AB', 'Kvinna', 1985, '2025-01-15', true),
-('CD', 'Man', 1978, '2025-02-20', true),
-('EF', 'Kvinna', 1992, '2025-03-10', true)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO efforts (name, description, active) VALUES 
-('Personlig assistans', 'Hjälp med vardagsliv', true),
-('Stöd och samtal', 'Psykiskt stöd', true),
-('Praktisk hjälp', 'Hjälp med hem och trädgård', true)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO cases (customer_id, handler_id, effort_id, status, start_date, active) VALUES 
-(1, 1, 1, 'Aktiv', '2025-01-20', true),
-(2, 1, 2, 'Aktiv', '2025-02-25', true),
-(3, 1, 3, 'Aktiv', '2025-03-15', true)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO shifts (case_id, handler_id, date, hours, description, active) VALUES 
-(1, 1, '2025-08-01', 4.5, 'Personlig assistans', true),
-(1, 1, '2025-08-02', 3.0, 'Personlig assistans', true),
-(2, 1, '2025-08-01', 2.0, 'Stöd och samtal', true),
-(3, 1, '2025-08-01', 1.5, 'Praktisk hjälp', true)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO visits (case_id, date, hours, status, active) VALUES 
-(1, '2025-08-01', 4.5, 'Utförd', true),
-(1, '2025-08-02', 3.0, 'Utförd', true),
-(2, '2025-08-01', 2.0, 'Utförd', true),
-(3, '2025-08-01', 1.5, 'Utförd', true)
-ON CONFLICT DO NOTHING;
 
 -- Skapa index för snabbare sökningar
 CREATE INDEX IF NOT EXISTS idx_customers_active ON customers(active);
