@@ -7,6 +7,7 @@ const config: Config = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   testTimeout: 30000,
   setupFiles: ['<rootDir>/test/jest.setup.ts'],
+  watchman: false,
 };
 
 export default config;

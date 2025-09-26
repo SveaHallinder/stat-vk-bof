@@ -468,7 +468,7 @@ export const MainContent = (): JSX.Element => {
       {/* Main Content Grid */}
       <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
         {/* Sammanfattning */}
-        <div className="grid grid-cols-1 mobile:grid-cols-1 lg:grid-cols-3 gap-4 mobile:gap-6 w-full" data-tour="stats-cards">
+        <div className="grid grid-cols-1 mobile:grid-cols-1 lg:grid-cols-4 gap-4 mobile:gap-6 w-full" data-tour="stats-cards">
           {isLoading ? (
             // Loading state
             Array.from({ length: 3 }).map((_, index) => (
@@ -485,7 +485,7 @@ export const MainContent = (): JSX.Element => {
             statsCards.map((card, index) => (
               <div
                 key={index}
-                className="bg-white rounded-2xl shadow-sm p-4 mobile:p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
+                className="bg-white rounded-2xl shadow-sm p-2 mobile:p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => handleCardClick(['customers', 'cases', 'visits'][index])}
               >
                 <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">

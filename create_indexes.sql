@@ -2,6 +2,7 @@
 -- Customers
 CREATE INDEX IF NOT EXISTS idx_customers_active ON customers (active);
 CREATE INDEX IF NOT EXISTS idx_customers_created_at ON customers (created_at);
+CREATE INDEX IF NOT EXISTS idx_customers_birth_year ON customers (birth_year) WHERE birth_year IS NOT NULL;
 -- Some instances may not have is_protected yet; guard with DO block
 DO $$
 BEGIN
@@ -25,4 +26,3 @@ CREATE INDEX IF NOT EXISTS idx_cases_created_at ON cases (created_at);
 CREATE INDEX IF NOT EXISTS idx_shifts_case_id ON shifts (case_id);
 CREATE INDEX IF NOT EXISTS idx_shifts_date ON shifts (date);
 CREATE INDEX IF NOT EXISTS idx_shifts_status ON shifts (status);
-

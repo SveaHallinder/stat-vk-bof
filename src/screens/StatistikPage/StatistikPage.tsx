@@ -12,7 +12,6 @@ import {
   getStatsByHandler,
   getStatsByGender,
   getStatsByBirthYear,
-  getStatsCases,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,12 +26,62 @@ import { Loader2 } from "lucide-react";
 import { useRefresh } from "@/contexts/RefreshContext";
 
 const minBarHeight = 24;
+const barChartHeight = 200;
+
+const createNiceScale = (maxValue: number, maxTicks = 5) => {
+  if (!Number.isFinite(maxValue) || maxValue <= 0) {
+    return { ticks: [0, 1], niceMax: 1 };
+  }
+
+  const roughStep = maxValue / maxTicks;
+  const exponent = Math.floor(Math.log10(roughStep));
+  const magnitude = 10 ** exponent;
+  const normalized = roughStep / magnitude;
+
+  let niceNormalized: number;
+  if (normalized <= 1) niceNormalized = 1;
+  else if (normalized <= 2) niceNormalized = 2;
+  else if (normalized <= 5) niceNormalized = 5;
+  else niceNormalized = 10;
+
+  const step = niceNormalized * magnitude;
+  const niceMax = step * Math.ceil(maxValue / step);
+
+  const ticks: number[] = [];
+  for (let tick = 0; tick <= niceMax + step / 2; tick += step) {
+    ticks.push(Number(tick.toFixed(10)));
+  }
+
+  return { ticks, niceMax };
+};
+
+const formatAxisTick = (value: number) => {
+  const absValue = Math.abs(value);
+
+  if (absValue >= 1_000_000) {
+    const formatted = (value / 1_000_000).toLocaleString('sv-SE', { maximumFractionDigits: 1 });
+    return `${formatted.replace('.', ',')}M`;
+  }
+
+  if (absValue >= 1_000) {
+    const formatted = (value / 1_000).toLocaleString('sv-SE', { maximumFractionDigits: absValue >= 10_000 ? 0 : 1 });
+    return `${formatted.replace('.', ',')}k`;
+  }
+
+  return value.toLocaleString('sv-SE', { maximumFractionDigits: 1 });
+};
+
+const createYAxisLabel = (primaryLabel: string, secondaryLabel: string, secondarySuffix?: string) => {
+  if (primaryLabel === secondaryLabel) return primaryLabel;
+  const suffix = secondarySuffix?.trim();
+  const secondary = suffix ? `${secondaryLabel} (${suffix})` : secondaryLabel;
+  return `${primaryLabel} & ${secondary}`;
+};
 const viewOptions = [
   { value: 'effort', label: 'Insatser' },
   { value: 'handler', label: 'Behandlare' },
   { value: 'gender', label: 'Kön' },
   { value: 'birthYear', label: 'Födelseår' },
-  { value: 'cases', label: 'Ärenden' },
 ] as const;
 
 type ViewMode = typeof viewOptions[number]['value'];
@@ -63,7 +112,6 @@ export const StatistikPage = (): JSX.Element => {
   const [handlerData, setHandlerData] = useState<any[] | null>(null);
   const [genderData, setGenderData] = useState<any[] | null>(null);
   const [birthYearData, setBirthYearData] = useState<any[] | null>(null);
-  const [caseData, setCaseData] = useState<any[] | null>(null);
   const [selectedGenders, setSelectedGenders] = useState<string[]>([]);
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
   const [selectedEfforts, setSelectedEfforts] = useState<string[]>([]);
@@ -77,94 +125,126 @@ export const StatistikPage = (): JSX.Element => {
   const chartRef = useRef<HTMLDivElement>(null);
 
   const chartSettings = useMemo(() => {
-    const formatMeta = (customers?: number, avg?: number) => {
+    const formatMeta = ({ customers, totalHours }: { customers?: number; totalHours?: number }) => {
       const parts: string[] = [];
-      if (typeof customers === 'number') parts.push(`${customers} kunder`);
-      if (typeof avg === 'number' && !Number.isNaN(avg) && avg > 0) {
-        parts.push(`${avg.toFixed(2)} h/besök`);
+      if (typeof customers === 'number' && Number.isFinite(customers)) {
+        const count = customers;
+        parts.push(`${count.toLocaleString('sv-SE')} ${count === 1 ? 'kund' : 'kunder'}`);
+      }
+      if (typeof totalHours === 'number' && !Number.isNaN(totalHours) && totalHours > 0) {
+        parts.push(`${totalHours.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} h`);
       }
       return parts.join(" • ");
     };
 
+    let config: {
+      title: string;
+      primaryLabel: string;
+      secondaryLabel: string;
+      secondarySuffix?: string;
+      showChart: boolean;
+      data: Array<{ label: string; primaryValue: number; secondaryValue: number; meta?: string }>;
+      xAxisLabel: string;
+    };
+
     switch (viewMode) {
       case 'handler':
-        return {
+        config = {
           title: 'Besök och timmar per behandlare',
           primaryLabel: 'Besök',
           secondaryLabel: 'Timmar',
           secondarySuffix: ' h',
           showChart: true,
+          xAxisLabel: 'Behandlare',
           data: (handlerData || []).map((d: any) => ({
             label: d.handler_name || 'Okänd',
             primaryValue: Number(d.antal_besok) || 0,
             secondaryValue: Number(d.totala_timmar) || 0,
-            meta: formatMeta(undefined, d.antal_besok ? (Number(d.totala_timmar || 0) / Number(d.antal_besok || 1)) : undefined),
+            meta: formatMeta({ totalHours: Number(d.totala_timmar) || 0 }),
           })),
         };
+        break;
       case 'gender':
-        return {
+        config = {
           title: 'Besök och timmar per kön',
           primaryLabel: 'Besök',
           secondaryLabel: 'Timmar',
           secondarySuffix: ' h',
           showChart: true,
+          xAxisLabel: 'Kön',
           data: (genderData || []).map((d: any) => ({
             label: d.gender ?? 'Okänd',
             primaryValue: Number(d.antal_besok) || 0,
             secondaryValue: Number(d.totala_timmar) || 0,
-            meta: d.snitt_timmar ? `${Number(d.snitt_timmar).toFixed(2)} h/besök` : '',
+            meta: formatMeta({ totalHours: Number(d.totala_timmar) || 0 }),
           })),
         };
+        break;
       case 'birthYear':
-        return {
-          title: 'Besök och timmar per födelseår',
+        config = {
+          title: 'Besök och kunder per födelseår',
           primaryLabel: 'Besök',
-          secondaryLabel: 'Timmar',
-          secondarySuffix: ' h',
+          secondaryLabel: 'Kunder',
+          secondarySuffix: '',
           showChart: true,
+          xAxisLabel: 'Födelseår',
           data: (birthYearData || []).map((d: any) => ({
             label: d.label ?? 'Okänt',
             primaryValue: Number(d.antal_besok) || 0,
-            secondaryValue: Number(d.totala_timmar) || 0,
-            meta: d.snitt_timmar ? `${Number(d.snitt_timmar).toFixed(2)} h/besök` : '',
+            secondaryValue: Number(d.antal_kunder) || 0,
+            meta: formatMeta({ customers: Number(d.antal_kunder) || 0, totalHours: Number(d.totala_timmar) || 0 }),
           })),
         };
-      case 'cases':
-        return {
-          title: '',
-          primaryLabel: 'Besök',
-          secondaryLabel: 'Timmar',
-          secondarySuffix: ' h',
-          showChart: false,
-          data: [],
-        };
+        break;
       default:
-        return {
+        config = {
           title: 'Besök och timmar per insats',
           primaryLabel: 'Besök',
           secondaryLabel: 'Timmar',
           secondarySuffix: ' h',
           showChart: true,
+          xAxisLabel: 'Insats',
           data: (effortData || []).map((d: any) => ({
             label: d.effort_name,
             primaryValue: Number(d.antal_besok) || 0,
             secondaryValue: Number(d.totala_timmar) || 0,
-            meta: formatMeta(Number(d.antal_kunder) || 0),
+            meta: formatMeta({ customers: Number(d.antal_kunder) || 0, totalHours: Number(d.totala_timmar) || 0 }),
           })),
         };
+        break;
     }
+
+    return {
+      ...config,
+      yAxisLabel: createYAxisLabel(config.primaryLabel, config.secondaryLabel, config.secondarySuffix),
+    };
   }, [viewMode, effortData, handlerData, genderData, birthYearData]);
 
-  const { data: chartData, title: chartTitle, primaryLabel: chartPrimaryLabel, secondaryLabel: chartSecondaryLabel, secondarySuffix: chartSecondarySuffix, showChart } = chartSettings;
+  const {
+    data: chartData,
+    title: chartTitle,
+    primaryLabel: chartPrimaryLabel,
+    secondaryLabel: chartSecondaryLabel,
+    secondarySuffix: chartSecondarySuffix,
+    showChart,
+    xAxisLabel,
+    yAxisLabel,
+  } = chartSettings;
   const hasChartData = showChart && chartData.length > 0;
 
-  const maxY = useMemo(() => {
-    if (!showChart || chartData.length === 0) return 1;
-    return Math.max(
+  const chartScale = useMemo<ReturnType<typeof createNiceScale>>(() => {
+    if (!hasChartData) {
+      return createNiceScale(1, 5);
+    }
+
+    const maxValue = Math.max(
       ...chartData.map(d => Math.max(Number(d.primaryValue) || 0, Number(d.secondaryValue) || 0)),
       1
     );
-  }, [showChart, chartData]);
+
+    const tickTarget = Math.min(6, Math.max(3, chartData.length >= 5 ? 6 : 5));
+    return createNiceScale(maxValue, tickTarget);
+  }, [chartData, hasChartData]);
 
   const formatHours = (value: number) => Number(value || 0).toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' h';
 
@@ -178,7 +258,6 @@ export const StatistikPage = (): JSX.Element => {
         { header: 'Behandlare', render: row => row.handler_name || 'Okänd' },
         { header: 'Besök', render: row => Number(row.antal_besok || 0).toLocaleString('sv-SE'), align: 'right' },
         { header: 'Totala timmar', render: row => formatHours(row.totala_timmar || 0), align: 'right' },
-        { header: 'Snitt h/besök', render: row => row.antal_besok ? (Number(row.totala_timmar || 0) / Number(row.antal_besok)).toFixed(2) : '0.00', align: 'right' },
       ];
     } else if (viewMode === 'gender') {
       rows = genderData || [];
@@ -186,15 +265,14 @@ export const StatistikPage = (): JSX.Element => {
         { header: 'Kön', render: row => row.gender || 'Okänd' },
         { header: 'Besök', render: row => Number(row.antal_besok || 0).toLocaleString('sv-SE'), align: 'right' },
         { header: 'Totala timmar', render: row => formatHours(row.totala_timmar || 0), align: 'right' },
-        { header: 'Snitt h/besök', render: row => row.snitt_timmar ? Number(row.snitt_timmar).toFixed(2) : '0.00', align: 'right' },
       ];
     } else if (viewMode === 'birthYear') {
       rows = birthYearData || [];
       columns = [
         { header: 'Födelseår', render: row => row.label ?? 'Okänt' },
+        { header: 'Kunder', render: row => Number(row.antal_kunder || 0).toLocaleString('sv-SE'), align: 'right' },
         { header: 'Besök', render: row => Number(row.antal_besok || 0).toLocaleString('sv-SE'), align: 'right' },
         { header: 'Totala timmar', render: row => formatHours(row.totala_timmar || 0), align: 'right' },
-        { header: 'Snitt h/besök', render: row => row.snitt_timmar ? Number(row.snitt_timmar).toFixed(2) : '0.00', align: 'right' },
       ];
     } else {
       rows = effortData || [];
@@ -241,69 +319,6 @@ export const StatistikPage = (): JSX.Element => {
                       {col.render(row)}
                     </td>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
-
-  const renderCasesTable = () => {
-    const rows = caseData || [];
-    if (!rows || rows.length === 0) {
-      return (
-        <div className="bg-white rounded-xl p-6 text-center text-gray-500 border border-gray-200">
-          Inga ärenden matchar filtren.
-        </div>
-      );
-    }
-
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ärende-ID</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kund</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Insats</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Besök</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Timmar</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Avbokade</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Behandlare</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
-              {rows.map((row: any) => (
-                <tr key={row.case_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-500">{row.case_id}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    <div className="font-medium text-gray-900">{row.customer_initials || '—'}</div>
-                    <div className="text-xs text-gray-500">
-                      {row.customer_gender || 'Okänd'}{row.customer_birth_year ? ` • ${row.customer_birth_year}` : ''}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    <div className="font-medium text-gray-900">{row.effort_name || 'Okänd'}</div>
-                    <div className="text-xs text-gray-500">{row.effort_available_for || ''}</div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">{Number(row.antal_besok || 0).toLocaleString('sv-SE')}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">{formatHours(row.totala_timmar || 0)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 text-right">{Number(row.avbokade_besok || 0).toLocaleString('sv-SE')}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    <div>{row.handler1_name || '—'}</div>
-                    {row.handler2_name && (
-                      <div className="text-xs text-gray-500">{row.handler2_name}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${row.case_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {row.case_active ? 'Aktiv' : 'Avslutad'}
-                    </span>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -384,16 +399,14 @@ export const StatistikPage = (): JSX.Element => {
       getStatsByEffort(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta diagramdata"); return null; }),
       getStatsByHandler(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta statistik per behandlare"); return null; }),
       getStatsByGender(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta statistik per kön"); return null; }),
-      getStatsByBirthYear(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta statistik per födelseår"); return null; }),
-      getStatsCases(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta ärenden"); return null; })
-    ]).then(([statsData, effortData, handlerDataRes, genderDataRes, birthYearDataRes, caseDataRes]) => {
+      getStatsByBirthYear(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta statistik per födelseår"); return null; })
+    ]).then(([statsData, effortData, handlerDataRes, genderDataRes, birthYearDataRes]) => {
       if (!controller.signal.aborted) {
         setStats(statsData);
         setEffortData(effortData);
         setHandlerData(handlerDataRes);
         setGenderData(genderDataRes);
         setBirthYearData(birthYearDataRes);
-        setCaseData(caseDataRes);
       }
     }).finally(() => setLoading(false));
   }
@@ -532,14 +545,12 @@ export const StatistikPage = (): JSX.Element => {
         handlerExport,
         genderExport,
         birthYearExport,
-        casesExport,
       ] = await Promise.all([
         getStatsRaw(params),
         effortData ? Promise.resolve(effortData) : getStatsByEffort(params),
         handlerData ? Promise.resolve(handlerData) : getStatsByHandler(params),
         genderData ? Promise.resolve(genderData) : getStatsByGender(params),
         birthYearData ? Promise.resolve(birthYearData) : getStatsByBirthYear(params),
-        caseData ? Promise.resolve(caseData) : getStatsCases(params),
       ]);
 
       // Bygg filterinfo
@@ -640,60 +651,41 @@ export const StatistikPage = (): JSX.Element => {
 
       const handlerSheetData = [
         ["Behandlare"],
-        ["Namn", "Besök", "Totala timmar", "Snitt h/besök"],
+        ["Namn", "Besök", "Totala timmar"],
         ...((handlerExport || []).map((row: any) => [
           row.handler_name || 'Okänd',
           Number(row.antal_besok || 0),
           Number(row.totala_timmar || 0),
-          row.antal_besok ? Number(row.totala_timmar || 0) / Number(row.antal_besok) : 0,
         ]))
       ];
       const handlerSheet = XLSX.utils.aoa_to_sheet(handlerSheetData);
-      handlerSheet['!autofilter'] = { ref: `A2:D${(handlerExport?.length || 0) + 2}` };
+      handlerSheet['!autofilter'] = { ref: `A2:C${(handlerExport?.length || 0) + 2}` };
 
       const genderSheetData = [
         ["Kön"],
-        ["Kön", "Besök", "Totala timmar", "Snitt h/besök"],
+        ["Kön", "Besök", "Totala timmar"],
         ...((genderExport || []).map((row: any) => [
           row.gender || 'Okänd',
           Number(row.antal_besok || 0),
           Number(row.totala_timmar || 0),
-          row.snitt_timmar ? Number(row.snitt_timmar) : 0,
         ]))
       ];
       const genderSheet = XLSX.utils.aoa_to_sheet(genderSheetData);
-      genderSheet['!autofilter'] = { ref: `A2:D${(genderExport?.length || 0) + 2}` };
+      genderSheet['!autofilter'] = { ref: `A2:C${(genderExport?.length || 0) + 2}` };
 
       const birthYearSheetData = [
         ["Födelseår"],
-        ["Födelseår", "Besök", "Totala timmar", "Snitt h/besök"],
+        ["Födelseår", "Kunder", "Besök", "Totala timmar", "Snitt timmar (Utförd)"],
         ...((birthYearExport || []).map((row: any) => [
           row.label ?? 'Okänt',
+          Number(row.antal_kunder || 0),
           Number(row.antal_besok || 0),
           Number(row.totala_timmar || 0),
-          row.snitt_timmar ? Number(row.snitt_timmar) : 0,
+          Number(row.snitt_timmar || 0),
         ]))
       ];
       const birthYearSheet = XLSX.utils.aoa_to_sheet(birthYearSheetData);
-      birthYearSheet['!autofilter'] = { ref: `A2:D${(birthYearExport?.length || 0) + 2}` };
-
-      const casesSheetData = [
-        ["Ärenden"],
-        ["Ärende-ID", "Kund", "Insats", "Besök", "Totala timmar", "Avbokade", "Behandlare 1", "Behandlare 2", "Aktiv"],
-        ...((casesExport || []).map((row: any) => [
-          row.case_id,
-          row.customer_initials,
-          row.effort_name,
-          Number(row.antal_besok || 0),
-          Number(row.totala_timmar || 0),
-          Number(row.avbokade_besok || 0),
-          row.handler1_name || '',
-          row.handler2_name || '',
-          row.case_active ? 'Ja' : 'Nej',
-        ]))
-      ];
-      const casesSheet = XLSX.utils.aoa_to_sheet(casesSheetData);
-      casesSheet['!autofilter'] = { ref: `A2:I${(casesExport?.length || 0) + 2}` };
+      birthYearSheet['!autofilter'] = { ref: `A2:E${(birthYearExport?.length || 0) + 2}` };
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, summarySheet, 'Statistik');
@@ -701,7 +693,6 @@ export const StatistikPage = (): JSX.Element => {
       XLSX.utils.book_append_sheet(wb, handlerSheet, 'Behandlare');
       XLSX.utils.book_append_sheet(wb, genderSheet, 'Kön');
       XLSX.utils.book_append_sheet(wb, birthYearSheet, 'Födelseår');
-      XLSX.utils.book_append_sheet(wb, casesSheet, 'Ärenden');
       XLSX.writeFile(wb, 'statistik.xlsx');
       
       logExport('Excel', {
@@ -888,7 +879,7 @@ export const StatistikPage = (): JSX.Element => {
         )}
 
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="w-full">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 bg-gray-100 rounded-2xl p-1">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 bg-gray-100 rounded-2xl p-1">
             {viewOptions.map(option => (
               <TabsTrigger
                 key={option.value}
@@ -919,64 +910,73 @@ export const StatistikPage = (): JSX.Element => {
                       <span className="inline-block w-3 h-3 rounded-full bg-[#1769dc]" /> {chartSecondaryLabel}
                     </div>
                   </div>
-                  <div className="flex w-full h-48 mobile:h-64 mb-4 mobile:mb-6 min-w-max">
-                    <div className="flex flex-col justify-between items-end pr-2 mobile:pr-4 py-2 w-8 mobile:w-12 select-none">
-                      {[...Array(6)].map((_, i) => {
-                        const value = Math.round((maxY / 5) * (5 - i));
-                        return (
-                          <span key={i} className="text-xs text-gray-400">{value}</span>
-                        );
-                      })}
-                    </div>
-                    <div className="flex gap-8 mobile:gap-20 items-end flex-1 h-full justify-center">
-                      {chartData.map((item, idx) => (
-                        <div key={idx} className="flex flex-col items-center flex-1 max-w-[48px] mobile:max-w-[64px] min-w-[32px] mobile:min-w-[40px]">
-                          <div className="flex gap-2 mobile:gap-3 items-end w-full justify-center h-32 mobile:h-44">
-                            <div
-                              className="bg-[#17694c] rounded-lg transition-all duration-700 cursor-pointer relative"
-                              style={{
-                                width: '28px',
-                                height: `${Math.max(((Number(item.primaryValue) || 0) / maxY) * 128, minBarHeight)}px`,
-                                minHeight: minBarHeight,
-                              }}
-                              onMouseEnter={e => {
-                                const rect = (e.target as HTMLElement).getBoundingClientRect();
-                                setTooltip({
-                                  x: rect.left + rect.width / 2,
-                                  y: rect.top,
-                                  value: `${chartPrimaryLabel}: ${Number(item.primaryValue || 0).toLocaleString('sv-SE')}`
-                                });
-                              }}
-                              onMouseLeave={() => setTooltip(null)}
-                            />
-                            <div
-                              className="bg-[#1769dc] rounded-lg transition-all duration-700 cursor-pointer relative"
-                              style={{
-                                width: '28px',
-                                height: `${Math.max(((Number(item.secondaryValue) || 0) / maxY) * 128, minBarHeight)}px`,
-                                minHeight: minBarHeight,
-                              }}
-                              onMouseEnter={e => {
-                                const rect = (e.target as HTMLElement).getBoundingClientRect();
-                                setTooltip({
-                                  x: rect.left + rect.width / 2,
-                                  y: rect.top,
-                                  value: `${chartSecondaryLabel}: ${Number(item.secondaryValue || 0).toLocaleString('sv-SE')}${chartSecondarySuffix}`
-                                });
-                              }}
-                              onMouseLeave={() => setTooltip(null)}
-                            />
-                          </div>
-                          <div className="text-gray-700 font-medium text-xs mobile:text-sm text-center mt-4 mobile:mt-6 max-w-[72px] mobile:max-w-[96px] whitespace-nowrap overflow-hidden text-ellipsis">
-                            {item.label}
-                          </div>
-                          {item.meta && (
-                            <div className="text-gray-400 text-[11px] mobile:text-xs text-center mt-1 max-w-[90px] leading-tight">
-                              {item.meta}
-                            </div>
-                          )}
-                        </div>
+                  <div className="flex w-full h-56 mobile:h-72 mb-6 mobile:mb-8 min-w-max px-1 mobile:px-2">
+                    <div className="flex flex-col justify-between items-end pr-3 mobile:pr-5 py-2 w-12 mobile:w-16 select-none">
+                      {chartScale.ticks.slice().reverse().map((tick, idx) => (
+                        <span key={`${tick}-${idx}`} className="text-xs text-gray-400 tabular-nums">
+                          {formatAxisTick(tick)}
+                        </span>
                       ))}
+                    </div>
+                    <div className="flex-1 flex flex-col h-full">
+                      <div className="flex items-end justify-center gap-6 mobile:gap-12 flex-1 pb-4">
+                        {chartData.map((item, idx) => {
+                          const primaryHeight = Math.max(((Number(item.primaryValue) || 0) / chartScale.niceMax) * barChartHeight, minBarHeight);
+                          const secondaryHeight = Math.max(((Number(item.secondaryValue) || 0) / chartScale.niceMax) * barChartHeight, minBarHeight);
+
+                          return (
+                            <div key={idx} className="flex flex-col items-center flex-1 max-w-[72px] mobile:max-w-[100px] min-w-[40px] mobile:min-w-[56px]">
+                              <div
+                                className="flex gap-2 mobile:gap-3 items-end w-full justify-center"
+                                style={{ height: `${barChartHeight}px` }}
+                              >
+                                <div
+                                  className="bg-[#17694c] rounded-lg transition-all duration-700 cursor-pointer relative"
+                                  style={{
+                                    width: '28px',
+                                    height: `${primaryHeight}px`,
+                                    minHeight: minBarHeight,
+                                  }}
+                                  onMouseEnter={e => {
+                                    const rect = (e.target as HTMLElement).getBoundingClientRect();
+                                    setTooltip({
+                                      x: rect.left + rect.width / 2,
+                                      y: rect.top,
+                                      value: `${chartPrimaryLabel}: ${Number(item.primaryValue || 0).toLocaleString('sv-SE')}`
+                                    });
+                                  }}
+                                  onMouseLeave={() => setTooltip(null)}
+                                />
+                                <div
+                                  className="bg-[#1769dc] rounded-lg transition-all duration-700 cursor-pointer relative"
+                                  style={{
+                                    width: '28px',
+                                    height: `${secondaryHeight}px`,
+                                    minHeight: minBarHeight,
+                                  }}
+                                  onMouseEnter={e => {
+                                    const rect = (e.target as HTMLElement).getBoundingClientRect();
+                                    setTooltip({
+                                      x: rect.left + rect.width / 2,
+                                      y: rect.top,
+                                      value: `${chartSecondaryLabel}: ${Number(item.secondaryValue || 0).toLocaleString('sv-SE')}${chartSecondarySuffix ?? ''}`
+                                    });
+                                  }}
+                                  onMouseLeave={() => setTooltip(null)}
+                                />
+                              </div>
+                              <div className="text-gray-700 font-medium text-[11px] mobile:text-sm text-center mt-3 mobile:mt-4 max-w-full whitespace-nowrap overflow-hidden text-ellipsis">
+                                {item.label}
+                              </div>
+                              {item.meta && (
+                                <div className="text-gray-400 text-[11px] mobile:text-xs text-center mt-1 max-w-full leading-tight">
+                                  {item.meta}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                     {tooltip && (
                       <div
@@ -992,6 +992,10 @@ export const StatistikPage = (): JSX.Element => {
                       </div>
                     )}
                   </div>
+                  <div className="flex justify-between w-full text-[11px] text-gray-500 px-1 mobile:px-2">
+                    <span>Y-axel: {yAxisLabel}</span>
+                    <span>X-axel: {xAxisLabel}</span>
+                  </div>
                 </>
               ) : (
                 <div className="text-gray-400 text-sm py-10">Ingen data att visa för valt filter.</div>
@@ -999,7 +1003,7 @@ export const StatistikPage = (): JSX.Element => {
             </>
           ) : (
             <div className="text-gray-500 text-sm py-6 text-center w-full">
-              Ärendevyn visar ingen graf. Scrolla ned för att se hela listan på ärenden.
+              Insatsvyn visar ingen graf. Scrolla ned för att se hela listan på insats.
             </div>
           )}
         </div>
@@ -1025,7 +1029,7 @@ export const StatistikPage = (): JSX.Element => {
         </div>
 
         <div className="mt-6 w-full">
-          {viewMode === 'cases' ? renderCasesTable() : renderAggregatedTable()}
+          {renderAggregatedTable()}
         </div>
       </div>
 
