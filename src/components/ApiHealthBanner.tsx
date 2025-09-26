@@ -4,12 +4,12 @@ import { API_URL } from "@/lib/api";
 const POLL_INTERVAL = 60_000; // 60s
 
 type HealthState = {
-  status: "checking" | "ok" | "error";
+  status: "idle" | "checking" | "ok" | "error";
   message?: string;
 };
 
 export const ApiHealthBanner = (): JSX.Element | null => {
-  const [state, setState] = useState<HealthState>({ status: "checking" });
+  const [state, setState] = useState<HealthState>({ status: "idle" });
   const timerRef = useRef<number | null>(null);
 
   const healthUrl = useMemo(() => {
@@ -21,6 +21,9 @@ export const ApiHealthBanner = (): JSX.Element | null => {
     let cancelled = false;
 
     const checkHealth = async () => {
+      if (!cancelled) {
+        setState(prev => (prev.status === "error" ? prev : { status: "checking" }));
+      }
       try {
         const res = await fetch(healthUrl, {
           method: "GET",
@@ -54,7 +57,7 @@ export const ApiHealthBanner = (): JSX.Element | null => {
     };
   }, [healthUrl]);
 
-  if (state.status === "ok") return null;
+  if (state.status !== "error") return null;
 
   return (
     <div className="w-full bg-red-600/90 text-white text-sm py-2 px-4 text-center flex flex-col gap-1">

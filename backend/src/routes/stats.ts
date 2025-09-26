@@ -518,6 +518,7 @@ export default function stats(pool: Pool) {
         `SELECT
            COALESCE(customers.birth_year, 0) AS birth_year,
            COUNT(shifts.id) AS antal_besok,
+           COUNT(DISTINCT customers.id) AS antal_kunder,
            COALESCE(SUM(CASE WHEN shifts.status = 'Utförd' THEN shifts.hours ELSE 0 END), 0) AS totala_timmar,
            AVG(CASE WHEN shifts.status = 'Utförd' THEN shifts.hours ELSE NULL END) AS snitt_timmar
          FROM shifts
@@ -534,6 +535,7 @@ export default function stats(pool: Pool) {
         birth_year: Number(row.birth_year) || null,
         label: Number(row.birth_year) ? String(row.birth_year) : 'Okänt',
         antal_besok: Number(row.antal_besok) || 0,
+        antal_kunder: Number(row.antal_kunder) || 0,
         totala_timmar: Number(row.totala_timmar) || 0,
         snitt_timmar: row.snitt_timmar ? Number(row.snitt_timmar) : 0,
       }));
@@ -554,8 +556,7 @@ export default function stats(pool: Pool) {
       return `$${params.length}`;
     };
 
-    const whereClauses: string[] = [];
-    const shiftConditions: string[] = ["s.case_id = c.id", "s.active = TRUE"];
+    const shiftConditions: string[] = ["s.active = TRUE"];
 
     if (from) {
       shiftConditions.push(`s.date >= ${addParam(String(from))}::date`);
@@ -566,6 +567,10 @@ export default function stats(pool: Pool) {
     if (shiftStatus && shiftStatus !== 'Alla' && shiftStatus !== 'alla') {
       shiftConditions.push(`s.status = ${addParam(String(shiftStatus))}`);
     }
+
+    const shiftWhereSql = shiftConditions.length ? `WHERE ${shiftConditions.join(' AND ')}` : '';
+
+    const whereClauses: string[] = [];
 
     if (insats && insats !== "alla") {
       const parts = String(insats).split(",").map(s => s.trim()).filter(Boolean);
@@ -614,19 +619,18 @@ export default function stats(pool: Pool) {
     if (!includeInactiveBool) {
       whereClauses.push('(c.active = TRUE AND e.active = TRUE AND cust.active = TRUE)');
     }
-
-    // Kräver minst ett relevant skift (matchar tidigare beteende)
-    whereClauses.push('COALESCE(stats.total_rows, 0) > 0');
-
-    const shiftClause = `WHERE ${shiftConditions.join(' AND ')}`;
+    const requireShifts = shiftStatus !== 'Avbokad';
 
     try {
-      const result = await pool.query(
-        `SELECT
+      const sql = `WITH filtered_shifts AS (
+           SELECT s.*
+           FROM shifts s
+           ${shiftWhereSql}
+         )
+         SELECT
            c.id AS case_id,
            c.active AS case_active,
            c.created_at,
-           c.updated_at,
            e.id AS effort_id,
            e.name AS effort_name,
            e.available_for,
@@ -641,32 +645,31 @@ export default function stats(pool: Pool) {
            h1.name AS handler1_name,
            h2.id AS handler2_id,
            h2.name AS handler2_name,
-           COALESCE(stats.antal_besok, 0) AS antal_besok,
-           COALESCE(stats.totala_timmar, 0) AS totala_timmar,
-           COALESCE(stats.avbokade_besok, 0) AS avbokade_besok
+           COALESCE(COUNT(fs.id) FILTER (WHERE fs.status = 'Utförd'), 0) AS antal_besok,
+           COALESCE(SUM(CASE WHEN fs.status = 'Utförd' THEN fs.hours ELSE 0 END), 0) AS totala_timmar,
+           COALESCE(COUNT(fs.id) FILTER (WHERE fs.status = 'Avbokad'), 0) AS avbokade_besok
          FROM cases c
          LEFT JOIN efforts e ON c.effort_id = e.id
          LEFT JOIN customers cust ON c.customer_id = cust.id
          LEFT JOIN handlers h1 ON c.handler1_id = h1.id
          LEFT JOIN handlers h2 ON c.handler2_id = h2.id
-         LEFT JOIN LATERAL (
-           SELECT
-             COUNT(*) FILTER (WHERE s.status = 'Utförd') AS antal_besok,
-             COALESCE(SUM(CASE WHEN s.status = 'Utförd' THEN s.hours ELSE 0 END), 0) AS totala_timmar,
-             COUNT(*) FILTER (WHERE s.status = 'Avbokad') AS avbokade_besok,
-             COUNT(*) AS total_rows
-           FROM shifts s
-           ${shiftClause}
-         ) stats ON TRUE
+         LEFT JOIN filtered_shifts fs ON fs.case_id = c.id
          ${whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : ''}
-         ORDER BY c.id DESC`,
-        params
-      );
+         GROUP BY
+           c.id,
+           e.id,
+           cust.id,
+           h1.id,
+           h2.id
+         HAVING ${requireShifts ? 'COUNT(fs.id) FILTER (WHERE fs.status = \'Utförd\') > 0' : 'TRUE'}
+         ORDER BY c.id DESC`;
+
+      console.log('stats/cases SQL', sql, params);
+      const result = await pool.query(sql, params);
 
       const viewerId = req.user?.id ?? 0;
       const viewerRole = req.user?.role ?? '';
-      const roleLower = viewerRole.toLowerCase();
-      const isAdmin = roleLower === 'admin';
+      const isAdmin = viewerRole?.toLowerCase() === 'admin';
       let assignedIds = new Set<number>();
       if (!isAdmin && viewerId) {
         const assigned = await pool.query(
@@ -694,7 +697,6 @@ export default function stats(pool: Pool) {
           case_id: Number(row.case_id),
           case_active: row.case_active,
           created_at: row.created_at,
-          updated_at: row.updated_at,
           effort_id: row.effort_id ? Number(row.effort_id) : null,
           effort_name: row.effort_name,
           effort_available_for: row.available_for,
@@ -717,7 +719,7 @@ export default function stats(pool: Pool) {
       res.json(rows);
     } catch (err) {
       console.error('Error fetching case stats:', err);
-      res.status(500).json({ error: "Kunde inte hämta ärenden" });
+      res.status(500).json({ error: "Kunde inte hämta insats" });
     }
   });
 
