@@ -1,13 +1,13 @@
 # Vallentuna Kommun - Tidsregistreringssystem
 
-Ett modernt webbbaserat system för hantering av kunder, ärenden och tidsregistreringar för Vallentuna kommun.
+Ett modernt webbbaserat system för hantering av kunder, insatsn och tidsregistreringar för Vallentuna kommun.
 # Statistik Vallentuna
 
 ## Funktioner
 
 - **Kundhantering**: Registrera och hantera kunder
-- **Ärendesystem**: Skapa och spåra ärenden med olika insatser
-- **Tidsregistrering**: Registrera arbetstid för olika ärenden
+- **Insatssystem**: Skapa och spåra insatsn med olika insatser
+- **Tidsregistrering**: Registrera arbetstid för olika insatsn
 - **Statistik**: Översikt och analys av aktiviteter
 - **Användarhantering**: Rollbaserad åtkomst (admin/behandlare)
 - **Responsiv design**: Fungerar på alla enheter
@@ -54,6 +54,8 @@ Skapa en `.env`-fil i projektets rot (se [ENVIRONMENT_SETUP.md](./ENVIRONMENT_SE
 VITE_API_URL=http://localhost:4000/api
 VITE_APP_NAME=Vallentuna Kommun
 ```
+
+> Tips: Om `VITE_API_URL` inte är satt försöker frontenden automatiskt använda samma domän som appen körs på (t.ex. `https://staging.example.com/api`).
 
 ### 3. Starta utvecklingsservern
 
@@ -159,7 +161,7 @@ Om databasen är helt ny: skapa en första admin‑användare (exempel) genom at
 
 - Auditloggar gallras efter 5 år via funktionen `cleanup_old_audit_logs()` (se `create_audit_log_table.sql`).
 - Schemalägg gallring via cron/pg_cron eller anropa `/api/audit/cleanup` från ett serverjobb.
-- Verksamhetsdata (kunder/ärenden/tider/insatser/behandlare) hård‑raderas inte: avaktivera i stället. Kundinitialer anonymiseras vid avaktivering.
+- Verksamhetsdata (kunder/insatsn/tider/insatser/behandlare) hård‑raderas inte: avaktivera i stället. Kundinitialer anonymiseras vid avaktivering.
 
 ## Bidrag
 

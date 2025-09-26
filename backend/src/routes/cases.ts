@@ -8,7 +8,7 @@ export default function cases(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
 
-  // Skapa nytt ärende
+  // Skapa nytt insats
   router.post("/", sanitizeTextInputs, validateCaseData, async (req, res) => {
     const { customer_id, handler1_id, handler2_id, effort_id, active } = req.body;
     if (!customer_id || !handler1_id || !effort_id) {
@@ -42,11 +42,11 @@ export default function cases(pool: Pool) {
         return res.status(400).json({ error: 'Kunden är inaktiv eller saknas' });
       }
       if (custRow.is_protected && String(req.user?.role).toLowerCase() !== 'admin') {
-        return res.status(403).json({ error: 'Endast admin kan skapa ärenden för skyddad kund' });
+        return res.status(403).json({ error: 'Endast admin kan skapa insatsn för skyddad kund' });
       }
     } catch {}
 
-    // Kontrollera om det redan finns ett aktivt ärende med samma kombination
+    // Kontrollera om det redan finns ett aktivt insats med samma kombination
     try {
       const existingCase = await pool.query(
         `SELECT id FROM cases 
@@ -60,12 +60,12 @@ export default function cases(pool: Pool) {
 
       if (existingCase.rows.length > 0) {
         return res.status(400).json({ 
-          error: "Ett aktivt ärende med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska ärenden." 
+          error: "Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsn." 
         });
       }
     } catch (checkError) {
       console.error("Error checking for duplicate case:", checkError);
-      // Fortsätt med att skapa ärendet om kontrollen misslyckas
+      // Fortsätt med att skapa insatst om kontrollen misslyckas
     }
 
     try {
@@ -94,11 +94,11 @@ export default function cases(pool: Pool) {
       res.status(201).json(r.rows[0]);
     } catch (e) {
       console.error("Error creating case:", e);
-      res.status(500).json({ error: "Kunde inte skapa ärende" });
+      res.status(500).json({ error: "Kunde inte skapa insats" });
     }
   });
 
-  // Hämta ärenden (med namn) + FILTER: all, customer_id, effort_id, active
+  // Hämta insatsn (med namn) + FILTER: all, customer_id, effort_id, active
   router.get("/", async (req, res) => {
     try {
       const { all, customer_id, effort_id, active } = req.query as {
@@ -207,7 +207,7 @@ export default function cases(pool: Pool) {
         };
       });
 
-      // Dölj skyddade ärenden helt för icke-admin och icke-tilldelade
+      // Dölj skyddade insatsn helt för icke-admin och icke-tilldelade
       const isAdmin = String(viewerRole).toLowerCase() === 'admin';
       if (!isAdmin) {
         rows = rows.filter((row: any) => !row.is_protected || row.handler1_id === viewerId || row.handler2_id === viewerId);
@@ -216,7 +216,7 @@ export default function cases(pool: Pool) {
       res.json(rows);
     } catch (e) {
       console.error("Error fetching cases:", e);
-      res.status(500).json({ error: "Kunde inte hämta ärenden" });
+      res.status(500).json({ error: "Kunde inte hämta insatsn" });
     }
   });
 
@@ -224,26 +224,26 @@ export default function cases(pool: Pool) {
   router.put("/:id/deactivate", sanitizeTextInputs, async (req, res) => {
     try {
       const r = await pool.query("UPDATE cases SET active = FALSE WHERE id = $1 RETURNING *", [req.params.id]);
-      if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
+      if (r.rows.length === 0) return res.status(404).json({ error: "Insats hittades inte" });
       res.json(r.rows[0]);
     } catch (e) {
       console.error("Error deactivating case:", e);
-      res.status(500).json({ error: "Kunde inte avaktivera ärende" });
+      res.status(500).json({ error: "Kunde inte avaktivera insats" });
     }
   });
 
   router.put("/:id/activate", sanitizeTextInputs, async (req, res) => {
     try {
       const r = await pool.query("UPDATE cases SET active = TRUE WHERE id = $1 RETURNING *", [req.params.id]);
-      if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
+      if (r.rows.length === 0) return res.status(404).json({ error: "Insats hittades inte" });
       res.json(r.rows[0]);
     } catch (e) {
       console.error("Error activating case:", e);
-      res.status(500).json({ error: "Kunde inte återaktivera ärende" });
+      res.status(500).json({ error: "Kunde inte återaktivera insats" });
     }
   });
 
-  // Uppdatera ärende
+  // Uppdatera insats
   router.put("/:id", sanitizeTextInputs, async (req, res) => {
     const { customer_id, handler1_id, handler2_id, effort_id, active } = req.body;
     if (!customer_id || !handler1_id || !effort_id) {
@@ -259,7 +259,7 @@ export default function cases(pool: Pool) {
       return res.status(400).json({ error: "Ogiltigt handler2_id värde" });
     }
 
-    // Kontrollera om det redan finns ett aktivt ärende med samma kombination (exkludera aktuellt ärende)
+    // Kontrollera om det redan finns ett aktivt insats med samma kombination (exkludera aktuellt insats)
     try {
       const existingCase = await pool.query(
         `SELECT id FROM cases 
@@ -274,12 +274,12 @@ export default function cases(pool: Pool) {
 
       if (existingCase.rows.length > 0) {
         return res.status(400).json({ 
-          error: "Ett aktivt ärende med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska ärenden." 
+          error: "Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsn." 
         });
       }
     } catch (checkError) {
       console.error("Error checking for duplicate case:", checkError);
-      // Fortsätt med att uppdatera ärendet om kontrollen misslyckas
+      // Fortsätt med att uppdatera insatst om kontrollen misslyckas
     }
 
     try {
@@ -300,7 +300,7 @@ export default function cases(pool: Pool) {
         return res.status(400).json({ error: 'Kunden är inaktiv eller saknas' });
       }
       if (custRow.is_protected && String(req.user?.role).toLowerCase() !== 'admin') {
-        return res.status(403).json({ error: 'Endast admin kan uppdatera ärenden för skyddad kund' });
+        return res.status(403).json({ error: 'Endast admin kan uppdatera insatsn för skyddad kund' });
       }
 
       // Validera att insats och behandlare är aktiva
@@ -333,15 +333,15 @@ export default function cases(pool: Pool) {
           req.params.id
         ]
       );
-      if (r.rows.length === 0) return res.status(404).json({ error: "Ärende hittades inte" });
+      if (r.rows.length === 0) return res.status(404).json({ error: "Insats hittades inte" });
       res.json(r.rows[0]);
     } catch (e) {
       console.error("Error updating case:", e);
-      res.status(500).json({ error: "Kunde inte uppdatera ärende" });
+      res.status(500).json({ error: "Kunde inte uppdatera insats" });
     }
   });
 
-  // INGEN DELETE ENDPOINT - ärenden ska aldrig raderas, bara avslutas/aktiveras
+  // INGEN DELETE ENDPOINT - insatsn ska aldrig raderas, bara avslutas/aktiveras
   // Detta skyddar statistiken och historiken
 
   return router;

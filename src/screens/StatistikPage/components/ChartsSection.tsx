@@ -48,7 +48,7 @@ export const ChartsSection = ({  }: ChartsSectionProps): JSX.Element => {
                 value="cases"
                 className="px-4 py-2 rounded-full bg-[#f0f0f0] data-[state=off]:bg-[#f0f0f0] data-[state=on]:bg-[#17694c] data-[state=on]:text-white text-sm font-medium"
               >
-                Ärenden
+                Insatsn
               </ToggleGroupItem>
               <ToggleGroupItem
                 value="customers"
@@ -152,7 +152,7 @@ export const ChartsSection = ({  }: ChartsSectionProps): JSX.Element => {
                       {item.caseworker}
                     </span>
                     <div className="flex items-center gap-4 text-xs text-[#666666]">
-                      <span>{item.cases} ärenden</span>
+                      <span>{item.cases} insatsn</span>
                       <span>{item.hours}h</span>
                     </div>
                   </div>

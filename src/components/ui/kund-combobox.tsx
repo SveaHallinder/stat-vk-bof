@@ -23,10 +23,16 @@ export const KundCombobox = ({ value, onChange, placeholder }: KundComboboxProps
       try {
         const data = await getCustomers();
         setKunder(
-          data.map((k: any) => ({
-            id: k.id.toString(),
-            label: `${k.initials} ${k.gender} ${k.birthYear}`,
-          }))
+          data.map((k: any) => {
+            const isGroup = k.is_group || k.isGroup;
+            const genderPart = isGroup ? 'Grupp' : (k.gender ?? '');
+            const birthPart = isGroup || !k.birthYear ? '' : `(${k.birthYear})`;
+            const label = [k.initials, genderPart, birthPart].filter(Boolean).join(' ').trim();
+            return {
+              id: k.id.toString(),
+              label: label || k.initials,
+            };
+          })
         );
       } catch (err) {
         setKunder([]);

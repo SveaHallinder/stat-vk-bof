@@ -15,7 +15,7 @@ export const Sidebar = ({ onClose }: SidebarProps): JSX.Element => {
     { id: 1, name: "Startsida", path: "/", active: location.pathname === "/" || location.pathname === "/dashboard", icon: Home },
     { id: 2, name: "Kunder", path: "/kunder", active: location.pathname === "/kunder", icon: Users },
     { id: 3, name: "Registrera tid", path: "/registrera-tid", active: location.pathname === "/registrera-tid", icon: Clock },
-    { id: 4, name: "Ärendelista", path: "/arendelista", active: location.pathname === "/arendelista", icon: FileText },
+    { id: 4, name: "Insatslista", path: "/arendelista", active: location.pathname === "/arendelista", icon: FileText },
     { id: 5, name: "Statistik", path: "/statistik", active: location.pathname === "/statistik", icon: BarChart3 },
   ];
 

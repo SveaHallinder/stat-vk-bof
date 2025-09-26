@@ -4,7 +4,7 @@
 
 **Vad**: Tidsregistreringssystem för kommunal personal
 **Användare**: Handläggare, administratörer, chefer
-**Data**: Kunder, ärenden, tidsregistrering, statistik
+**Data**: Kunder, insatsn, tidsregistrering, statistik
 
 ## 👥 ANVÄNDARANTAL
 
@@ -16,7 +16,7 @@
 
 ### **Nuvarande data:**
 - **Kunder**: ~500-1000 personer
-- **Ärenden**: ~2000-5000 ärenden
+- **Insatsn**: ~2000-5000 insatsn
 - **Tidsregistreringar**: ~10000-20000 poster
 - **Användare**: ~30-40 personer
 

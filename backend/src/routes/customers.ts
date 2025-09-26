@@ -12,35 +12,35 @@ export default function customers(pool: Pool) {
 
   // Skapa kund
   router.post("/", sanitizeTextInputs, validateCustomerData, async (req, res) => {
-    const { initials, gender, birthYear, startDate } = req.body;
-    if (!initials || !gender || !birthYear) {
-      return res.status(400).json({ error: "Alla fält krävs" });
-    }
+    const { initials, gender, birthYear, startDate, isGroup } = req.body;
+    const groupFlag = Boolean(isGroup);
+    const genderValue = groupFlag ? null : gender;
+    const birthYearValue = groupFlag ? null : birthYear;
     try {
       let result;
       if (startDate) {
         result = await pool.query(
-          "INSERT INTO customers (initials, gender, birth_year, active, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-          [initials, gender, birthYear, true, startDate]
+          "INSERT INTO customers (initials, gender, birth_year, active, created_at, is_group) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+          [initials, genderValue, birthYearValue, true, startDate, groupFlag]
         );
       } else {
         result = await pool.query(
-          "INSERT INTO customers (initials, gender, birth_year, active) VALUES ($1, $2, $3, $4) RETURNING *",
-          [initials, gender, birthYear, true]
+          "INSERT INTO customers (initials, gender, birth_year, active, is_group) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+          [initials, genderValue, birthYearValue, true, groupFlag]
         );
       }
       
       // Logga skapandet av kund (PII minimerad)
       if (req.user) {
         const auditLogger = getAuditLogger(pool);
-        const safeName = `${initials} (${birthYear})`;
+        const safeName = groupFlag ? `Grupp ${initials}` : `${initials} (${birthYearValue})`;
         await auditLogger.logCreate(
           req.user.id,
           req.user.name, // Använd name istället för username
           'customer',
           result.rows[0].id,
           safeName,
-          { initials, gender, birthYear, startDate }
+          { initials, gender: genderValue, birthYear: birthYearValue, startDate, isGroup: groupFlag }
         );
       }
       
@@ -55,8 +55,8 @@ export default function customers(pool: Pool) {
     try {
       const all = req.query.all === "true";
       const sqlWith = all
-        ? "SELECT id, initials, gender, birth_year, active, created_at, is_protected FROM customers ORDER BY id ASC"
-        : "SELECT id, initials, gender, birth_year, active, created_at, is_protected FROM customers WHERE active = TRUE ORDER BY id ASC";
+        ? "SELECT id, initials, gender, birth_year, active, created_at, is_protected, is_group FROM customers ORDER BY id ASC"
+        : "SELECT id, initials, gender, birth_year, active, created_at, is_protected, is_group FROM customers WHERE active = TRUE ORDER BY id ASC";
       let rows: any[];
       try {
         const result = await pool.query(sqlWith);
@@ -68,7 +68,7 @@ export default function customers(pool: Pool) {
             ? "SELECT id, initials, gender, birth_year, active, created_at FROM customers ORDER BY id ASC"
             : "SELECT id, initials, gender, birth_year, active, created_at FROM customers WHERE active = TRUE ORDER BY id ASC";
           const result = await pool.query(sqlWithout);
-          rows = result.rows.map((r: any) => ({ ...r, is_protected: false }));
+          rows = result.rows.map((r: any) => ({ ...r, is_protected: false, is_group: false }));
         } else {
           throw err;
         }
@@ -88,8 +88,9 @@ export default function customers(pool: Pool) {
         const isAssigned = assignedSet.has(Number(row.id));
         const protectedView = !!row.is_protected && !isAdmin && !isAssigned;
         const gender = protectedView ? null : row.gender;
+        const birthYear = row.birth_year;
         const can_view = !row.is_protected || isAdmin || isAssigned;
-        return { ...row, initials, gender, can_view };
+        return { ...row, initials, gender, birth_year: birthYear, can_view, is_group: !!row.is_group };
       });
       res.json(safe);
     } catch (e) {
@@ -109,7 +110,7 @@ export default function customers(pool: Pool) {
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Kund hittades inte eller är redan avaktiverad" });
       }
-      // Sätt alla kundens aktiva ärenden till inaktiva för att undvika inkonsekvens
+      // Sätt alla kundens aktiva insatsn till inaktiva för att undvika inkonsekvens
       await pool.query(
         'UPDATE cases SET active = FALSE WHERE customer_id = $1 AND active = TRUE',
         [id]
@@ -143,14 +144,14 @@ export default function customers(pool: Pool) {
     try {
       let row: any;
       try {
-        const result = await pool.query("SELECT id, initials, gender, birth_year, active, created_at, is_protected FROM customers WHERE id = $1", [id]);
+        const result = await pool.query("SELECT id, initials, gender, birth_year, active, created_at, is_protected, is_group FROM customers WHERE id = $1", [id]);
         if (result.rows.length === 0) return res.status(404).json({ error: "Kund hittades inte" });
         row = result.rows[0];
       } catch (err: any) {
         if (err?.code === '42703') {
           const result = await pool.query("SELECT id, initials, gender, birth_year, active, created_at FROM customers WHERE id = $1", [id]);
           if (result.rows.length === 0) return res.status(404).json({ error: "Kund hittades inte" });
-          row = { ...result.rows[0], is_protected: false };
+          row = { ...result.rows[0], is_protected: false, is_group: false };
         } else {
           throw err;
         }
@@ -169,7 +170,8 @@ export default function customers(pool: Pool) {
       const safe = {
         ...row,
         initials: getSafeInitials(row, { viewerId, viewerRole, assignedCustomerIds: new Set<number>(isAssigned ? [Number(id)] : []) }),
-        gender: row.is_protected && !isAdmin && !isAssigned ? null : row.gender
+        gender: row.is_protected && !isAdmin && !isAssigned ? null : row.gender,
+        is_group: !!row.is_group
       };
       res.json(safe);
     } catch (e) {
@@ -178,12 +180,69 @@ export default function customers(pool: Pool) {
     }
   });
 
+  // Summerad tid för kundens insatser (endast utförda besök)
+  router.get("/:id/time", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const customerResult = await pool.query(
+        "SELECT id, is_protected FROM customers WHERE id = $1",
+        [id]
+      );
+      if (customerResult.rows.length === 0) {
+        return res.status(404).json({ error: "Kund hittades inte" });
+      }
+
+      const viewerId = req.user?.id || 0;
+      const viewerRole = req.user?.role || '';
+      const isAdmin = String(viewerRole).toLowerCase() === 'admin';
+
+      if (customerResult.rows[0].is_protected && !isAdmin) {
+        const assigned = await pool.query(
+          `SELECT 1 FROM cases WHERE customer_id = $1 AND active = TRUE AND (handler1_id = $2 OR handler2_id = $2) LIMIT 1`,
+          [id, viewerId]
+        );
+        if (assigned.rows.length === 0) {
+          return res.status(403).json({ error: 'forbidden_protected_customer' });
+        }
+      }
+
+      const totalResult = await pool.query(
+        `SELECT COALESCE(SUM(s.hours), 0) AS total_hours
+         FROM shifts s
+         INNER JOIN cases c ON c.id = s.case_id
+         WHERE c.customer_id = $1 AND s.status = 'Utförd'`,
+        [id]
+      );
+
+      const total = Number(totalResult.rows[0]?.total_hours ?? 0);
+      res.json({ totalHours: Number.isFinite(total) ? total : 0 });
+    } catch (error) {
+      console.error('Error fetching total hours for customer:', error);
+      res.status(500).json({ error: "Kunde inte hämta total tid" });
+    }
+  });
+
   // Uppdatera en kund
   router.put("/:id", sanitizeTextInputs, async (req, res) => {
     const { id } = req.params;
-    const { initials, gender, birthYear, active, startDate } = req.body;
-    if (!initials || !gender || !birthYear || typeof active !== "boolean") {
-      return res.status(400).json({ error: "Alla fält krävs" });
+    const { initials, gender, birthYear, active, startDate, isGroup } = req.body;
+    if (!initials || typeof active !== "boolean") {
+      return res.status(400).json({ error: "Initialer och aktiv-status krävs" });
+    }
+    const groupFlag = typeof isGroup === 'string' ? isGroup.toLowerCase() === 'true' : Boolean(isGroup);
+    const genderValue = groupFlag ? null : gender;
+    const birthYearValue = groupFlag ? null : Number(birthYear);
+    if (!groupFlag) {
+      if (!genderValue || birthYearValue == null || Number.isNaN(birthYearValue)) {
+        return res.status(400).json({ error: "Kön och födelseår krävs" });
+      }
+      if (!['Flicka', 'Pojke', 'Icke-binär'].includes(genderValue)) {
+        return res.status(400).json({ error: "Ogiltigt kön" });
+      }
+      const currentYear = new Date().getFullYear();
+      if (birthYearValue < 1900 || birthYearValue > currentYear) {
+        return res.status(400).json({ error: "Ogiltigt födelseår" });
+      }
     }
     try {
       // Hämta gamla värden för audit log
@@ -197,17 +256,17 @@ export default function customers(pool: Pool) {
       const newInitials = active === false ? 'ANONYM' : initials;
       if (startDate) {
         result = await pool.query(
-          "UPDATE customers SET initials = $1, gender = $2, birth_year = $3, active = $4, created_at = $5 WHERE id = $6 RETURNING *",
-          [newInitials, gender, birthYear, active, startDate, id]
+          "UPDATE customers SET initials = $1, gender = $2, birth_year = $3, active = $4, created_at = $5, is_group = $6 WHERE id = $7 RETURNING *",
+          [newInitials, genderValue, birthYearValue, active, startDate, groupFlag, id]
         );
       } else {
         result = await pool.query(
-          "UPDATE customers SET initials = $1, gender = $2, birth_year = $3, active = $4 WHERE id = $5 RETURNING *",
-          [newInitials, gender, birthYear, active, id]
+          "UPDATE customers SET initials = $1, gender = $2, birth_year = $3, active = $4, is_group = $5 WHERE id = $6 RETURNING *",
+          [newInitials, genderValue, birthYearValue, active, groupFlag, id]
         );
       }
 
-      // Om kunden nu är inaktiv, stäng alla aktiva ärenden
+      // Om kunden nu är inaktiv, stäng alla aktiva insatsn
       if (active === false) {
         await pool.query(
           'UPDATE cases SET active = FALSE WHERE customer_id = $1 AND active = TRUE',
@@ -218,12 +277,13 @@ export default function customers(pool: Pool) {
       // Logga uppdateringen
       if (req.user) {
         const auditLogger = getAuditLogger(pool);
+        const safeName = groupFlag ? `Grupp ${initials}` : `${initials} (${birthYearValue})`;
         await auditLogger.logUpdate(
           req.user.id,
           req.user.name, // Använd name istället för username
           'customer',
           parseInt(id),
-          `${initials} (${birthYear})`,
+          safeName,
           oldValues,
           result.rows[0]
         );
@@ -334,7 +394,7 @@ export default function customers(pool: Pool) {
     }
   });
 
-  // Hämta alla ärenden för en viss kund och insats
+  // Hämta alla insatsn för en viss kund och insats
   router.get("/:customerId/efforts/:effortId/cases", async (req, res) => {
     const { customerId, effortId } = req.params;
     try {
@@ -375,7 +435,7 @@ export default function customers(pool: Pool) {
       );
       res.json(result.rows);
     } catch {
-      res.status(500).json({ error: "Kunde inte hämta ärenden för kund och insats" });
+      res.status(500).json({ error: "Kunde inte hämta insatsn för kund och insats" });
     }
   });
 

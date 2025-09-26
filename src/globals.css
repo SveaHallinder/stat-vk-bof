@@ -1,4 +1,5 @@
-/* Tailwind CSS directives - ignore linter warnings */
+/* stylelint-disable at-rule-no-unknown */
+/* Tailwind CSS directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -66,6 +67,7 @@
   
   /* Konsekvent spacing för sektioner */
   .section-spacing {
+    /* stylelint-disable-next-line at-rule-no-unknown */
     @apply mb-6;
   }
   
@@ -83,6 +85,7 @@
   }
   
   .content-card-compact {
+    /* stylelint-disable-next-line at-rule-no-unknown */
     @apply bg-white rounded-lg shadow-sm p-4;
   }
   

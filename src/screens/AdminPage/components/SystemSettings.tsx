@@ -162,7 +162,7 @@ export const SystemSettings = (): JSX.Element => {
           label: "Dataarkivering (månader)",
           value: "24",
           type: "number",
-          description: "Arkivera gamla ärenden efter antal månader"
+          description: "Arkivera gamla insatsn efter antal månader"
         }
       ]
     }

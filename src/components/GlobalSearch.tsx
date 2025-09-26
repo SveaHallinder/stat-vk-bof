@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCustomers, getPublicHandlers, getEfforts, getCases, getShifts } from "@/lib/api";
+import { formatAvailableFor } from "@/lib/effortLabels";
 import toast from "react-hot-toast";
 
 interface SearchResult {
@@ -45,7 +46,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
         // Endast aktiva behandlare (publik lista, ej admin-krav)
         getPublicHandlers().catch(() => []),
         getEfforts().catch(() => []),
-        // Endast aktiva ärenden
+        // Endast aktiva insatsn
         getCases().catch(() => []),
         getShifts().catch(() => [])
       ]);
@@ -57,7 +58,10 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
         // Dölj skyddade kunder för icke-behöriga
         if ((customer as any).is_protected && (customer as any).can_view === false) return;
         if (customer.initials.toLowerCase().includes(lowerQuery)) {
-          const subtitle = (customer as any).gender ? `${(customer as any).gender}, född ${customer.birth_year}` : `Född ${customer.birth_year}`;
+          const isGroup = (customer as any).is_group || (customer as any).isGroup;
+          const genderLabel = isGroup ? 'Grupp' : ((customer as any).gender ?? '');
+          const birthLabel = isGroup ? '' : (customer.birth_year ? `, född ${customer.birth_year}` : '');
+          const subtitle = [genderLabel, birthLabel].filter(Boolean).join('').trim() || 'Kund';
           searchResults.push({
             id: customer.id,
             type: 'customer',
@@ -91,14 +95,14 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
             id: effort.id,
             type: 'effort',
             title: `Insats: ${effort.name}`,
-            subtitle: `Tillgänglig för: ${effort.available_for}`,
+            subtitle: `Tillgänglig för: ${formatAvailableFor(effort.name, effort.available_for)}`,
             icon: 'FileText',
             data: effort,
           });
         }
       });
 
-      // Sök i ärenden
+      // Sök i insatsn
       cases.forEach(caseItem => {
         if (caseItem.customer_name?.toLowerCase().includes(lowerQuery) ||
             caseItem.effort_name?.toLowerCase().includes(lowerQuery) ||
@@ -106,7 +110,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
           searchResults.push({
             id: caseItem.id,
             type: 'case',
-            title: `Ärende: ${caseItem.customer_name || 'Okänd'} - ${caseItem.effort_name || 'Okänd'}`,
+            title: `Insats: ${caseItem.customer_name || 'Okänd'} - ${caseItem.effort_name || 'Okänd'}`,
             subtitle: `Behandlare: ${caseItem.handler1_name || 'Okänd'}`,
             icon: 'FileText',
             data: caseItem,
@@ -217,7 +221,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
       case 'customer': return 'Kund';
       case 'handler': return 'Behandlare';
       case 'effort': return 'Insats';
-      case 'case': return 'Ärende';
+      case 'case': return 'Insats';
       case 'shift': return 'Tid';
       default: return type;
     }

@@ -22,7 +22,7 @@ export const nonNegativeNumber = z.number().min(0, 'Måste vara 0 eller större'
 
 // Validering för tidsregistrering
 export const timeEntrySchema = z.object({
-  caseId: z.number().positive('Välj ett ärende'),
+  caseId: z.number().positive('Välj ett insats'),
   date: z.string().min(1, swedishMessages.required),
   hours: z.number().min(0.5, 'Timmar måste vara minst 0.5').max(24, 'Timmar kan inte vara mer än 24'),
   status: z.enum(['Utförd', 'Avbokad'], {
@@ -30,7 +30,7 @@ export const timeEntrySchema = z.object({
   }),
 });
 
-// Validering för ärendeskapande
+// Validering för insatsskapande
 export const caseSchema = z.object({
   customer_id: z.number().positive('Välj en kund'),
   effort_id: z.number().positive('Välj en insats'),

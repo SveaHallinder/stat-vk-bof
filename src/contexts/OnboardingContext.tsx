@@ -55,7 +55,7 @@ const baseSteps: OnboardingStep[] = [
   {
     id: 'quick-actions',
     title: 'Startsida – Snabbåtgärder',
-    description: 'Här finns snabbåtgärder för att snabbt lägga till en ny kund, registrera ett ärende, registrera tid  och ta ut statistik.',
+    description: 'Här finns snabbåtgärder för att snabbt lägga till en ny kund, registrera ett insats, registrera tid  och ta ut statistik.',
     route: '/dashboard',
     selector: '[data-tour="quick-actions"]',
     placement: 'bottom',
@@ -73,7 +73,7 @@ const baseSteps: OnboardingStep[] = [
   {
     id: 'customers-add',
     title: 'Kunder – Lägg till ny kund',
-    description: 'Börja med att registrera din kund. Därefter kan du skapa ärenden och registrera tider. Du kan även lägga till flera kunder samtidigt.',
+    description: 'Börja med att registrera din kund. Därefter kan du skapa insatsn och registrera tider. Du kan även lägga till flera kunder samtidigt.',
     route: '/kunder',
     selector: '[data-tour="customers-add-btn"]',
     placement: 'bottom',
@@ -89,7 +89,7 @@ const baseSteps: OnboardingStep[] = [
   {
     id: 'customers-profile-note',
     title: 'Kundprofil',
-    description: 'I kundprofilen visas alla uppgifter, ärenden och tidsregistreringar för kunden.',
+    description: 'I kundprofilen visas alla uppgifter, insatsn och tidsregistreringar för kunden.',
     route: '/kunder',
     placement: 'center',
   },
@@ -98,15 +98,15 @@ const baseSteps: OnboardingStep[] = [
   {
     id: 'time-section',
     title: 'Registrera tid – Tidsregistreringar',
-    description: 'Enkelt och snabbt: Välj ärende, datum, timmar och status. Observera att kunden måste ha ett registrerat ärende först.',
+    description: 'Enkelt och snabbt: Välj insats, datum, timmar och status. Observera att kunden måste ha ett registrerat insats först.',
     route: '/registrera-tid',
     selector: '[data-tour="time-section"]',
     placement: 'bottom',
   },
   {
     id: 'time-case',
-    title: 'Välj ärende',
-    description: 'Börja med att välja rätt ärende här.',
+    title: 'Välj insats',
+    description: 'Börja med att välja rätt insats här.',
     route: '/registrera-tid',
     selector: '[data-tour="time-case-select"]',
     placement: 'bottom',
@@ -153,8 +153,8 @@ const baseSteps: OnboardingStep[] = [
   },
   {
     id: 'create-case',
-    title: 'Registrera nytt ärende för kund',
-    description: 'Om ärendet saknas kan du snabbt skapa det här och därefter registrera tid direkt.',
+    title: 'Registrera nytt insats för kund',
+    description: 'Om insatst saknas kan du snabbt skapa det här och därefter registrera tid direkt.',
     route: '/registrera-tid',
     selector: '[data-tour="create-case-toggle"]',
     placement: 'top',
@@ -168,19 +168,19 @@ const baseSteps: OnboardingStep[] = [
     placement: 'top',
   },
 
-  // 4. Ärendelista
+  // 4. Insatslista
   {
     id: 'cases-overview',
-    title: 'Ärendelista – Översikt',
-    description: 'Snabb översikt av alla ärenden. Du kan även visa inaktiva ärenden.',
+    title: 'Insatslista – Översikt',
+    description: 'Snabb översikt av alla insatsn. Du kan även visa inaktiva insatsn.',
     route: '/arendelista',
     selector: '[data-tour="cases-filter"]',
     placement: 'bottom',
   },
   {
     id: 'cases-table',
-    title: 'Ärendelista – Lista',
-    description: 'Klicka på en rad för att se kundprofil och dess ärenden.',
+    title: 'Insatslista – Lista',
+    description: 'Klicka på en rad för att se kundprofil och dess insatsn.',
     route: '/arendelista',
     selector: '[data-tour="cases-table"]',
     placement: 'top',
@@ -216,7 +216,7 @@ const baseSteps: OnboardingStep[] = [
   {
     id: 'profile',
     title: 'Min profil',
-    description: 'Se dina uppgifter, logga ut och se dina ärenden. Vill du ändra info eller har glömt lösenord – kontakta admin.',
+    description: 'Se dina uppgifter, logga ut och se dina insatsn. Vill du ändra info eller har glömt lösenord – kontakta admin.',
     route: '/min-profil',
     placement: 'center',
   },

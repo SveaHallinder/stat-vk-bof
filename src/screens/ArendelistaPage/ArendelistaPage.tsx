@@ -8,6 +8,7 @@ import { getCases } from "@/lib/api";
 import { CaseWithNames } from "@/types/types";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 export const ArendelistaPage = (): JSX.Element => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export const ArendelistaPage = (): JSX.Element => {
   const [includeInactive, setIncludeInactive] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   // loading state not used in UI; remove to satisfy typecheck
+  const { refreshKey } = useRefresh();
 
   useEffect(() => {
     async function load() {
@@ -31,13 +33,13 @@ export const ArendelistaPage = (): JSX.Element => {
         const data = await getCases(includeInactive, { signal: controller.signal }); // styr via checkbox
         setCases(data);
       } catch (err: any) {
-        if (err?.name !== 'AbortError') toast.error("Kunde inte hämta ärenden");
+        if (err?.name !== 'AbortError') toast.error("Kunde inte hämta insatsn");
       } finally {
         // finished
       }
     }
     load();
-  }, [includeInactive]);
+  }, [includeInactive, refreshKey]);
 
   const statusOptions = ["Aktivt", "Inaktivt"];
 
@@ -64,13 +66,13 @@ export const ArendelistaPage = (): JSX.Element => {
     return 0;
   });
 
-  // Navigera till kundens profil med ärendet markerat
+  // Navigera till kundens profil med insatst markerat
   const handleCaseClick = (caseItem: CaseWithNames) => {
     navigate(`/kunder/${caseItem.customer_id}?caseId=${caseItem.id}`);
   };
 
   return (
-    <Layout title="Ärendelista">
+    <Layout title="Insatslista">
       {/* Responsiv container */}
       <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
 

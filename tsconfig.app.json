@@ -10,6 +10,8 @@
   "moduleResolution": "bundler",
   "isolatedModules": true,
   "moduleDetection": "force",
+  "esModuleInterop": true,
+  "allowSyntheticDefaultImports": true,
   "noEmit": false,
   "jsx": "react-jsx",
   "strict": true,

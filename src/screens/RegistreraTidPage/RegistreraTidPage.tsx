@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRefresh } from "@/contexts/RefreshContext";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Save, FileText, Clock, CheckCircle } from "lucide-react";
 import { addShift, getShifts, getCases, getEfforts, getHandlers, getPublicHandlers, createCase, updateShift } from "@/lib/api";
 import { KundCombobox } from "@/components/ui/kund-combobox";
+import { CaseCombobox } from "@/components/ui/case-combobox";
 import { ShiftEntry, CaseWithNames, Effort, Handler } from "@/types/types";
 import { HandlerPublic } from "@/lib/api";
 import { LoadingSpinner, Skeleton } from "@/components/ui/loading-spinner";
@@ -31,6 +33,7 @@ interface TimeEntry {
 
 export const RegisteraTidPage = (): JSX.Element => {
   const { user } = useAuth();
+  const { refreshKey, triggerRefresh } = useRefresh();
   
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([
     {
@@ -46,12 +49,13 @@ export const RegisteraTidPage = (): JSX.Element => {
   const [efforts, setEfforts] = useState<Effort[]>([]);
   const [handlers, setHandlers] = useState<Handler[] | HandlerPublic[]>([]);
   const [shifts, setShifts] = useState<ShiftEntry[]>([]);
+  const [showOnlyMyCases, setShowOnlyMyCases] = useState(user?.role !== 'admin');
   
   // Loading states
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isLoadingCases, setIsLoadingCases] = useState(false);
   
-  // State för att registrera ärende
+  // State för att registrera insats
   const [showCreateCase, setShowCreateCase] = useState(false);
   const [newCaseCustomerId, setNewCaseCustomerId] = useState<string>("");
   const [newCaseEffortId, setNewCaseEffortId] = useState<string>("");
@@ -89,7 +93,7 @@ export const RegisteraTidPage = (): JSX.Element => {
         setEditingShift(null);
       }
       
-      // Escape för att stänga ärendeskapande
+      // Escape för att stänga insatsskapande
       if (event.key === 'Escape' && showCreateCase) {
         setShowCreateCase(false);
       }
@@ -99,13 +103,18 @@ export const RegisteraTidPage = (): JSX.Element => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [hasUnsavedChanges, showEditModal, showCreateCase]);
 
+  // Synka standardfilter när användarrollen laddas
+  useEffect(() => {
+    setShowOnlyMyCases(user?.role !== 'admin');
+  }, [user?.role]);
+
   // Ladda data vid mount
   useEffect(() => {
     async function loadData() {
       setIsLoadingData(true);
       try {
         const [activeCasesData, effortsData, handlersData, shiftsData] = await Promise.all([
-          getCases(false), // false = endast aktiva ärenden
+          getCases(false), // false = endast aktiva insatsn
           getEfforts(),
           user?.role === 'admin' ? getHandlers(true) : getPublicHandlers(),
           getShifts()
@@ -119,10 +128,16 @@ export const RegisteraTidPage = (): JSX.Element => {
           enhancedToast.error("Kunde inte ladda data. Kontrollera din internetanslutning och försök igen.");
         } finally {
         setIsLoadingData(false);
+        }
       }
-    }
     loadData();
-  }, [user]);
+  }, [user, refreshKey]);
+
+  const filteredCases = useMemo(() => {
+    if (!user) return activeCases;
+    if (!showOnlyMyCases) return activeCases;
+    return activeCases.filter(c => c.handler1_id === user.id || c.handler2_id === user.id);
+  }, [activeCases, showOnlyMyCases, user]);
   
 
 
@@ -155,7 +170,7 @@ export const RegisteraTidPage = (): JSX.Element => {
     setHasUnsavedChanges(true);
   };
 
-  // Registrera ärende
+  // Registrera insats
   const handleCreateCase = async () => {
     // Validera formuläret med Zod
     const formData = {
@@ -182,7 +197,7 @@ export const RegisteraTidPage = (): JSX.Element => {
         active: true
       });
       
-      // Uppdatera aktiva ärenden
+      // Uppdatera aktiva insatsn
       setActiveCases(prev => [newCase, ...prev]);
       setShowCreateCase(false);
       
@@ -192,14 +207,15 @@ export const RegisteraTidPage = (): JSX.Element => {
       setNewCaseHandler1Id("");
       setNewCaseHandler2Id("none");
       
-      enhancedToast.success("Ärende registrerat");
+      enhancedToast.success("Insats registrerat");
+      triggerRefresh();
     } catch (error: any) {
       if (error.error && error.error.includes('samma kombination finns redan')) {
         enhancedToast.error(error.error, { duration: 8000 }); // 8 sekunder
       } else if (error.message && error.message.includes('samma kombination finns redan')) {
-        enhancedToast.error('Ett aktivt ärende med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska ärenden.', { duration: 8000 }); // 8 sekunder
+        enhancedToast.error('Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsn.', { duration: 8000 }); // 8 sekunder
       } else {
-        enhancedToast.error("Kunde inte skapa ärende. Kontrollera din internetanslutning och försök igen.");
+        enhancedToast.error("Kunde inte skapa insats. Kontrollera din internetanslutning och försök igen.");
       }
     } finally {
       setIsLoadingCases(false);
@@ -271,6 +287,7 @@ export const RegisteraTidPage = (): JSX.Element => {
         status: "Utförd"
       }]);
       setHasUnsavedChanges(false);
+      triggerRefresh();
     } catch (error) {
       console.error("Error saving shifts:", error);
       enhancedToast.error("Kunde inte spara tidsregistreringarna. Kontrollera din internetanslutning och försök igen.", {
@@ -309,6 +326,7 @@ export const RegisteraTidPage = (): JSX.Element => {
       setShowEditModal(false);
       setEditingShift(null);
       enhancedToast.success("Tidsregistrering uppdaterad!");
+      triggerRefresh();
     } catch (error) {
       enhancedToast.error("Kunde inte uppdatera tidsregistrering");
     }
@@ -336,8 +354,8 @@ export const RegisteraTidPage = (): JSX.Element => {
             )}
           </CardTitle>
           <p className="mb-2 text-sm max-w-xl">
-                Här kan du registrera tidsregistreringar för befintliga aktiva ärenden. 
-                Välj ärende, datum, timmar och status. Registrera ett nytt ärende nedan om du inte hittar ärendet i listan.
+                Här kan du registrera tidsregistreringar för befintliga aktiva insatsn. 
+                Välj insats, datum, timmar och status. Registrera ett nytt insats nedan om du inte hittar insatst i listan.
           </p>
         </CardHeader>
         <CardContent>
@@ -349,26 +367,37 @@ export const RegisteraTidPage = (): JSX.Element => {
           ) : (
             <>
               {/* Tidsregistreringar */}
+              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 ml-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-[#17694c] focus:ring-[#17694c]"
+                    checked={showOnlyMyCases}
+                    onChange={e => setShowOnlyMyCases(e.target.checked)}
+                  />
+                  Visa endast mina insatser
+                </label>
+                <span className="text-xs text-gray-500">
+                  Visar {filteredCases.length} insatser
+                </span>
+              </div>
               <div className="space-y-1 mobile:space-y-2">
-                {timeEntries.map((entry) => (
+                {timeEntries.map((entry) => {
+                  const selectedCase = entry.caseId ? activeCases.find(c => c.id === entry.caseId) : undefined;
+                  const casesForCombobox = selectedCase && !filteredCases.some(c => c.id === selectedCase.id)
+                    ? [selectedCase, ...filteredCases]
+                    : filteredCases;
+
+                  return (
                   <div key={entry.id} className="flex flex-col gap-4 p-4 bg-white rounded-lg lg:flex-row" style={{ gridTemplateColumns: '1.75fr auto auto auto' }}>
                     <div className="space-y-2 mobile:flex-1" data-tour="time-case-select">
-                      <Label className="text-sm font-medium text-gray-700">Ärende *</Label>
-                      <Select 
-                        value={entry.caseId?.toString() || ""} 
-                        onValueChange={(value) => updateTimeEntry(entry.id, 'caseId', Number(value))}
-                      >
-                        <SelectTrigger className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 flex-1 h-10">
-                          <SelectValue placeholder="Välj ärende" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {activeCases.map((caseItem) => (
-                            <SelectItem key={caseItem.id} value={caseItem.id.toString()}>
-                              {(caseItem as any).customer_active === false || caseItem.customer_name === 'ANONYM' ? '—' : caseItem.customer_name} - {caseItem.effort_name} ({caseItem.handler1_name})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label className="text-sm font-medium text-gray-700">Insats *</Label>
+                      <CaseCombobox
+                        cases={casesForCombobox}
+                        value={entry.caseId}
+                        onChange={(value) => updateTimeEntry(entry.id, 'caseId', value)}
+                        placeholder="Sök efter insats"
+                      />
                     </div>
                     
                     <div className="space-y-2 mobile:flex-1" data-tour="time-date-input">
@@ -447,7 +476,8 @@ export const RegisteraTidPage = (): JSX.Element => {
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
                 
                 {/* Knapp för att lägga till fler tider - nu över linjen */}
                 <div className="pl-4 pt-2 pb-4">
@@ -514,7 +544,7 @@ export const RegisteraTidPage = (): JSX.Element => {
         </CardContent>
       </Card>
 
-      {/* Separerad sektion för att registrera ärende - nu underst med samma design */}
+      {/* Separerad sektion för att registrera insats - nu underst med samma design */}
       <Card className="mb-6 ">
         <CardHeader className="pb-4">
           <CardTitle className="flex flex-col gap-3 text-gray-800">
@@ -522,7 +552,7 @@ export const RegisteraTidPage = (): JSX.Element => {
               <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
                 <FileText className="w-4 h-4 text-white" />
               </div>
-              <span>Registrera nytt ärende för kund</span>
+              <span>Registrera nytt insats för kund</span>
             </div>
             <div className="flex lg:ml-6 gap-3 mobile:w-full">
               <Button 
@@ -533,7 +563,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                 data-tour="create-case-toggle"
                 type="button"
               >
-                {showCreateCase ? 'Dölj formulär' : 'Registrera ärende'}
+                {showCreateCase ? 'Dölj formulär' : 'Registrera insats'}
               </Button>
             </div>
           </CardTitle>
@@ -543,7 +573,7 @@ export const RegisteraTidPage = (): JSX.Element => {
           <CardContent className="pt-0">
             <div className="p-6 bg-white rounded-lg">
               <div className="mb-4 text-sm text-gray-600">
-                Fyll i formuläret nedan för att skapa ett nytt ärende:
+                Fyll i formuläret nedan för att skapa ett nytt insats:
               </div>
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2 flex flex-col">
@@ -612,10 +642,10 @@ export const RegisteraTidPage = (): JSX.Element => {
                   {isLoadingCases ? (
                     <>
                       <LoadingSpinner size="sm" />
-                      Skapar ärende...
+                      Skapar insats...
                     </>
                   ) : (
-                    'Skapa ärende'
+                    'Skapa insats'
                   )}
                 </Button>
                 <Button 

@@ -22,6 +22,7 @@ import { Forbidden } from "./components/Forbidden";
 import { Toaster } from "react-hot-toast";
 import { LoadingSpinner } from "./components/ui/loading-spinner";
 import { OnboardingProvider } from "./contexts/OnboardingContext";
+import { RefreshProvider } from "./contexts/RefreshContext";
 import { OnboardingTour } from "./components/Onboarding/OnboardingTour";
 
 // Loading component for Suspense fallback
@@ -65,27 +66,29 @@ createRoot(document.getElementById("app") as HTMLElement).render(
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
-          <OnboardingProvider>
-            <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/forbidden" element={<Forbidden />} />
-              <Route path="/invite/:token" element={<InviteAcceptPage />} />
-              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<ProtectedRoute><DashboardRedesign /></ProtectedRoute>} />
-              <Route path="/kunder" element={<ProtectedRoute><KunderPage /></ProtectedRoute>} />
-              <Route path="/kunder/:id" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
-              <Route path="/registrera-tid" element={<ProtectedRoute><RegisteraTidPage /></ProtectedRoute>} />
-              <Route path="/arendelista" element={<ProtectedRoute><ArendelistaPage /></ProtectedRoute>} />
-              <Route path="/statistik" element={<ProtectedRoute><StatistikPage /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
-              <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
-              </Routes>
-              <OnboardingTour />
-            </Suspense>
-          </OnboardingProvider>
+          <RefreshProvider>
+            <OnboardingProvider>
+              <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/forbidden" element={<Forbidden />} />
+                  <Route path="/invite/:token" element={<InviteAcceptPage />} />
+                  <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<ProtectedRoute><DashboardRedesign /></ProtectedRoute>} />
+                  <Route path="/kunder" element={<ProtectedRoute><KunderPage /></ProtectedRoute>} />
+                  <Route path="/kunder/:id" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
+                  <Route path="/registrera-tid" element={<ProtectedRoute><RegisteraTidPage /></ProtectedRoute>} />
+                  <Route path="/arendelista" element={<ProtectedRoute><ArendelistaPage /></ProtectedRoute>} />
+                  <Route path="/statistik" element={<ProtectedRoute><StatistikPage /></ProtectedRoute>} />
+                  <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
+                  <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
+                </Routes>
+                <OnboardingTour />
+              </Suspense>
+            </OnboardingProvider>
+          </RefreshProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

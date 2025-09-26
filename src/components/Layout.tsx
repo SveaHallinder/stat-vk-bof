@@ -5,6 +5,7 @@ import { GlobalSearch } from "./GlobalSearch";
 import { useAuth } from "@/contexts/AuthContext";
 import { User, Menu, HelpCircle } from "lucide-react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
+import { ApiHealthBanner } from "@/components/ApiHealthBanner";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -75,6 +76,7 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
       )}
 
       <div className="flex-1 flex flex-col">
+        <ApiHealthBanner />
         {/* Custom header med global sökning */}
         <header className="flex h-24 items-center justify-between bg-white/95 px-4 lg:px-6">
           <div className="max-w-5xl flex flex-row justify-between items-center mx-auto w-full">
