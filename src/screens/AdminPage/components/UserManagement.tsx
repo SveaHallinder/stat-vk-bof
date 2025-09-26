@@ -57,7 +57,7 @@ export const UserManagement = (): JSX.Element => {
       email: "lars.nilsson@vallentuna.se",
       phone: "08-587 851 67",
       role: "Supervisor",
-      department: "Förebyggande",
+      department: "Förebyggande arbete",
       status: "Inaktiv",
       lastLogin: "2025-03-20 16:20",
       created: "2023-11-05",

@@ -67,11 +67,16 @@ export function validateUserRegistration(req: Request, res: Response, next: Next
 
 // Middleware för att validera kunddata
 export function validateCustomerData(req: Request, res: Response, next: NextFunction) {
-  const { initials, gender, birthYear, startDate } = req.body;
+  const { initials, gender, birthYear, startDate, isGroup } = req.body;
 
-  if (!initials || !gender || !birthYear) {
-    return res.status(400).json({ error: 'Initialer, kön och födelseår krävs' });
+  if (!initials) {
+    return res.status(400).json({ error: 'Initialer krävs' });
   }
+
+  const normalizedIsGroup = typeof isGroup === 'string'
+    ? isGroup.toLowerCase() === 'true'
+    : Boolean(isGroup);
+  req.body.isGroup = normalizedIsGroup;
 
   // Konvertera initialer till versaler automatiskt
   req.body.initials = initials.toString().toUpperCase();
@@ -81,13 +86,30 @@ export function validateCustomerData(req: Request, res: Response, next: NextFunc
     return res.status(400).json({ error: 'Initialer måste vara 1-3 bokstäver (A-Z, Å, Ä, Ö)' });
   }
 
-  if (!['Flicka', 'Pojke', 'Icke-binär'].includes(gender)) {
-    return res.status(400).json({ error: 'Kön måste vara Flicka, Pojke eller Icke-binär' });
-  }
+  if (normalizedIsGroup) {
+    req.body.gender = null;
+    req.body.birthYear = null;
+  } else {
+    if (!gender || !birthYear) {
+      return res.status(400).json({ error: 'Initialer, kön och födelseår krävs' });
+    }
 
-  const currentYear = new Date().getFullYear();
-  if (birthYear < 1900 || birthYear > currentYear) {
-    return res.status(400).json({ error: 'Ogiltigt födelseår' });
+    if (!['Flicka', 'Pojke', 'Icke-binär'].includes(gender)) {
+      return res.status(400).json({ error: 'Kön måste vara Flicka, Pojke eller Icke-binär' });
+    }
+
+    const numericBirthYear = Number(birthYear);
+    if (!Number.isInteger(numericBirthYear)) {
+      return res.status(400).json({ error: 'Födelseår måste vara ett heltal' });
+    }
+
+    const currentYear = new Date().getFullYear();
+    if (numericBirthYear < 1900 || numericBirthYear > currentYear) {
+      return res.status(400).json({ error: 'Ogiltigt födelseår' });
+    }
+
+    req.body.gender = gender;
+    req.body.birthYear = numericBirthYear;
   }
 
   if (startDate && !validateDate(startDate)) {
@@ -102,11 +124,11 @@ export function validateShiftData(req: Request, res: Response, next: NextFunctio
   const { case_id, date, hours, status } = req.body;
 
   if (!case_id || !date || !hours || !status) {
-    return res.status(400).json({ error: 'Ärende-ID, datum, timmar och status krävs' });
+    return res.status(400).json({ error: 'Insats-ID, datum, timmar och status krävs' });
   }
 
   if (!validateId(case_id)) {
-    return res.status(400).json({ error: 'Ogiltigt ärende-ID' });
+    return res.status(400).json({ error: 'Ogiltigt insats-ID' });
   }
 
   if (!validateDate(date)) {
@@ -124,7 +146,7 @@ export function validateShiftData(req: Request, res: Response, next: NextFunctio
   next();
 }
 
-// Middleware för att validera ärendedata
+// Middleware för att validera insatsdata
 export function validateCaseData(req: Request, res: Response, next: NextFunction) {
   const { customer_id, effort_id, handler1_id, handler2_id } = req.body;
 

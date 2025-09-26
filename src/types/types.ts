@@ -1,12 +1,15 @@
 export interface Customer {
   id: number;
   initials: string;
-  gender: string;
-  birth_year: number;
+  gender: string | null;
+  birth_year: number | null;
+  birthYear?: number | null;
   created_at: string;
   active: boolean;
   is_protected?: boolean;
   can_view?: boolean;
+  is_group?: boolean;
+  isGroup?: boolean;
 }
 
 export interface Effort {

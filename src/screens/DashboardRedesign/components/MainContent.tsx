@@ -14,12 +14,14 @@ import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import toast from 'react-hot-toast';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 export const MainContent = (): JSX.Element => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { refreshKey, triggerRefresh } = useRefresh();
   // Dynamisk statistik
-  const [stats, setStats] = useState<{ antal_besok: number; antal_kunder: number; genomsnittlig_tid: number; avbokningsgrad: number } | null>(null);
+  const [stats, setStats] = useState<{ antal_besok: number; antal_kunder: number; totala_timmar: number; avbokningsgrad: number } | null>(null);
   const [effortData, setEffortData] = useState<any[] | null>(null);
   const [handlers, setHandlers] = useState<any[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -77,7 +79,7 @@ export const MainContent = (): JSX.Element => {
     // Ladda data med en liten fördröjning för att säkerställa att token är redo
     const timer = setTimeout(loadDashboardData, 100);
     return () => clearTimeout(timer);
-  }, [user, loadDashboardData]);
+  }, [user, loadDashboardData, refreshKey]);
 
   // Memoized stats cards
   const statsCards = useMemo(() => [
@@ -95,6 +97,11 @@ export const MainContent = (): JSX.Element => {
       title: "Månadens besök",
       value: stats ? stats.antal_besok : "-",
       note: "",
+    },
+    {
+      title: "Totala besökstimmar",
+      value: stats ? `${stats.totala_timmar.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} h` : "-",
+      note: "Utförda besök",
     },
   ], [stats, effortData]);
 
@@ -117,6 +124,7 @@ export const MainContent = (): JSX.Element => {
     initials: "",
     gender: "",
     birthYear: "",
+    isGroup: false,
   });
 
   const [errors, setErrors] = useState<{ initials?: string; gender?: string; birthYear?: string }>({});
@@ -125,28 +133,34 @@ export const MainContent = (): JSX.Element => {
   const validateCustomer = useCallback((c: typeof newCustomer) => {
     const err: { initials?: string; gender?: string; birthYear?: string } = {};
     if (!c.initials) err.initials = "Obligatoriskt fält";
-    if (!c.gender) err.gender = "Obligatoriskt fält";
-    if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
-    else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
+    if (!c.isGroup) {
+      if (!c.gender) err.gender = "Obligatoriskt fält";
+      if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
+      else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
+    }
     return err;
   }, []);
 
   const handleCustomerChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    let value = e.target.value;
-    
-    // Konvertera initialer till versaler automatiskt
-    if (e.target.name === 'initials') {
+    const target = e.target;
+    const isCheckbox = target instanceof HTMLInputElement && target.type === 'checkbox';
+    let value: string | boolean = isCheckbox ? target.checked : target.value;
+
+    if (target.name === 'initials' && typeof value === 'string') {
       value = value.toUpperCase();
     }
-    
-    const updated = { ...newCustomer, [e.target.name]: value };
+
+    let updated = { ...newCustomer, [target.name]: value } as typeof newCustomer;
+    if (target.name === 'isGroup' && value === true) {
+      updated = { ...updated, gender: '', birthYear: '' };
+    }
     setNewCustomer(updated);
     setErrors(validateCustomer(updated));
   }, [newCustomer, validateCustomer]);
 
   const handleCustomerCancel = useCallback(() => {
     setOpenModal(null);
-    setNewCustomer({ initials: "", gender: "", birthYear: "" });
+    setNewCustomer({ initials: "", gender: "", birthYear: "", isGroup: false });
     setErrors({});
   }, []);
 
@@ -157,19 +171,21 @@ export const MainContent = (): JSX.Element => {
     try {
       await createCustomer({
         initials: newCustomer.initials,
-        gender: newCustomer.gender,
-        birthYear: Number(newCustomer.birthYear)
+        gender: newCustomer.isGroup ? undefined : newCustomer.gender,
+        birthYear: newCustomer.isGroup ? undefined : Number(newCustomer.birthYear),
+        isGroup: newCustomer.isGroup,
       });
       setOpenModal(null);
-      setNewCustomer({ initials: '', gender: '', birthYear: '' });
+      setNewCustomer({ initials: '', gender: '', birthYear: '', isGroup: false });
       toast.success('Kund registrerad!');
       setErrors({});
+      triggerRefresh();
     } catch (err) {
       toast.error('Kunde inte spara kund');
     }
-  }, [newCustomer, validateCustomer]);
+  }, [newCustomer, validateCustomer, triggerRefresh]);
 
-  // Form state för Registrera ärende
+  // Form state för Registrera insats
   const [newCase, setNewCase] = useState({
     customerId: "",
     effortId: "",
@@ -191,16 +207,16 @@ export const MainContent = (): JSX.Element => {
   }, []);
 
   useEffect(() => {
-    // Ladda aktiva ärenden när tid-modalen öppnas
+    // Ladda aktiva insatsn när tid-modalen öppnas
     if (openModal === "tid") {
       loadActiveCases();
     }
   }, [openModal, loadActiveCases]);
 
-  // Ladda aktiva ärenden för dashboard-kortet
+  // Ladda aktiva insatsn för dashboard-kortet
   useEffect(() => {
     loadActiveCases();
-  }, [loadActiveCases]);
+  }, [loadActiveCases, refreshKey]);
 
   function validateNewCase(c: typeof newCase) {
     const err: { customerId?: string; effortId?: string; handler1Id?: string } = {};
@@ -246,20 +262,21 @@ export const MainContent = (): JSX.Element => {
       
       setOpenModal(null);
       setNewCase({ customerId: "", effortId: "", handler1Id: "", handler2Id: "" });
-      toast.success('Ärende registrerat!');
+      toast.success('Insats registrerat!');
       setNewCaseErrors({});
+      triggerRefresh();
     } catch (err: any) {
       // Silent error handling
       
       if (err.error && err.error.includes('samma kombination finns redan')) {
         toast.error(err.error, { duration: 8000 }); // 8 sekunder
       } else if (err.message && err.message.includes('samma kombination finns redan')) {
-        toast.error('Ett aktivt ärende med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska ärenden.', { duration: 8000 }); // 8 sekunder
+        toast.error('Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsn.', { duration: 8000 }); // 8 sekunder
       } else {
-        toast.error('Kunde inte skapa ärende');
+        toast.error('Kunde inte skapa insats');
       }
     }
-  }, [newCase, validateNewCase]);
+  }, [newCase, validateNewCase, triggerRefresh]);
 
   // Form state för Registrera tid
   const [registerTime, setRegisterTime] = useState({
@@ -283,7 +300,7 @@ export const MainContent = (): JSX.Element => {
 
   function validateRegisterTime(rt: typeof registerTime) {
     const err: { customer?: string; date?: string; hours?: string } = {};
-    if (!rt.customer) err.customer = "Du måste välja ärende";
+    if (!rt.customer) err.customer = "Du måste välja insats";
     if (!rt.date) err.date = "Du måste ange datum";
     if (!rt.hours || isNaN(Number(rt.hours)) || Number(rt.hours) <= 0) err.hours = "Du måste ange antal timmar";
     return err;
@@ -313,7 +330,7 @@ export const MainContent = (): JSX.Element => {
       // Find the selected case to get its details
       const selectedCase = activeCases.find(c => c.id.toString() === registerTime.customer);
       if (!selectedCase) {
-        toast.error("Välj ett ärende");
+        toast.error("Välj ett insats");
         return;
       }
 
@@ -337,10 +354,11 @@ export const MainContent = (): JSX.Element => {
       });
       setOpenModal(null);
       toast.success("Tid registrerad!");
+      triggerRefresh();
     } catch (err) {
       toast.error("Kunde inte spara tid");
     }
-  }, [registerTime, activeCases]);
+  }, [registerTime, activeCases, triggerRefresh]);
 
   // Form state för Ta ut statistik
   const [statistik, setStatistik] = useState({
@@ -504,7 +522,7 @@ export const MainContent = (): JSX.Element => {
               onClick={() => setOpenModal("ny-insats")}
               data-tour="register-case-btn"
             >
-              + Registrera ärende
+              + Registrera insats
             </Button>
             <Button
               variant="outline"
@@ -563,34 +581,48 @@ export const MainContent = (): JSX.Element => {
               />
               {errors.initials && <span className="text-red-500 text-sm mt-1">{errors.initials}</span>}
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[#17694c] font-normal text-base">Kön</label>
-              <select
-                name="gender"
-                value={newCustomer.gender}
-                onChange={handleCustomerChange}
-                className={`border rounded-lg px-4 py-2 text-base bg-[#fafbfc] focus:outline-none focus:ring-2 ${errors.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
-              >
-                <option value="">Välj kön</option>
-                <option value="Flicka">Flicka</option>
-                <option value="Pojke">Pojke</option>
-                <option value="Icke-binär">Icke-binär</option>
-              </select>
-              {errors.gender && <span className="text-red-500 text-sm mt-1">{errors.gender}</span>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[#17694c] font-normal text-base">Födelseår</label>
+            <label className="inline-flex items-center gap-2 text-[#17694c] text-base">
               <input
-                type="text"
-                name="birthYear"
-                placeholder="ÅÅÅÅ"
-                value={newCustomer.birthYear}
+                type="checkbox"
+                name="isGroup"
+                checked={newCustomer.isGroup}
                 onChange={handleCustomerChange}
-                className={`border rounded-lg px-4 py-2 text-base bg-[#fafbfc] focus:outline-none focus:ring-2 ${errors.birthYear ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
-                maxLength={4}
+                className="rounded border-gray-300 text-[#17694c] focus:ring-[#17694c]"
               />
-              {errors.birthYear && <span className="text-red-500 text-sm mt-1">{errors.birthYear}</span>}
-            </div>
+              Registrera som grupp
+            </label>
+            {!newCustomer.isGroup && (
+              <>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[#17694c] font-normal text-base">Kön</label>
+                  <select
+                    name="gender"
+                    value={newCustomer.gender}
+                    onChange={handleCustomerChange}
+                    className={`border rounded-lg px-4 py-2 text-base bg-[#fafbfc] focus:outline-none focus:ring-2 ${errors.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                  >
+                    <option value="">Välj kön</option>
+                    <option value="Flicka">Flicka</option>
+                    <option value="Pojke">Pojke</option>
+                    <option value="Icke-binär">Icke-binär</option>
+                  </select>
+                  {errors.gender && <span className="text-red-500 text-sm mt-1">{errors.gender}</span>}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[#17694c] font-normal text-base">Födelseår</label>
+                  <input
+                    type="text"
+                    name="birthYear"
+                    placeholder="ÅÅÅÅ"
+                    value={newCustomer.birthYear}
+                    onChange={handleCustomerChange}
+                    className={`border rounded-lg px-4 py-2 text-base bg-[#fafbfc] focus:outline-none focus:ring-2 ${errors.birthYear ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                    maxLength={4}
+                  />
+                  {errors.birthYear && <span className="text-red-500 text-sm mt-1">{errors.birthYear}</span>}
+                </div>
+              </>
+            )}
             <div className="flex gap-4 justify-center mt-8">
               <button
                 type="button"
@@ -612,11 +644,11 @@ export const MainContent = (): JSX.Element => {
         </div>
       </Modal>
 
-      {/* Registrera ärende modal */}
+      {/* Registrera insats modal */}
       <Modal open={openModal === "ny-insats"} onClose={handleNewCaseCancel}>
         <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-0">
           <div className="bg-[#17694c] rounded-t-2xl px-8 pt-7 pb-5 flex items-center justify-between">
-            <h2 className="text-xl font-light text-white tracking-tight">Registrera ärende</h2>
+            <h2 className="text-xl font-light text-white tracking-tight">Registrera insats</h2>
             <button
               type="button"
               onClick={handleNewCaseCancel}
@@ -687,7 +719,7 @@ export const MainContent = (): JSX.Element => {
       <Modal open={openModal === "tid"} onClose={handleRegisterTimeCancel}>
         <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-0">
           <div className="bg-[#17694c] rounded-t-2xl px-8 pt-7 pb-5 flex items-center justify-between">
-            <h2 className="text-xl font-light text-white tracking-tight">Registrera tid på ärende</h2>
+            <h2 className="text-xl font-light text-white tracking-tight">Registrera tid på insats</h2>
             <button
               type="button"
               onClick={handleRegisterTimeCancel}
@@ -699,13 +731,13 @@ export const MainContent = (): JSX.Element => {
           </div>
           <form className="pt-8 pb-10 px-8 flex flex-col gap-7" style={{borderRadius: '0 0 1rem 1rem'}}>
             <div className="flex flex-col gap-2">
-              <label className="text-[#17694c] font-normal text-base">Välj ärende *</label>
+              <label className="text-[#17694c] font-normal text-base">Välj insats *</label>
               <Select value={registerTime.customer} onValueChange={value => {
                 setRegisterTime(rt => ({ ...rt, customer: value }));
                 setRegisterTimeErrors(prev => ({ ...prev, customer: undefined }));
               }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj ärende" />
+                  <SelectValue placeholder="Välj insats" />
                 </SelectTrigger>
                 <SelectContent>
                   {activeCases.map((caseItem) => (
@@ -792,7 +824,10 @@ export const MainContent = (): JSX.Element => {
                 <MultiSelectCombobox
                   options={[
                     { value: "Biståndsbedömda", label: "Biståndsbedömda" },
-                    { value: "Förebyggande", label: "Förebyggande" }
+                    { value: "Förebyggande arbete", label: "Förebyggande arbete" },
+                    { value: "Biståndsbedömda, Förebyggande arbete", label: "Biståndsbedömda, Förebyggande arbete" },
+                    { value: "IUB", label: "IUB" },
+                    { value: "Biståndsbedömda, IUB", label: "Biståndsbedömda, IUB" }
                   ]}
                   value={statistik.effortCategory}
                   onChange={(values) => setStatistik({ ...statistik, effortCategory: values })}

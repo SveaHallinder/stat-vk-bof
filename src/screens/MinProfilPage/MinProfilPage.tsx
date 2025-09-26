@@ -4,33 +4,40 @@ import { getCustomers, getCases } from '../../lib/api';
 import { Layout } from '../../components/Layout';
 import { LogOut } from 'lucide-react';
 import { Customer, CaseWithNames } from '../../types/types';
+import { useRefresh } from '../../contexts/RefreshContext';
 
 // Optimized customer row component with React.memo
 const CustomerRow = React.memo<{
   customer: Customer;
   onViewProfile: (customerId: number) => void;
-}>(({ customer, onViewProfile }) => (
-  <tr className="hover:bg-gray-50 cursor-pointer">
-    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{customer.id}</td>
-    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{customer.initials}</td>
-    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.birth_year}</td>
-    <td className="px-6 py-4 whitespace-nowrap">
-      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-        customer.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-      }`}>
-        {customer.active ? 'Aktiv' : 'Inaktiv'}
-      </span>
-    </td>
-    <td className="px-6 py-4 whitespace-nowrap">
-      <button 
-        onClick={() => onViewProfile(customer.id)}
-        className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
-      >
-        Visa profil →
-      </button>
-    </td>
-  </tr>
-));
+}>(({ customer, onViewProfile }) => {
+  const isGroup = Boolean(customer.is_group || customer.isGroup);
+  return (
+    <tr className="hover:bg-gray-50 cursor-pointer">
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{customer.id}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center gap-2">
+        <span>{customer.initials}</span>
+        {isGroup && <span className="inline-block px-2 py-0.5 text-[10px] rounded-full bg-blue-100 text-blue-700 uppercase">Grupp</span>}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{isGroup ? '—' : (customer.birth_year ?? '—')}</td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+          customer.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+        }`}>
+          {customer.active ? 'Aktiv' : 'Inaktiv'}
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <button 
+          onClick={() => onViewProfile(customer.id)}
+          className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+        >
+          Visa profil →
+        </button>
+      </td>
+    </tr>
+  );
+});
 
 // Optimized profile info component with React.memo
 const ProfileInfo = React.memo<{
@@ -115,6 +122,7 @@ const CustomersTable = React.memo<{
 
 const MinProfilPage: React.FC = () => {
   const { user, logout } = useAuth();
+  const { refreshKey } = useRefresh();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cases, setCases] = useState<CaseWithNames[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,26 +154,26 @@ const MinProfilPage: React.FC = () => {
     if (user) {
       fetchUserData();
     }
-  }, [user]);
+  }, [user, refreshKey]);
 
   const fetchUserData = async () => {
     try {
-      // Hämta användarens kunder och ärenden
+      // Hämta användarens kunder och insatsn
       const [customersRes, casesRes] = await Promise.all([
         getCustomers(),
         getCases()
       ]);
       
-      // Filtrera kunder baserat på användarens ärenden
+      // Filtrera kunder baserat på användarens insatsn
       const userCases = casesRes.filter(c => 
         c.handler1_id === user?.id || c.handler2_id === user?.id
       );
       
-      // Hämta kunder för användarens ärenden
+      // Hämta kunder för användarens insatsn
       const userCustomerIds = [...new Set(userCases.map(c => c.customer_id))];
       const userCustomers = customersRes.filter(c => userCustomerIds.includes(c.id));
       
-      // Filtrera ärenden för den inloggade användaren
+      // Filtrera insatsn för den inloggade användaren
       const userCasesFiltered = casesRes.filter(c => 
         c.handler1_id === user?.id || c.handler2_id === user?.id
       );

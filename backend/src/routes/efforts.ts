@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import { sanitizeTextInputs } from "../middleware/validation";
+import { normalizeAvailableFor } from "../utils/efforts";
 
 export default function efforts(pool: Pool) {
   const router = Router();
@@ -16,9 +17,10 @@ export default function efforts(pool: Pool) {
       return res.status(400).json({ error: "Alla fält krävs" });
     }
     try {
+      const normalized = normalizeAvailableFor(name, available_for);
       const result = await pool.query(
         "INSERT INTO efforts (name, available_for) VALUES ($1, $2) RETURNING *",
-        [name, available_for]
+        [name, normalized]
       );
       res.status(201).json(result.rows[0]);
     } catch {
@@ -35,7 +37,14 @@ export default function efforts(pool: Pool) {
       } else {
         result = await pool.query("SELECT * FROM efforts WHERE active = TRUE ORDER BY id ASC");
       }
-      res.json(result.rows);
+      const rows = result.rows.map(row => {
+        const normalized = normalizeAvailableFor(row.name, row.available_for);
+        if (normalized !== row.available_for) {
+          row.available_for = normalized;
+        }
+        return row;
+      });
+      res.json(rows);
     } catch {
       res.status(500).json({ error: "Kunde inte hämta insatser" });
     }
@@ -74,9 +83,10 @@ export default function efforts(pool: Pool) {
       return res.status(400).json({ error: "Alla fält krävs" });
     }
     try {
+      const normalized = normalizeAvailableFor(name, available_for);
       const result = await pool.query(
         "UPDATE efforts SET name = $1, available_for = $2 WHERE id = $3 RETURNING *",
-        [name, available_for, id]
+        [name, normalized, id]
       );
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Insats hittades inte" });

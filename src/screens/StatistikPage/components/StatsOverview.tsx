@@ -19,7 +19,7 @@ export const StatsOverview = ({  }: StatsOverviewProps): JSX.Element => {
       description: "Jämfört med föregående period",
     },
     {
-      title: "Aktiva ärenden",
+      title: "Aktiva insatsn",
       value: "89",
       change: "+5%",
       changeType: "positive",
@@ -35,7 +35,7 @@ export const StatsOverview = ({  }: StatsOverviewProps): JSX.Element => {
       description: "Förbättring från förra månaden",
     },
     {
-      title: "Avslutade ärenden",
+      title: "Avslutade insatsn",
       value: "156",
       change: "+8%",
       changeType: "positive",
@@ -43,7 +43,7 @@ export const StatsOverview = ({  }: StatsOverviewProps): JSX.Element => {
       description: "Under vald period",
     },
     {
-      title: "Försenade ärenden",
+      title: "Försenade insatsn",
       value: "12",
       change: "-4",
       changeType: "positive",

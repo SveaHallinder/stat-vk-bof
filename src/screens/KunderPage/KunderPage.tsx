@@ -8,6 +8,7 @@ import { createCustomer, getCustomers, softDeleteCustomer, reactivateCustomer, p
 import toast from "react-hot-toast";
 import { Customer } from "@/types/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 
 type NewCustomer = {
@@ -16,6 +17,7 @@ type NewCustomer = {
   birth_year: number;
   active: boolean;
   startDate: string;
+  is_group: boolean;
 };
 
 export const KunderPage = (): JSX.Element => {
@@ -32,6 +34,7 @@ export const KunderPage = (): JSX.Element => {
   const [reactivating, setReactivating] = useState(false);
   const [protecting, setProtecting] = useState<number | null>(null);
   const { user } = useAuth();
+  const { refreshKey, triggerRefresh } = useRefresh();
 
   const handleRowClick = (customer: Customer) => {
     if (customer.is_protected && customer.can_view === false) {
@@ -50,6 +53,7 @@ export const KunderPage = (): JSX.Element => {
       setCustomers(updated);
       setDeleteId(null);
       toast.success("Kund avaktiverad!");
+      triggerRefresh();
     } catch (err: any) {
       toast.error(err?.message || "Kunde inte avaktivera kund");
     } finally {
@@ -64,6 +68,7 @@ export const KunderPage = (): JSX.Element => {
       const updated = await getCustomers(includeInactive);
       setCustomers(updated);
       toast.success("Kund återaktiverad!");
+      triggerRefresh();
     } catch (err: any) {
       toast.error(err?.message || "Kunde inte återaktivera kund");
     } finally {
@@ -84,6 +89,7 @@ export const KunderPage = (): JSX.Element => {
       }
       const updated = await getCustomers(includeInactive);
       setCustomers(updated);
+      triggerRefresh();
     } catch (e: any) {
       toast.error(e?.message || 'Kunde inte ändra skyddsstatus');
     } finally {
@@ -99,21 +105,37 @@ export const KunderPage = (): JSX.Element => {
   const handleAddCustomer = () => {
     setNewCustomers(prev => [
       ...prev,
-      { initials: "", gender: "Flicka", birth_year: 0, active: true, startDate: getToday() },
+      { initials: "", gender: "Flicka", birth_year: 0, active: true, startDate: getToday(), is_group: false },
     ]);
   };
 
-  const handleChangeNewCustomer = (idx: number, field: keyof NewCustomer, value: string | number) => {
+  const handleChangeNewCustomer = (idx: number, field: keyof NewCustomer, value: string | number | boolean) => {
     // Konvertera initialer till versaler automatiskt
     if (field === 'initials' && typeof value === 'string') {
       value = value.toUpperCase();
     }
     
-    setNewCustomers(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c));
+    setNewCustomers(prev => prev.map((c, i) => {
+      if (i !== idx) return c;
+      if (field === 'is_group') {
+        const checked = value === true;
+        return {
+          ...c,
+          is_group: checked,
+          gender: checked ? '' : c.gender,
+          birth_year: checked ? 0 : c.birth_year,
+        };
+      }
+      return { ...c, [field]: value } as NewCustomer;
+    }));
     // Validera direkt när man skriver
     setErrors(prev => {
       const updated = { ...prev };
-      const updatedCustomer = { ...newCustomers[idx], [field]: value };
+      const updatedCustomer = { ...newCustomers[idx], [field]: value } as NewCustomer;
+      if (field === 'is_group' && value === true) {
+        updatedCustomer.gender = '';
+        updatedCustomer.birth_year = 0;
+      }
       updated[idx] = validateCustomer(updatedCustomer);
       return updated;
     });
@@ -126,9 +148,11 @@ export const KunderPage = (): JSX.Element => {
   const validateCustomer = (c: NewCustomer) => {
     const err: { initials?: string; gender?: string; birth_year?: string } = {};
     if (!c.initials) err.initials = "Obligatoriskt fält";
-    if (!c.gender) err.gender = "Obligatoriskt fält";
-    if (!c.birth_year) err.birth_year = "Obligatoriskt fält";
-    else if (!/^\d{4}$/.test(c.birth_year.toString())) err.birth_year = "Födelseår måste vara 4 siffror";
+    if (!c.is_group) {
+      if (!c.gender) err.gender = "Obligatoriskt fält";
+      if (!c.birth_year) err.birth_year = "Obligatoriskt fält";
+      else if (!/^\d{4}$/.test(c.birth_year.toString())) err.birth_year = "Födelseår måste vara 4 siffror";
+    }
     return err;
   };
 
@@ -151,9 +175,10 @@ export const KunderPage = (): JSX.Element => {
         newCustomers.map(c =>
           createCustomer({
             initials: c.initials,
-            gender: c.gender,
-            birthYear: c.birth_year,
-            startDate: c.startDate
+            gender: c.is_group ? undefined : c.gender,
+            birthYear: c.is_group ? undefined : c.birth_year,
+            startDate: c.startDate,
+            isGroup: c.is_group
           })
         )
       );
@@ -162,6 +187,7 @@ export const KunderPage = (): JSX.Element => {
       setNewCustomers([]);
       setErrors({});
       toast.success("Kund/kunder sparade!");
+      triggerRefresh();
     } catch (err) {
       toast.error("Kunde inte spara kund/kunder");
     } finally {
@@ -173,7 +199,7 @@ export const KunderPage = (): JSX.Element => {
     getCustomers(includeInactive)
       .then(setCustomers)
       .catch(() => toast.error("Kunde inte hämta kunder"));
-  }, [includeInactive]);
+  }, [includeInactive, refreshKey]);
 
   // Sortera kunder
   const sortedCustomers = [...customers].sort((a, b) => {
@@ -235,8 +261,8 @@ export const KunderPage = (): JSX.Element => {
                 <tr className="border-b border-gray-200">
                   {[
                     { label: "Kund-ID", field: "id" },
-                    { label: "Initialer", field: "initials" },
-                    { label: "Kön", field: "gender" },
+                  { label: "Initialer", field: "initials" },
+                  { label: "Kön", field: "gender" },
                   { label: "Födelseår", field: "birth_year" },
                     { label: "Status", field: "status" },
                     { label: "Startdatum", field: "created_at" },
@@ -281,27 +307,49 @@ export const KunderPage = (): JSX.Element => {
                       {errors[idx]?.initials && <span className="text-red-500 text-xs mt-1 block">{errors[idx].initials}</span>}
                     </td>
                     <td className="px-3 mobile:px-6 py-3 text-center">
-                      <select
-                        className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
-                        value={c.gender}
-                        onChange={e => handleChangeNewCustomer(idx, "gender", e.target.value)}
-                      >
-                        <option value="">Välj kön</option>
-                        <option value="Flicka">Flicka</option>
-                        <option value="Pojke">Pojke</option>
-                        <option value="Icke-binär">Icke-binär</option>
-                      </select>
-                      {errors[idx]?.gender && <span className="text-red-500 text-xs mt-1 block">{errors[idx].gender}</span>}
+                      <label className="inline-flex items-center justify-center gap-2 text-xs mobile:text-sm">
+                        <input
+                          type="checkbox"
+                          checked={c.is_group}
+                          onChange={e => handleChangeNewCustomer(idx, "is_group", e.target.checked)}
+                        />
+                        Grupp
+                      </label>
                     </td>
                     <td className="px-3 mobile:px-6 py-3 text-center">
-                      <input
-                        type="text"
-                        placeholder="Födelseår"
-                        className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.birth_year ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
-                        value={c.birth_year}
-                        onChange={e => handleChangeNewCustomer(idx, "birth_year", parseInt(e.target.value) || 0)}
-                      />
-                      {errors[idx]?.birth_year && <span className="text-red-500 text-xs mt-1 block">{errors[idx].birth_year}</span>}
+                      {!c.is_group ? (
+                        <>
+                          <select
+                            className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                            value={c.gender}
+                            onChange={e => handleChangeNewCustomer(idx, "gender", e.target.value)}
+                          >
+                            <option value="">Välj kön</option>
+                            <option value="Flicka">Flicka</option>
+                            <option value="Pojke">Pojke</option>
+                            <option value="Icke-binär">Icke-binär</option>
+                          </select>
+                          {errors[idx]?.gender && <span className="text-red-500 text-xs mt-1 block">{errors[idx].gender}</span>}
+                        </>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 mobile:px-6 py-3 text-center">
+                      {!c.is_group ? (
+                        <>
+                          <input
+                            type="text"
+                            placeholder="Födelseår"
+                            className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.birth_year ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                            value={c.birth_year || ''}
+                            onChange={e => handleChangeNewCustomer(idx, "birth_year", parseInt(e.target.value) || 0)}
+                          />
+                          {errors[idx]?.birth_year && <span className="text-red-500 text-xs mt-1 block">{errors[idx].birth_year}</span>}
+                        </>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-3 mobile:px-6 py-3 text-center">
                       <span className="inline-block px-2 mobile:px-3 py-1 text-xs rounded-full font-semibold bg-green-100 text-green-800">
@@ -330,9 +378,16 @@ export const KunderPage = (): JSX.Element => {
                     onClick={() => handleRowClick(customer)}
                   >
                     <td className="px-3 mobile:px-6 py-3 mobile:py-4 font-medium text-center text-xs mobile:text-sm">{customer.id}</td>
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.active ? customer.initials : '—'}</td>
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.gender}</td>
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.birth_year}</td>
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{customer.active ? customer.initials : '—'}</span>
+                        {customer.is_group && (
+                          <span className="inline-block px-2 py-0.5 text-[10px] rounded-full bg-blue-100 text-blue-700 uppercase tracking-wide">Grupp</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.is_group ? '—' : customer.gender}</td>
+                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.is_group ? '—' : (customer.birth_year ?? '—')}</td>
                     <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center">
                       <span className={`inline-block px-2 mobile:px-3 py-1 text-xs rounded-full font-semibold ${
                         customer.active

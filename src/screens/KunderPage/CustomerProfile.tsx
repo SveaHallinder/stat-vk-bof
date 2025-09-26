@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit, Loader2, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
-import { getCustomer, updateCustomer, getCustomerEfforts, getShiftsForCase, updateCase, updateShift, addShift, getEfforts, getPublicHandlers, createCase } from "@/lib/api";
+import { getCustomer, updateCustomer, getCustomerEfforts, getShiftsForCase, updateCase, updateShift, addShift, getEfforts, getPublicHandlers, createCase, getCustomerTotalHours } from "@/lib/api";
 import { api } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRefresh } from "@/contexts/RefreshContext";
 import type { CaseWithNames, ShiftEntry, ShiftStatus, Effort } from "@/types/types";
 import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
 import toast from "react-hot-toast";
@@ -51,8 +52,10 @@ export const CustomerProfile = () => {
   const [handlers, setHandlers] = useState<any[]>([]);
   const [pii, setPii] = useState<{ initials: string; gender: string } | null>(null);
   const { user } = useAuth();
+  const { refreshKey, triggerRefresh } = useRefresh();
+  const [totalHours, setTotalHours] = useState<number | null>(null);
   
-  // Toggle för att visa/dölja avslutade ärenden
+  // Toggle för att visa/dölja avslutade insatsn
   const [showClosedCases, setShowClosedCases] = useState(false);
 
 
@@ -67,7 +70,7 @@ export const CustomerProfile = () => {
         .catch(() => setCases([]))
         .finally(() => setLoadingCases(false));
       
-      // Ladda efforts och handlers för tidsregistrering och nya ärenden
+      // Ladda efforts och handlers för tidsregistrering och nya insatser
       Promise.all([getEfforts(), getPublicHandlers()])
         .then(([effortsData, handlersData]) => {
           setEfforts(effortsData);
@@ -77,8 +80,12 @@ export const CustomerProfile = () => {
           console.error('CustomerProfile: Error loading efforts/handlers:', error);
           // Ignorera fel för dessa
         });
+
+      getCustomerTotalHours(Number(id))
+        .then(hours => setTotalHours(hours))
+        .catch(() => setTotalHours(null));
     }
-  }, [id]);
+  }, [id, refreshKey]);
 
   // Öppna rätt insats automatiskt om state.openEffort finns
   useEffect(() => {
@@ -92,7 +99,7 @@ export const CustomerProfile = () => {
     }
   }, [cases, location.state]);
 
-  // Öppna rätt ärende automatiskt om caseId finns i URL
+  // Öppna rätt insats automatiskt om caseId finns i URL
   useEffect(() => {
     if (!cases || !Array.isArray(cases)) return;
     
@@ -103,7 +110,7 @@ export const CustomerProfile = () => {
       const targetCase = cases.find(c => c.id.toString() === caseId);
       if (targetCase) {
         handleToggleCase(targetCase);
-        // Scrolla till ärendet
+        // Scrolla till insatst
         setTimeout(() => {
           const element = document.getElementById(`case-${targetCase.id}`);
           if (element) {
@@ -118,26 +125,36 @@ export const CustomerProfile = () => {
     return <div className="p-8 text-center text-gray-500">Laddar kunddata...</div>;
   }
 
+  const isGroup = Boolean(customer.isGroup ?? customer.is_group);
   const displayInitials = customer?.active ? customer.initials : '—';
-  const customerTitle = `${displayInitials} - ${customer.gender} (${customer.birthYear})`;
-  const effectiveTitle = pii ? `${pii.initials} - ${pii.gender ?? customer.gender} (${customer.birthYear})` : customerTitle;
+  const baseTitle = isGroup
+    ? `${displayInitials} – Grupp`
+    : `${displayInitials} - ${customer.gender ?? '—'} (${customer.birthYear ?? '—'})`;
+  const piiTitle = pii
+    ? (isGroup ? `${pii.initials} – Grupp` : `${pii.initials} - ${pii.gender ?? customer.gender ?? '—'} (${customer.birthYear ?? '—'})`)
+    : null;
+  const customerTitle = baseTitle;
+  const effectiveTitle = piiTitle ?? customerTitle;
 
   function validateEditCustomer(c: any) {
     const err: { initials?: string; birthYear?: string; gender?: string } = {};
     if (!c.initials) err.initials = "Obligatoriskt fält";
-    if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
-    else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
-    if (!c.gender) err.gender = "Obligatoriskt fält";
+    if (!c.isGroup) {
+      if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
+      else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
+      if (!c.gender) err.gender = "Obligatoriskt fält";
+    }
     return err;
   }
 
   const handleOpenEdit = () => {
     setEditCustomer({
       initials: customer.initials || "",
-      birthYear: customer.birthYear || "",
-      gender: customer.gender || "Flicka",
+      birthYear: customer.birthYear ? String(customer.birthYear) : "",
+      gender: isGroup ? '' : (customer.gender || "Flicka"),
       startDate: customer.created_at ? customer.created_at.slice(0, 10) : "",
-      active: typeof customer.active === "boolean" ? customer.active : true
+      active: typeof customer.active === "boolean" ? customer.active : true,
+      isGroup,
     });
     setEditCustomerErrors({});
     setEditOpen(true);
@@ -148,6 +165,14 @@ export const CustomerProfile = () => {
       let updated;
       if (field === 'active') {
         updated = { ...prev, active: value === 'Aktiv' || value === true };
+      } else if (field === 'isGroup') {
+        const isChecked = value === true || value === 'true';
+        updated = {
+          ...prev,
+          isGroup: isChecked,
+          gender: isChecked ? '' : prev.gender,
+          birthYear: isChecked ? '' : prev.birthYear,
+        };
       } else if (field === 'initials' && typeof value === 'string') {
         // Konvertera initialer till versaler automatiskt
         updated = { ...prev, [field]: value.toUpperCase() };
@@ -168,15 +193,17 @@ export const CustomerProfile = () => {
     try {
       await updateCustomer(id, {
         initials: editCustomer.initials,
-        gender: editCustomer.gender,
-        birthYear: Number(editCustomer.birthYear),
+        gender: editCustomer.isGroup ? undefined : editCustomer.gender,
+        birthYear: editCustomer.isGroup ? undefined : Number(editCustomer.birthYear),
         active: editCustomer.active,
-        startDate: editCustomer.startDate
+        startDate: editCustomer.startDate,
+        isGroup: editCustomer.isGroup
       });
       const updated = await getCustomer(id);
       setCustomer(updated);
       setEditOpen(false);
       toast.success("Kund uppdaterad!");
+      triggerRefresh();
     } catch (error) {
       toast.error("Kunde inte spara ändringar");
     } finally {
@@ -205,9 +232,10 @@ export const CustomerProfile = () => {
       });
       setCases(prev => prev.map(x => x.id === updated.id ? updated : x));
       setEditingCase(null);
-      toast.success("Ärende uppdaterat!");
+      toast.success("Insats uppdaterat!");
+      triggerRefresh();
     } catch (e) {
-      toast.error("Kunde inte uppdatera ärende");
+      toast.error("Kunde inte uppdatera insats");
     }
   }
 
@@ -282,6 +310,7 @@ export const CustomerProfile = () => {
       
       setEditingShift(null);
       toast.success("Uppdaterat!");
+      triggerRefresh();
     } catch {
       toast.error("Kunde inte spara ändringar");
     } finally {
@@ -324,6 +353,7 @@ export const CustomerProfile = () => {
       setShowTimeRegistration(false);
       setSelectedCaseForTime(null);
       toast.success("Tid registrerad!");
+      triggerRefresh();
     } catch (error) {
       toast.error("Kunde inte registrera tid");
     } finally {
@@ -356,19 +386,20 @@ export const CustomerProfile = () => {
       // Uppdatera lokalt state
       setCases(prev => [...prev, newCaseData]);
       setShowNewCase(false);
-      toast.success("Nytt ärende skapat!");
+      toast.success("Nytt insats skapat!");
+      triggerRefresh();
     } catch (error: any) {
       if (error.message && error.message.includes('samma kombination finns redan')) {
-        toast.error('Ett aktivt ärende med samma kombination finns redan för denna kund.');
+        toast.error('Ett aktivt insats med samma kombination finns redan för denna kund.');
       } else {
-        toast.error("Kunde inte skapa ärende");
+        toast.error("Kunde inte skapa insats");
       }
     } finally {
       setSavingCase(false);
     }
   };
 
-  // Återuppta avslutat ärende
+  // Återuppta avslutat insats
   const reactivateCase = async (caseItem: CaseWithNames) => {
     try {
       const updated = await updateCase(String(caseItem.id), {
@@ -384,9 +415,10 @@ export const CustomerProfile = () => {
         ...x,  // Behåll alla ursprungliga fält inklusive namn
         active: true  // Uppdatera bara active-status
       } : x));
-      toast.success("Ärende återupptaget!");
+      toast.success("Insats återupptaget!");
+      triggerRefresh();
     } catch (error) {
-      toast.error("Kunde inte återuppta ärende");
+      toast.error("Kunde inte återuppta insats");
     }
   };
 
@@ -457,16 +489,24 @@ export const CustomerProfile = () => {
                 <span className="font-medium text-gray-800">{customer.initials}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-gray-500">Typ</span>
+                <span className="font-medium text-gray-800">{isGroup ? 'Grupp' : 'Individ'}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-gray-500">Födelseår</span>
-                <span className="font-medium text-gray-800">{customer.birthYear}</span>
+                <span className="font-medium text-gray-800">{isGroup ? '—' : (customer.birthYear ?? '—')}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Kön</span>
-                <span className="font-medium text-gray-800">{customer.gender}</span>
+                <span className="font-medium text-gray-800">{isGroup ? '—' : (customer.gender ?? '—')}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Startdatum</span>
                 <span className="font-medium text-gray-800">{customer.created_at?.slice(0, 10)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Totala besökstimmar</span>
+                <span className="font-medium text-gray-800">{totalHours != null ? `${totalHours.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} h` : '—'}</span>
               </div>
             </CardContent>
           </Card>
@@ -483,12 +523,12 @@ export const CustomerProfile = () => {
                   onClick={openNewCase}
                   className="bg-green-50 hover:bg-green-100 text-green-700 border-green-300"
                 >
-                  + Skapa nytt ärende
+                  + Lägg till insats på kund
                 </Button>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Toggle för att visa/dölja avslutade ärenden */}
+              {/* Toggle för att visa/dölja avslutade insatsn */}
 
               {cases.some(c => !c.active) && (
                 <div className="flex justify-end mb-4">
@@ -498,7 +538,7 @@ export const CustomerProfile = () => {
                     onClick={() => setShowClosedCases(!showClosedCases)}
                     className="text-gray-600 hover:text-gray-800"
                   >
-                    {showClosedCases ? "Dölj avslutade ärenden" : "Visa avslutade ärenden"}
+                    {showClosedCases ? "Dölj avslutade insatsn" : "Visa avslutade insatsn"}
                   </Button>
                 </div>
               )}
@@ -525,7 +565,7 @@ export const CustomerProfile = () => {
                               openEditCase(caseItem);
                             }}
                           >
-                            Redigera ärende
+                            Redigera insats
                           </Button>
                           <Button
                             variant="outline"
@@ -630,7 +670,7 @@ export const CustomerProfile = () => {
                       )}
                       
                       <div className="flex gap-2 justify-end mt-2">
-                        {/* Visa "Registrera tid" för aktiva ärenden */}
+                        {/* Visa "Registrera tid" för aktiva insatsn */}
                         {caseItem.active && (
                           <Button
                             variant="outline"
@@ -645,7 +685,7 @@ export const CustomerProfile = () => {
                           </Button>
                         )}
                         
-                        {/* Visa "Återuppta ärende" för avslutade ärenden */}
+                        {/* Visa "Återuppta insats" för avslutade insatsn */}
                         {!caseItem.active && (
                           <Button
                             variant="outline"
@@ -656,7 +696,7 @@ export const CustomerProfile = () => {
                               reactivateCase(caseItem);
                             }}
                           >
-                            Återuppta ärende
+                            Återuppta insats
                           </Button>
                         )}
                       </div>
@@ -684,26 +724,38 @@ export const CustomerProfile = () => {
                 placeholder="Initialer"
               />
               {editCustomerErrors.initials && <span className="text-red-500 text-xs mt-1">{editCustomerErrors.initials}</span>}
-              <label className="text-sm font-medium text-gray-700">Födelseår</label>
-              <input
-                type="text"
-                className={`border rounded px-3 py-2 ${editCustomerErrors.birthYear ? 'border-red-500' : ''}`}
-                value={editCustomer.birthYear}
-                onChange={e => handleEditCustomerChange('birthYear', e.target.value)}
-                placeholder="Födelseår"
-              />
-              {editCustomerErrors.birthYear && <span className="text-red-500 text-xs mt-1">{editCustomerErrors.birthYear}</span>}
-              <label className="text-sm font-medium text-gray-700">Kön</label>
-              <select
-                className={`border rounded px-3 py-2 ${editCustomerErrors.gender ? 'border-red-500' : ''}`}
-                value={editCustomer.gender}
-                onChange={e => handleEditCustomerChange('gender', e.target.value)}
-              >
-                <option value="Flicka">Flicka</option>
-                <option value="Pojke">Pojke</option>
-                <option value="Icke-binär">Icke-binär</option>
-              </select>
-              {editCustomerErrors.gender && <span className="text-red-500 text-xs mt-1">{editCustomerErrors.gender}</span>}
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={!!editCustomer.isGroup}
+                  onChange={e => handleEditCustomerChange('isGroup', e.target.checked)}
+                />
+                Markera som grupp
+              </label>
+              {!editCustomer.isGroup && (
+                <>
+                  <label className="text-sm font-medium text-gray-700">Födelseår</label>
+                  <input
+                    type="text"
+                    className={`border rounded px-3 py-2 ${editCustomerErrors.birthYear ? 'border-red-500' : ''}`}
+                    value={editCustomer.birthYear}
+                    onChange={e => handleEditCustomerChange('birthYear', e.target.value)}
+                    placeholder="Födelseår"
+                  />
+                  {editCustomerErrors.birthYear && <span className="text-red-500 text-xs mt-1">{editCustomerErrors.birthYear}</span>}
+                  <label className="text-sm font-medium text-gray-700">Kön</label>
+                  <select
+                    className={`border rounded px-3 py-2 ${editCustomerErrors.gender ? 'border-red-500' : ''}`}
+                    value={editCustomer.gender}
+                    onChange={e => handleEditCustomerChange('gender', e.target.value)}
+                  >
+                    <option value="Flicka">Flicka</option>
+                    <option value="Pojke">Pojke</option>
+                    <option value="Icke-binär">Icke-binär</option>
+                  </select>
+                  {editCustomerErrors.gender && <span className="text-red-500 text-xs mt-1">{editCustomerErrors.gender}</span>}
+                </>
+              )}
               <label className="text-sm font-medium text-gray-700">Startdatum</label>
               <input
                 type="date"
@@ -734,10 +786,10 @@ export const CustomerProfile = () => {
         </div>
       </Modal>
 
-      {/* Modal för Redigera ärende */}
+      {/* Modal för Redigera insats */}
       <Modal open={!!editingCase} onClose={() => setEditingCase(null)}>
         <div className="p-8 max-w-lg w-full" style={{ minWidth: 500 }}>
-          <h2 className="text-xl font-semibold mb-4">Redigera ärende</h2>
+          <h2 className="text-xl font-semibold mb-4">Redigera insats</h2>
           {editingCase && (
             <div className="flex flex-col gap-4">
               <label className="text-sm font-medium text-gray-700">Insats</label>
@@ -766,7 +818,7 @@ export const CustomerProfile = () => {
                   checked={editActive} 
                   onChange={e => setEditActive(e.target.checked)} 
                 />
-                Aktivt ärende
+                Aktivt insats
               </label>
             </div>
           )}
@@ -836,10 +888,10 @@ export const CustomerProfile = () => {
         </div>
       </Modal>
 
-      {/* Modal för Skapa nytt ärende */}
+      {/* Modal för Skapa nytt insats */}
       <Modal open={showNewCase} onClose={() => setShowNewCase(false)}>
         <div className="p-8 max-w-lg w-full" style={{ minWidth: 500 }}>
-          <h2 className="text-xl font-semibold mb-4">Skapa nytt ärende</h2>
+          <h2 className="text-xl font-semibold mb-4">Skapa nytt insats</h2>
           <div className="flex flex-col gap-4">
             <div className="bg-gray-50 p-3 rounded">
               <div className="text-sm text-gray-600">Kund: {customer.initials}</div>
@@ -896,7 +948,7 @@ export const CustomerProfile = () => {
               onClick={saveNewCase} 
               disabled={savingCase || !newCase.effortId || !newCase.handler1Id}
             >
-              {savingCase ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Skapar...</> : "Skapa ärende"}
+              {savingCase ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Skapar...</> : "Skapa insats"}
             </Button>
           </div>
         </div>

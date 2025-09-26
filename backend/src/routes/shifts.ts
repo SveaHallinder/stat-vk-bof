@@ -152,7 +152,7 @@ export default function shifts(pool: Pool) {
     try {
       let caseId: number = case_id;
       if (!caseId) {
-        // Om vi riskerar att skapa ett nytt ärende: stoppa om kunden är skyddad och användaren inte är admin
+        // Om vi riskerar att skapa ett nytt insats: stoppa om kunden är skyddad och användaren inte är admin
         try {
           let custRow: any;
           try {
@@ -164,7 +164,7 @@ export default function shifts(pool: Pool) {
             } else { throw err; }
           }
           if (custRow?.is_protected && String(req.user?.role).toLowerCase() !== 'admin') {
-            return res.status(403).json({ error: 'Endast admin kan skapa nya ärenden för skyddad kund' });
+            return res.status(403).json({ error: 'Endast admin kan skapa nya insatsn för skyddad kund' });
           }
         } catch {}
         const existing = await pool.query(

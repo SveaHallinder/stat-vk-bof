@@ -1,4 +1,11 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const fallbackApiUrl = (() => {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin.replace(/\/$/, '')}/api`;
+  }
+  return 'http://localhost:4000/api';
+})();
+
+export const API_URL = import.meta.env.VITE_API_URL || fallbackApiUrl;
 import { Customer, Handler, Effort, CaseWithNames, ShiftEntry } from "@/types/types";
 import { api } from "./apiClient";
 
@@ -8,7 +15,8 @@ export async function getCustomers(all = false): Promise<Customer[]> {
   const data = await res.json();
   return data.map((c: Customer) => ({
     ...c,
-    birthYear: c.birth_year,
+    birthYear: c.birth_year ?? null,
+    isGroup: c.is_group ?? false,
   }));
 }
 
@@ -38,7 +46,7 @@ export async function unprotectCustomer(id: number): Promise<{ id: number; is_pr
   return res.json();
 }
 
-export async function createCustomer(data: { initials: string; gender: string; birthYear: number; startDate?: string }): Promise<Customer> {
+export async function createCustomer(data: { initials: string; gender?: string; birthYear?: number; startDate?: string; isGroup?: boolean }): Promise<Customer> {
   const res = await api(`/customers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -80,17 +88,27 @@ export async function reactivateCustomer(id: string): Promise<Customer> {
   return res.json();
 }
 
-export async function getCustomer(id: string): Promise<Customer & { birthYear: number }> {
+export async function getCustomer(id: string): Promise<Customer & { birthYear: number | null; isGroup?: boolean }> {
   const res = await api(`/customers/${id}`);
   if (!res.ok) throw new Error("Kunde inte hämta kund");
   const c = await res.json();
   return {
     ...c,
-    birthYear: c.birth_year,
+    birthYear: c.birth_year ?? null,
+    isGroup: c.is_group ?? false,
   };
 }
 
-export async function updateCustomer(id: string, data: { initials: string; gender: string; birthYear: number; active: boolean; startDate: string }): Promise<Customer> {
+export async function getCustomerTotalHours(id: number): Promise<number> {
+  const res = await api(`/customers/${id}/time`);
+  if (!res.ok) {
+    throw new Error("Kunde inte hämta kundens tid");
+  }
+  const data = await res.json();
+  return Number(data?.totalHours ?? 0);
+}
+
+export async function updateCustomer(id: string, data: { initials: string; gender?: string; birthYear?: number; active: boolean; startDate: string; isGroup?: boolean }): Promise<Customer> {
   const res = await api(`/customers/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -99,7 +117,8 @@ export async function updateCustomer(id: string, data: { initials: string; gende
       gender: data.gender,
       birthYear: data.birthYear,
       active: data.active,
-      startDate: data.startDate
+      startDate: data.startDate,
+      isGroup: data.isGroup
     })
   });
   if (!res.ok) throw new Error("Kunde inte uppdatera kund");
@@ -124,32 +143,32 @@ export async function getCustomerEfforts(customerId: number) {
 export async function getCustomerCases(customerId: number) {
   const res = await api(`/cases?customer_id=${customerId}`);
   if (!res.ok) {
-    throw new Error(`Kunde inte hämta ärenden för kund ${customerId}`);
+    throw new Error(`Kunde inte hämta insatsn för kund ${customerId}`);
   }
   return res.json();
 }
 
 export async function getCasesForCustomerEffort(customerId: string, effortId: string): Promise<CaseWithNames[]> {
   const res = await api(`/cases?customer_id=${customerId}&effort_id=${effortId}`);
-  if (!res.ok) throw new Error("Kunde inte hämta ärenden för kund och insats");
+  if (!res.ok) throw new Error("Kunde inte hämta insatsn för kund och insats");
   return res.json();
 }
 
 export async function getCases(all = false, options?: RequestInit): Promise<CaseWithNames[]> {
   const res = await api(`/cases${all ? '?all=true' : ''}`, options);
-  if (!res.ok) throw new Error("Kunde inte hämta ärenden");
+  if (!res.ok) throw new Error("Kunde inte hämta insatsn");
   const data = await res.json();
   return data;
 }
 
-// Ny funktion för att hämta aktiva ärenden för en specifik kund
+// Ny funktion för att hämta aktiva insatsn för en specifik kund
 export async function getActiveCasesByCustomer(customerId: number): Promise<CaseWithNames[]> {
   const res = await api(`/cases?customer_id=${customerId}&active=true`);
-  if (!res.ok) throw new Error("Kunde inte hämta ärenden för kund");
+  if (!res.ok) throw new Error("Kunde inte hämta insatsn för kund");
   return res.json();
 }
 
-// Ny funktion för att skapa nytt ärende
+// Ny funktion för att skapa nytt insats
 export async function createCase(data: { customer_id: number; effort_id: number; handler1_id: number; handler2_id?: number | null; active?: boolean }): Promise<CaseWithNames> {
   const res = await api(`/cases`, {
     method: "POST",
@@ -158,7 +177,7 @@ export async function createCase(data: { customer_id: number; effort_id: number;
   });
   if (!res.ok) {
     const errorData = await res.json();
-    throw new Error(errorData.error || "Kunde inte skapa ärende");
+    throw new Error(errorData.error || "Kunde inte skapa insats");
   }
   return res.json();
 }
@@ -174,7 +193,7 @@ export async function updateCase(
   });
   if (!res.ok) {
     const errorData = await res.json();
-    throw new Error(errorData.error || "Kunde inte uppdatera ärende");
+    throw new Error(errorData.error || "Kunde inte uppdatera insats");
   }
   return res.json();
 }
@@ -206,7 +225,7 @@ export async function getShifts(): Promise<ShiftEntry[]> {
 
 export async function getShiftsForCase(caseId: string): Promise<ShiftEntry[]> {
   const res = await api(`/shifts?case_id=${caseId}`);
-  if (!res.ok) throw new Error("Kunde inte hämta besök för ärendet");
+  if (!res.ok) throw new Error("Kunde inte hämta besök för insatst");
   return res.json();
 }
 
@@ -290,6 +309,125 @@ export async function getStatsByEffort(
   return res.json();
 }
 
+export async function getStatsByHandler(
+  params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
+  options?: RequestInit
+): Promise<any> {
+  let url = `/stats/by-handler`;
+  if (params) {
+    const search = new URLSearchParams();
+    if (params.from) search.append('from', params.from);
+    if (params.to) search.append('to', params.to);
+    if (params.insats) search.append('insats', params.insats);
+    if (params.effortCategory) search.append('effortCategory', params.effortCategory);
+    if (params.gender) search.append('gender', params.gender);
+    if (params.birthYear) search.append('birthYear', params.birthYear);
+    if (params.handler) search.append('handler', params.handler);
+    if (params.customer) search.append('customer', params.customer);
+    if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
+    if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
+    if ([...search].length > 0) url += `?${search.toString()}`;
+  }
+  const res = await api(url, options);
+  if (!res.ok) throw new Error("Kunde inte hämta statistik per behandlare");
+  return res.json();
+}
+
+export async function getStatsByGender(
+  params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
+  options?: RequestInit
+): Promise<any> {
+  let url = `/stats/by-gender`;
+  if (params) {
+    const search = new URLSearchParams();
+    if (params.from) search.append('from', params.from);
+    if (params.to) search.append('to', params.to);
+    if (params.insats) search.append('insats', params.insats);
+    if (params.effortCategory) search.append('effortCategory', params.effortCategory);
+    if (params.gender) search.append('gender', params.gender);
+    if (params.birthYear) search.append('birthYear', params.birthYear);
+    if (params.handler) search.append('handler', params.handler);
+    if (params.customer) search.append('customer', params.customer);
+    if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
+    if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
+    if ([...search].length > 0) url += `?${search.toString()}`;
+  }
+  const res = await api(url, options);
+  if (!res.ok) throw new Error("Kunde inte hämta statistik per kön");
+  return res.json();
+}
+
+export async function getStatsByBirthYear(
+  params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
+  options?: RequestInit
+): Promise<any> {
+  let url = `/stats/by-birthyear`;
+  if (params) {
+    const search = new URLSearchParams();
+    if (params.from) search.append('from', params.from);
+    if (params.to) search.append('to', params.to);
+    if (params.insats) search.append('insats', params.insats);
+    if (params.effortCategory) search.append('effortCategory', params.effortCategory);
+    if (params.gender) search.append('gender', params.gender);
+    if (params.birthYear) search.append('birthYear', params.birthYear);
+    if (params.handler) search.append('handler', params.handler);
+    if (params.customer) search.append('customer', params.customer);
+    if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
+    if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
+    if ([...search].length > 0) url += `?${search.toString()}`;
+  }
+  const res = await api(url, options);
+  if (!res.ok) throw new Error("Kunde inte hämta statistik per födelseår");
+  return res.json();
+}
+
+export async function getStatsCases(
+  params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
+  options?: RequestInit
+): Promise<any[]> {
+  let url = `/stats/cases`;
+  if (params) {
+    const search = new URLSearchParams();
+    if (params.from) search.append('from', params.from);
+    if (params.to) search.append('to', params.to);
+    if (params.insats) search.append('insats', params.insats);
+    if (params.effortCategory) search.append('effortCategory', params.effortCategory);
+    if (params.gender) search.append('gender', params.gender);
+    if (params.birthYear) search.append('birthYear', params.birthYear);
+    if (params.handler) search.append('handler', params.handler);
+    if (params.customer) search.append('customer', params.customer);
+    if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
+    if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
+    if ([...search].length > 0) url += `?${search.toString()}`;
+  }
+  const res = await api(url, options);
+  if (!res.ok) throw new Error("Kunde inte hämta ärenden");
+  return res.json();
+}
+export async function getStatsRaw(
+  params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
+  options?: RequestInit
+): Promise<any[]> {
+  let url = `/stats/raw`;
+  if (params) {
+    const search = new URLSearchParams();
+    if (params.from) search.append('from', params.from);
+    if (params.to) search.append('to', params.to);
+    if (params.insats) search.append('insats', params.insats);
+    if (params.effortCategory) search.append('effortCategory', params.effortCategory);
+    if (params.gender) search.append('gender', params.gender);
+    if (params.birthYear) search.append('birthYear', params.birthYear);
+    if (params.handler) search.append('handler', params.handler);
+    if (params.customer) search.append('customer', params.customer);
+    if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
+    if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
+    if ([...search].length > 0) url += `?${search.toString()}`;
+  }
+  const res = await api(url, options);
+  if (!res.ok) throw new Error("Kunde inte hämta detaljerad statistik");
+  return res.json();
+}
+
 export async function getStatsByMonth(
   params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean },
   options?: RequestInit
@@ -305,25 +443,6 @@ export async function getStatsByMonth(
   }
   const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per månad");
-  return res.json();
-}
-
-export async function getStatsByHandler(
-  params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
-  options?: RequestInit
-): Promise<any> {
-  let url = `/stats/by-handler`;
-  if (params) {
-    const search = new URLSearchParams();
-    if (params.from) search.append('from', params.from);
-    if (params.to) search.append('to', params.to);
-    if (params.insats) search.append('insats', params.insats);
-    if (params.includeInactive) search.append('includeInactive', String(params.includeInactive));
-    if (params.shiftStatus) search.append('shiftStatus', params.shiftStatus);
-    if ([...search].length > 0) url += `?${search.toString()}`;
-  }
-  const res = await api(url, options);
-  if (!res.ok) throw new Error("Kunde inte hämta statistik per behandlare");
   return res.json();
 }
 

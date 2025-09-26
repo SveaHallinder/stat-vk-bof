@@ -23,13 +23,14 @@ CREATE TABLE IF NOT EXISTS handlers (
 CREATE TABLE IF NOT EXISTS customers (
   id SERIAL PRIMARY KEY,
   initials TEXT NOT NULL,
-  gender TEXT NOT NULL,
-  birth_year INTEGER NOT NULL,
+  gender TEXT,
+  birth_year INTEGER,
   start_date DATE,
   active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   -- protected identity flag (may also be added by a separate migration)
-  is_protected BOOLEAN NOT NULL DEFAULT FALSE
+  is_protected BOOLEAN NOT NULL DEFAULT FALSE,
+  is_group BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- 3) Efforts (insatser)
@@ -41,7 +42,7 @@ CREATE TABLE IF NOT EXISTS efforts (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- 4) Cases (ärenden)
+-- 4) Cases (insatsn)
 CREATE TABLE IF NOT EXISTS cases (
   id SERIAL PRIMARY KEY,
   customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
@@ -101,4 +102,3 @@ CREATE INDEX IF NOT EXISTS idx_cases_customer_id ON cases(customer_id);
 CREATE INDEX IF NOT EXISTS idx_cases_effort_id ON cases(effort_id);
 CREATE INDEX IF NOT EXISTS idx_shifts_case_id ON shifts(case_id);
 CREATE INDEX IF NOT EXISTS idx_shifts_date ON shifts(date);
-

@@ -9,6 +9,8 @@ import AuditLog from "./components/AuditLog";
 import { Effort, Handler } from "@/types/types";
 import toast from "react-hot-toast";
 import { api } from "@/lib/apiClient";
+import { formatAvailableFor } from "@/lib/effortLabels";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 
 const TableHeader = ({ children }: { children: React.ReactNode }) => (
@@ -43,10 +45,11 @@ export const AdminPage = (): JSX.Element => {
   // Lösenordsåterställning (likt invite-systemet)
   const [resetPasswordToken, setResetPasswordToken] = React.useState<string | null>(null);
   const [resetPasswordCopied, setResetPasswordCopied] = React.useState(false);
+  const { refreshKey, triggerRefresh } = useRefresh();
 
   useEffect(() => {
     fetchEfforts();
-  }, [showInactiveEfforts]);
+  }, [showInactiveEfforts, refreshKey]);
 
   async function fetchEfforts() {
     try {
@@ -63,7 +66,7 @@ export const AdminPage = (): JSX.Element => {
 
   useEffect(() => {
     fetchHandlers();
-  }, [showInactive]);
+  }, [showInactive, refreshKey]);
 
   async function fetchHandlers() {
     try {
@@ -87,13 +90,14 @@ export const AdminPage = (): JSX.Element => {
           body: JSON.stringify({ name: newInsats.name, available_for: newInsats.for })
         });
         if (!res.ok) throw new Error();
-        const created = await res.json();
-        setInsatser(prev => [...prev, created]);
-        setNewInsats({ name: "", for: "Biståndsbedömda" });
-        setOpenModal(false);
-      } catch {
-        toast.error("Kunde inte spara insats");
-      }
+      const created = await res.json();
+      setInsatser(prev => [...prev, created]);
+      setNewInsats({ name: "", for: "Biståndsbedömda" });
+      setOpenModal(false);
+      triggerRefresh();
+    } catch {
+      toast.error("Kunde inte spara insats");
+    }
   };
 
   // Redigera insats
@@ -109,6 +113,7 @@ export const AdminPage = (): JSX.Element => {
         const updated = await res.json();
         setInsatser(prev => prev.map(i => i.id === insatser[editIdx].id ? updated : i));
         setOpenEditModal(false);
+        triggerRefresh();
       } catch {
         toast.error("Kunde inte uppdatera insats");
       }
@@ -162,6 +167,7 @@ export const AdminPage = (): JSX.Element => {
       fetchHandlers();
       
       toast.success(`Inbjudan skapad för ${invite.email}`);
+      triggerRefresh();
       
     } catch (error) {
       console.error('Error creating invite:', error);
@@ -182,6 +188,7 @@ export const AdminPage = (): JSX.Element => {
       const data = await res.json();
       setResetPasswordToken(data.token);
       setResetPasswordCopied(false);
+      triggerRefresh();
     } catch {
       toast.error("Kunde inte generera återställningslänk");
     }
@@ -223,7 +230,7 @@ export const AdminPage = (): JSX.Element => {
                     {insatser.map((i, idx) => (
                       <TableRow key={i.id}>
                         <TableCell className={`font-medium ${i.active ? "text-gray-800" : "text-gray-400 italic"}`}>{i.name}</TableCell>
-                        <TableCell className={i.active ? "" : "text-gray-400 italic"}>{i.available_for}</TableCell>
+                        <TableCell className={i.active ? "" : "text-gray-400 italic"}>{formatAvailableFor(i.name, i.available_for)}</TableCell>
                         <TableCell>
                           {i.active ? (
                             <Button variant="ghost" size="icon" onClick={() => {
@@ -267,8 +274,10 @@ export const AdminPage = (): JSX.Element => {
                 <label className="text-sm font-medium text-gray-700">Tillgänglig för</label>
                 <select className="border rounded px-3 py-2" value={newInsats.for} onChange={e => setNewInsats({ ...newInsats, for: e.target.value })}>
                   <option value="Biståndsbedömda">Biståndsbedömda</option>
-                  <option value="Förebyggande">Förebyggande</option>
-                  <option value="Biståndsbedömda, Förebyggande">Biståndsbedömda, Förebyggande</option>
+                  <option value="Förebyggande arbete">Förebyggande arbete</option>
+                  <option value="Biståndsbedömda, Förebyggande arbete">Biståndsbedömda, Förebyggande arbete</option>
+                  <option value="IUB">IUB</option>
+                  <option value="Biståndsbedömda, IUB">Biståndsbedömda, IUB</option>
                 </select>
               </div>
               <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-end mt-6">
@@ -286,8 +295,10 @@ export const AdminPage = (): JSX.Element => {
                 <label className="text-sm font-medium text-gray-700">Tillgänglig för</label>
                 <select className="border rounded px-3 py-2" value={editInsats.for} onChange={e => setEditInsats({ ...editInsats, for: e.target.value })}>
                   <option value="Biståndsbedömda">Biståndsbedömda</option>
-                  <option value="Förebyggande">Förebyggande</option>
-                  <option value="Biståndsbedömda, Förebyggande">Biståndsbedömda, Förebyggande</option>
+                  <option value="Förebyggande arbete">Förebyggande arbete</option>
+                  <option value="Biståndsbedömda, Förebyggande arbete">Biståndsbedömda, Förebyggande arbete</option>
+                  <option value="IUB">IUB</option>
+                  <option value="Biståndsbedömda, IUB">Biståndsbedömda, IUB</option>
                 </select>
               </div>
               <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-between mt-6">

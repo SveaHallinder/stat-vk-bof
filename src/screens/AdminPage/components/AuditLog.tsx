@@ -7,6 +7,7 @@ import { DateRangePicker } from '../../../components/ui/date-range-picker';
 import { toast } from 'react-hot-toast';
 import { Search, Filter, Download, Trash2, RefreshCw } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
+import { useRefresh } from '@/contexts/RefreshContext';
 
 interface AuditLogEntry {
   id: number;
@@ -36,6 +37,7 @@ const AuditLog: React.FC = () => {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, pages: 0 });
+  const { refreshKey, triggerRefresh } = useRefresh();
   
   // Filter states
   const [search, setSearch] = useState('');
@@ -50,7 +52,7 @@ const AuditLog: React.FC = () => {
 
   useEffect(() => {
     loadAuditLogs();
-  }, [pagination.page, pagination.limit]);
+  }, [pagination.page, pagination.limit, refreshKey]);
 
   const loadAuditLogs = async () => {
     setLoading(true);
@@ -107,6 +109,7 @@ const AuditLog: React.FC = () => {
       
       toast.success('Gamla loggar rensade');
       loadAuditLogs();
+      triggerRefresh();
     } catch (error) {
       toast.error('Kunde inte rensa gamla loggar');
       console.error('Error cleaning up logs:', error);

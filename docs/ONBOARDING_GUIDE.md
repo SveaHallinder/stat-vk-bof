@@ -21,7 +21,7 @@ Onboarding-touren är en interaktiv guide som hjälper nya behandlare att först
 2. **Dashboard översikt** - Förklaring av dashboard-korten
 3. **Snabbåtgärder** - Guide genom huvudfunktionerna
 4. **Kundhantering** - Hur man hanterar kunder
-5. **Ärendeshantering** - Skapa och hantera ärenden
+5. **Insatsshantering** - Skapa och hantera insatsn
 6. **Tidsregistrering** - Logga arbetstid
 
 ## Teknisk implementation
