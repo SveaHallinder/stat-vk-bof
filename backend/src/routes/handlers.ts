@@ -146,8 +146,6 @@ export default function handlers(pool: Pool) {
         [handlerId, hashedToken, expiresAt]
       );
 
-      console.log(`✅ Admin genererade återställningslänk för behandlare: ${handler.email} (ID: ${handlerId})`);
-
       res.json({ 
         message: 'Återställningslänk genererad',
         token: token,

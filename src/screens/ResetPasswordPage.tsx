@@ -55,80 +55,31 @@ export const ResetPasswordPage: React.FC = () => {
   }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log('🔍 handleSubmit körs!', { password, confirmPassword });
     e.preventDefault();
     setErrors({});
-
-    // Debug: Kolla om schemas finns
-    console.log('🔍 Alla schemas:', Object.keys(schemas));
-    console.log('🔍 passwordReset schema finns:', !!schemas.passwordReset);
-    console.log('🔍 passwordReset schema typ:', typeof schemas.passwordReset);
-
-    // Validera lösenord
-    console.log('🔍 Validerar lösenord...');
-    console.log('🔍 Schema som används:', schemas.passwordReset);
-    console.log('🔍 Data som valideras:', { password, confirmPassword });
     
     let validation;
     try {
-      console.log('🔍 Anropar validateForm med:', {
-        data: { password, confirmPassword },
-        schema: schemas.passwordReset,
-        schemaType: typeof schemas.passwordReset,
-        schemaKeys: Object.keys(schemas.passwordReset || {})
-      });
-      
-      // Testa att parsa direkt först
-      console.log('🔍 Testar direkt parsing...');
-      try {
-        const directResult = schemas.passwordReset.parse({ password, confirmPassword });
-        console.log('✅ Direkt parsing lyckades:', directResult);
-      } catch (directError) {
-        console.error('❌ Direkt parsing misslyckades:', directError);
-        if (directError instanceof z.ZodError) {
-          console.error('❌ Zod-fel:', directError.issues);
-        }
-      }
-      
-      // Kontrollera att schemat är av rätt typ
-      console.log('🔍 Schema typ-kontroll:', {
-        isZodSchema: typeof schemas.passwordReset === 'object' && 'parse' in schemas.passwordReset,
-        hasParseMethod: typeof schemas.passwordReset.parse === 'function',
-        schemaType: typeof schemas.passwordReset,
-        schemaKeys: Object.keys(schemas.passwordReset || {})
-      });
-      
-      // Använd direkt parsing istället för validateForm
       try {
         const validatedData = schemas.passwordReset.parse({ password, confirmPassword });
         validation = { success: true, data: validatedData };
-        console.log('✅ Direkt validering lyckades:', validation);
       } catch (error) {
         if (error instanceof z.ZodError) {
           const errors = error.issues.map((err: any) => err.message);
           validation = { success: false, errors };
-          console.log('❌ Direkt validering misslyckades:', validation);
         } else {
           validation = { success: false, errors: ['Ett oväntat fel uppstod vid validering'] };
-          console.error('❌ Oväntat fel vid direkt validering:', error);
         }
       }
-      
-      console.log('🔍 Valideringsresultat:', validation);
     } catch (error) {
-      console.error('❌ Fel vid validering:', error);
       setErrors({ password: 'Valideringsfel: ' + (error instanceof Error ? error.message : 'Okänt fel') });
       return;
     }
     
     if (!validation.success) {
-      console.log('❌ Validering misslyckades:', validation.errors);
-      console.log('❌ Validering detaljer:', JSON.stringify(validation.errors, null, 2));
       setErrors(Array.isArray(validation.errors) ? {} : (validation.errors || {}));
       return;
     }
-    
-    console.log('✅ Validering lyckades!');
 
     setIsLoading(true);
 
@@ -316,50 +267,6 @@ export const ResetPasswordPage: React.FC = () => {
               disabled={isLoading}
             >
               {isLoading ? 'Återställer lösenord...' : 'Återställ lösenord'}
-            </Button>
-            
-            {/* Debug-knapp */}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full mt-2"
-              onClick={() => {
-                console.log('🔍 Test-knapp klickad!');
-                console.log('🔍 Schemas:', schemas);
-                console.log('🔍 passwordReset:', schemas.passwordReset);
-                
-                // Testa schemat direkt
-                try {
-                  console.log('🔍 Testar schema direkt...');
-                  const testData = { password: 'Test123!', confirmPassword: 'Test123!' };
-                  console.log('🔍 Testdata:', testData);
-                  
-                                  // Testa att parsa direkt med Zod
-                const result = schemas.passwordReset.parse(testData);
-                console.log('✅ Schema fungerar! Resultat:', result);
-                
-                // Testa med ditt lösenord också
-                console.log('🔍 Testar med ditt lösenord...');
-                const yourData = { password: 'Vatten1126', confirmPassword: 'Vatten1126' };
-                try {
-                  const yourResult = schemas.passwordReset.parse(yourData);
-                  console.log('✅ Ditt lösenord fungerar också!', yourResult);
-                } catch (error) {
-                  console.error('❌ Ditt lösenord misslyckas:', error);
-                  if (error instanceof z.ZodError) {
-                    console.error('❌ Zod-fel:', error.issues);
-                  }
-                }
-              } catch (error) {
-                console.error('❌ Schema-fel:', error);
-                if (error instanceof Error) {
-                  console.error('❌ Felmeddelande:', error.message);
-                  console.error('❌ Stack trace:', error.stack);
-                }
-              }
-              }}
-            >
-              🐛 Debug: Testa schemas
             </Button>
           </form>
         </CardContent>

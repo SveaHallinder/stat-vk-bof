@@ -53,8 +53,6 @@ export default function authRoutes(pool: Pool) {
       }
 
       const resetRequest = result.rows[0];
-      console.log(`✅ Token validerad för behandlare: ${resetRequest.email}`);
-
       res.json({ 
         message: 'Token är giltig',
         handler: {
@@ -145,8 +143,6 @@ export default function authRoutes(pool: Pool) {
         'DELETE FROM password_resets WHERE user_id = $1 AND id != $2',
         [resetRequest.user_id, resetRequest.id]
       );
-
-      console.log(`✅ Lösenord återställt för behandlare: ${resetRequest.email} (ID: ${resetRequest.user_id})`);
 
       res.json({ 
         message: 'Lösenord återställt framgångsrikt' 
