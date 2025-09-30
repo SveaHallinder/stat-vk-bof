@@ -127,17 +127,20 @@ export const config = {
 // Validera konfigurationen vid import
 validateRequiredEnvVars();
 
-// Logga konfiguration (utan känslig information)
-console.log(`🚀 Konfiguration laddad för miljö: ${config.env}`);
-console.log(`📡 Server kommer köra på port: ${config.port}`);
-console.log(`🔒 HTTPS: ${config.https.enabled ? 'AKTIVERAT' : 'INAKTIVERAT'}`);
-console.log(`🗄️  Database pool: ${config.database.pool.min}-${config.database.pool.max} connections`);
-console.log(`🌐 CORS origins: ${config.cors.origin.length} tillåtna`);
-console.log(`⚡ Rate limiting: ${config.rateLimit.maxRequests} requests per ${config.rateLimit.windowMs / 1000 / 60} minuter`);
-// Skydda mot undefined i test där DATABASE_URL kan saknas
-const dbUrlLog = config.database.url
-  ? config.database.url.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
-  : '(unset)';
-console.log(`🔗 Database URL: ${dbUrlLog}`);
+// Logga konfiguration (utan känslig information) endast i icke-produktionsmiljöer
+if (!config.isProduction) {
+  console.log(`🚀 Konfiguration laddad för miljö: ${config.env}`);
+  console.log(`📡 Server kommer köra på port: ${config.port}`);
+  console.log(`🔒 HTTPS: ${config.https.enabled ? 'AKTIVERAT' : 'INAKTIVERAT'}`);
+  console.log(`🗄️  Database pool: ${config.database.pool.min}-${config.database.pool.max} connections`);
+  console.log(`🌐 CORS origins: ${config.cors.origin.length} tillåtna`);
+  console.log(`⚡ Rate limiting: ${config.rateLimit.maxRequests} requests per ${config.rateLimit.windowMs / 1000 / 60} minuter`);
+  const dbUrlLog = config.database.url
+    ? config.database.url.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
+    : '(unset)';
+  console.log(`🔗 Database URL: ${dbUrlLog}`);
+} else {
+  console.log('✅ Konfiguration laddad för produktionsmiljö');
+}
 
 export default config;

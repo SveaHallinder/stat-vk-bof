@@ -664,7 +664,6 @@ export default function stats(pool: Pool) {
          HAVING ${requireShifts ? 'COUNT(fs.id) FILTER (WHERE fs.status = \'Utförd\') > 0' : 'TRUE'}
          ORDER BY c.id DESC`;
 
-      console.log('stats/cases SQL', sql, params);
       const result = await pool.query(sql, params);
 
       const viewerId = req.user?.id ?? 0;
