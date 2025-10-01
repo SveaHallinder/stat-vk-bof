@@ -100,7 +100,7 @@ export const config = {
   rateLimit: {
     redisUrl: process.env.REDIS_URL,
     windowMs: toInt(process.env.RATE_LIMIT_WINDOW_MS, 60_000),
-    globalMax: toInt(process.env.RATE_LIMIT_GLOBAL_MAX ?? process.env.RATE_LIMIT_MAX_REQUESTS, 500),
+    globalMax: toInt(process.env.RATE_LIMIT_GLOBAL_MAX ?? process.env.RATE_LIMIT_MAX_REQUESTS, 1_500),
     loginWindowMs: toInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS, 15 * 60_000),
     loginMax: toInt(process.env.LOGIN_RATE_LIMIT_MAX, 20),
   },

@@ -33,7 +33,7 @@ import { globalLimiter } from "./middleware/rateLimit";
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', config.trustProxy ? 1 : false);
+app.set('trust proxy', 1);
 
 const corsOptions: cors.CorsOptions = {
   origin: config.cors.origin,
@@ -44,12 +44,12 @@ const corsOptions: cors.CorsOptions = {
   optionsSuccessStatus: 204
 };
 app.use(helmet());
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 // Response compression if available
 if (compression) {
   app.use(compression());
 }
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 app.use(express.json({ limit: '1mb' }));
 app.use(sanitizeTextInputs);
@@ -57,6 +57,8 @@ app.use(sanitizeTextInputs);
 app.get('/health', (_req, res) => {
   res.status(200).json({ ok: true });
 });
+
+app.use('/api', globalLimiter);
 
 // Lightweight request logging
 app.use((req, res, next) => {
@@ -68,8 +70,6 @@ app.use((req, res, next) => {
   });
   next();
 });
-
-app.use('/api', globalLimiter);
 
 app.get("/api/healthz", (_req, res) => {
   res.json({ 

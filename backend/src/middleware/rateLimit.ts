@@ -2,7 +2,7 @@ import { Request, RequestHandler, Response } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import config from '../config';
 
-export const TOO_MANY_REQUESTS_RESPONSE = { error: 'too_many_requests' } as const;
+export const TOO_MANY_REQUESTS_RESPONSE = Object.freeze({ error: 'too_many_requests' });
 
 export const rateLimitKeyGenerator = (req: Request, _res: Response) => ipKeyGenerator(req.ip ?? 'unknown');
 
@@ -22,4 +22,19 @@ const createLimiter = (windowMs: number, max: number): RequestHandler => {
 };
 
 export const globalLimiter = createLimiter(config.rateLimit.windowMs, config.rateLimit.globalMax);
-export const loginLimiter = createLimiter(config.rateLimit.loginWindowMs, config.rateLimit.loginMax);
+
+export const loginLimiter: RequestHandler = config.rateLimit.loginMax > 0
+  ? rateLimit({
+      windowMs: config.rateLimit.loginWindowMs,
+      max: config.rateLimit.loginMax,
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: (req: Request) => {
+        const rawEmail = typeof req.body?.email === 'string' ? req.body.email : '';
+        const email = rawEmail.trim().toLowerCase();
+        const ip = req.ip ?? 'unknown';
+        return `${ip}:${email}`;
+      },
+      message: TOO_MANY_REQUESTS_RESPONSE,
+    })
+  : (_req, _res, next) => next();
