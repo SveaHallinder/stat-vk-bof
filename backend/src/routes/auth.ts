@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { sanitizeTextInputs } from '../middleware/validation';
 import rateLimit from 'express-rate-limit';
+import { TOO_MANY_REQUESTS_RESPONSE, rateLimitKeyGenerator } from '../middleware/rateLimit';
 
 const router = express.Router();
 
@@ -20,7 +21,8 @@ export default function authRoutes(pool: Pool) {
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: 'För många försök. Försök igen senare.' },
+    keyGenerator: rateLimitKeyGenerator,
+    message: TOO_MANY_REQUESTS_RESPONSE,
   });
   // POST /api/auth/validate-reset-token
   router.post('/validate-reset-token', resetLimiter, sanitizeTextInputs, async (req: Request, res: Response) => {

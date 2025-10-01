@@ -5,20 +5,45 @@ import { authenticateToken } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import rateLimit from "express-rate-limit";
 import bcrypt from "bcrypt";
+import { TOO_MANY_REQUESTS_RESPONSE, rateLimitKeyGenerator } from "../middleware/rateLimit";
 // emailService borttagen - e-post skickas manuellt
 
 // Rate limiting för invite-accept
 const acceptLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minuter
   max: 5, // 5 försök per IP
-  message: { error: 'För många försök. Försök igen om 15 minuter.' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: rateLimitKeyGenerator,
+  message: TOO_MANY_REQUESTS_RESPONSE,
 });
 
 export default function invites(pool: Pool) {
   const router = Router();
   const ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
+
+  const logInviteEvent = async (
+    inviteId: number,
+    action: string,
+    options: { performedBy?: number; details?: unknown } = {}
+  ) => {
+    if (!inviteId || !action) return;
+
+    const { performedBy, details } = options;
+    const query = performedBy != null
+      ? 'INSERT INTO invite_audit_log (invite_id, action, performed_by, details) VALUES ($1, $2, $3, $4)'
+      : 'INSERT INTO invite_audit_log (invite_id, action, details) VALUES ($1, $2, $3)';
+
+    const values = performedBy != null
+      ? [inviteId, action, performedBy, details ?? null]
+      : [inviteId, action, details ?? null];
+
+    try {
+      await pool.query(query, values);
+    } catch (error) {
+      console.warn('⚠️  Invite audit log misslyckades (fortsätter ändå):', (error as any)?.message || error);
+    }
+  };
 
   // Skapa ny invite (endast admin)
   router.post("/", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
@@ -82,10 +107,10 @@ export default function invites(pool: Pool) {
       const inviteId = result.rows[0].id;
 
       // Logga att invite skapades (en gång)
-      await pool.query(
-        'INSERT INTO invite_audit_log (invite_id, action, performed_by, details) VALUES ($1, $2, $3, $4)',
-        [inviteId, 'created', adminId, { email, role, expires_at: expiresAt, created_at: new Date() }]
-      );
+      await logInviteEvent(inviteId, 'created', {
+        performedBy: adminId,
+        details: { email, role, expires_at: expiresAt, created_at: new Date() },
+      });
 
       // Returnera data för admin
       res.status(201).json({ 
@@ -105,7 +130,17 @@ export default function invites(pool: Pool) {
   });
 
   // Verifiera e-postadress med kod
-  router.post("/verify-email", rateLimit({ windowMs: 15 * 60 * 1000, max: 10 }), async (req: Request, res: Response) => {
+  router.post(
+    "/verify-email",
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 10,
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: rateLimitKeyGenerator,
+      message: TOO_MANY_REQUESTS_RESPONSE,
+    }),
+    async (req: Request, res: Response) => {
     const { email, verification_code } = req.body;
 
     if (!email || !verification_code) {
@@ -139,10 +174,9 @@ export default function invites(pool: Pool) {
       );
 
       // Logga verifiering
-      await pool.query(
-        'INSERT INTO invite_audit_log (invite_id, action, details) VALUES ($1, $2, $3)',
-        [invite.id, 'verified', { verified_at: new Date() }]
-      );
+      await logInviteEvent(invite.id, 'verified', {
+        details: { verified_at: new Date() },
+      });
 
       res.json({ 
         message: 'E-postadress verifierad',
@@ -216,18 +250,18 @@ export default function invites(pool: Pool) {
       );
 
       // Logga accept
-      await pool.query(
-        'INSERT INTO invite_audit_log (invite_id, action, performed_by, details) VALUES ($1, $2, $3, $4)',
-        [invite.id, 'accepted', userId, { user_id: userId, accepted_at: new Date() }]
-      );
+      await logInviteEvent(invite.id, 'accepted', {
+        performedBy: userId,
+        details: { user_id: userId, accepted_at: new Date() },
+      });
 
       // Välkomst-e-post skickas manuellt
 
       // Logga att användare skapades
-      await pool.query(
-        'INSERT INTO invite_audit_log (invite_id, action, performed_by, details) VALUES ($1, $2, $3, $4)',
-        [invite.id, 'user_created', userId, { user_id: userId, created_at: new Date() }]
-      );
+      await logInviteEvent(invite.id, 'user_created', {
+        performedBy: userId,
+        details: { user_id: userId, created_at: new Date() },
+      });
 
       res.json({ 
         message: 'Konto skapat framgångsrikt! Skicka välkomstmeddelande manuellt till användaren.',
@@ -271,10 +305,10 @@ export default function invites(pool: Pool) {
       }
 
       // Logga avbrott
-      await pool.query(
-        'INSERT INTO invite_audit_log (invite_id, action, performed_by, details) VALUES ($1, $2, $3, $4)',
-        [id, 'cancelled', adminId, { cancelled_at: new Date() }]
-      );
+      await logInviteEvent(Number(id), 'cancelled', {
+        performedBy: adminId,
+        details: { cancelled_at: new Date() },
+      });
 
       res.json({ message: 'Inbjudan avbruten' });
 

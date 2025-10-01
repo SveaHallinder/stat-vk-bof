@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { Pool } from "pg";
-import rateLimit from "express-rate-limit";
 // Optional compression (graceful if package missing)
 let compression: any;
 try {
@@ -28,12 +27,13 @@ import { initAuditLogger } from "./utils/auditLogger";
 import { config } from "./config";
 import { sanitizeTextInputs } from "./middleware/validation";
 import { normalizeAvailableFor } from "./utils/efforts";
+import { globalLimiter } from "./middleware/rateLimit";
 
 // Konfigurationen valideras automatiskt vid import av config
 
 const app = express();
 app.disable('x-powered-by');
-app.set("trust proxy", config.trustProxy);
+app.set('trust proxy', config.trustProxy ? 1 : false);
 
 const corsOptions: cors.CorsOptions = {
   origin: config.cors.origin,
@@ -43,14 +43,21 @@ const corsOptions: cors.CorsOptions = {
   preflightContinue: false,
   optionsSuccessStatus: 204
 };
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
-
 app.use(helmet());
 // Response compression if available
 if (compression) {
   app.use(compression());
 }
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
+app.use(express.json({ limit: '1mb' }));
+app.use(sanitizeTextInputs);
+
+app.get('/health', (_req, res) => {
+  res.status(200).json({ ok: true });
+});
+
 // Lightweight request logging
 app.use((req, res, next) => {
   const start = Date.now();
@@ -61,20 +68,8 @@ app.use((req, res, next) => {
   });
   next();
 });
-// Global API rate limit (disabled in development)
-if (config.env !== 'development') {
-  const apiLimiter = rateLimit({
-    windowMs: config.rateLimit.windowMs,
-    max: config.rateLimit.maxRequests,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'too_many_requests' },
-  });
-  app.use('/api', apiLimiter);
-}
-// Begränsa body-storlek (basic skydd) och använd JSON parser
-app.use(express.json({ limit: '1mb' }));
-app.use(sanitizeTextInputs);
+
+app.use('/api', globalLimiter);
 
 app.get("/api/healthz", (_req, res) => {
   res.json({ 

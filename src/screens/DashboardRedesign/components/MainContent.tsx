@@ -84,24 +84,24 @@ export const MainContent = (): JSX.Element => {
   // Memoized stats cards
   const statsCards = useMemo(() => [
     {
-      title: "Kunder totalt",
+      title: "Aktiva kunder",
       value: stats ? stats.antal_kunder : "-",
-      note: `${new Date().getFullYear()} siffror för hela enheten`,
+      note: "Totalt för hela enheten",
     },
     {
       title: "Aktiva insatser",
       value: effortData ? effortData.length : "-",
-      note: `${new Date().getFullYear()} siffror`,
+      note: "Totalt för hela enheten",
     },
     {
-      title: "Månadens besök",
+      title: "Antal besök",
       value: stats ? stats.antal_besok : "-",
-      note: "",
+      note: "Totala besök för månaden",
     },
     {
-      title: "Totala besökstimmar",
-      value: stats ? `${stats.totala_timmar.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} h` : "-",
-      note: "Utförda besök",
+      title: "Utförda besökstimmar",
+      value: stats ? `${stats.totala_timmar.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} ` : "-",
+      note: "Totala besökstimmar för månaden",
     },
   ], [stats, effortData]);
 
@@ -495,7 +495,7 @@ export const MainContent = (): JSX.Element => {
                   {card.value}
                 </div>
                 {card.note && (
-                  <div className="text-gray-400 text-xs mt-2">
+                  <div className="text-gray-400 text-xs mt-2 font-light">
                     {card.note}
                   </div>
                 )}
