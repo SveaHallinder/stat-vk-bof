@@ -12,6 +12,13 @@ const IS_TEST = NODE_ENV === 'test';
 const envFile = path.resolve(process.cwd(), `.env.${NODE_ENV}`);
 dotenv.config({ path: envFile });
 
+const toInt = (value: string | undefined, defaultValue: number): number => {
+  const parsed = parseInt(String(value ?? ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
+};
+
+export const TRUST_PROXY = ((process.env.TRUST_PROXY ?? 'true').toLowerCase() === 'true');
+
 // Validera att alla kritiska variabler finns
 function validateRequiredEnvVars() {
   // I testmiljö räcker det med JWT_SECRET; övriga kan mockas/inte användas
@@ -52,7 +59,7 @@ export const config = {
 
   // Server
   port: parseInt(process.env.PORT || '4000', 10),
-  trustProxy: process.env.TRUST_PROXY === 'true',
+  trustProxy: TRUST_PROXY,
 
   // Database
   database: {
@@ -92,10 +99,10 @@ export const config = {
   // Rate Limiting
   rateLimit: {
     redisUrl: process.env.REDIS_URL,
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
-    loginMax: parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '5', 10),
-    loginWindowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || '900000', 10),
+    windowMs: toInt(process.env.RATE_LIMIT_WINDOW_MS, 60_000),
+    globalMax: toInt(process.env.RATE_LIMIT_GLOBAL_MAX ?? process.env.RATE_LIMIT_MAX_REQUESTS, 500),
+    loginWindowMs: toInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS, 15 * 60_000),
+    loginMax: toInt(process.env.LOGIN_RATE_LIMIT_MAX, 20),
   },
 
   // Logging
@@ -134,7 +141,7 @@ if (!config.isProduction) {
   console.log(`🔒 HTTPS: ${config.https.enabled ? 'AKTIVERAT' : 'INAKTIVERAT'}`);
   console.log(`🗄️  Database pool: ${config.database.pool.min}-${config.database.pool.max} connections`);
   console.log(`🌐 CORS origins: ${config.cors.origin.length} tillåtna`);
-  console.log(`⚡ Rate limiting: ${config.rateLimit.maxRequests} requests per ${config.rateLimit.windowMs / 1000 / 60} minuter`);
+  console.log(`⚡ Rate limiting: ${config.rateLimit.globalMax} requests per ${config.rateLimit.windowMs / 1000 / 60} minuter`);
   const dbUrlLog = config.database.url
     ? config.database.url.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
     : '(unset)';

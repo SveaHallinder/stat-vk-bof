@@ -858,7 +858,7 @@ export const StatistikPage = (): JSX.Element => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mobile:gap-6 text-center" data-tour="stats-summary-cards">
             <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
-              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Totalt antal besök</div>
+              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Antal besök</div>
               <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">{stats ? stats.antal_besok.toLocaleString() : "-"}</div>
             </div>
             <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
@@ -866,9 +866,9 @@ export const StatistikPage = (): JSX.Element => {
               <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">{stats ? stats.antal_kunder : "-"}</div>
             </div>
             <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
-              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Totala besökstimmar</div>
+              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Besökstimmar</div>
               <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">
-                {stats ? `${stats.totala_timmar.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} h` : "-"}
+                {stats ? `${stats.totala_timmar.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}` : "-"}
               </div>
             </div>
             <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
@@ -993,8 +993,8 @@ export const StatistikPage = (): JSX.Element => {
                     )}
                   </div>
                   <div className="flex justify-between w-full text-[11px] text-gray-500 px-1 mobile:px-2">
-                    <span>Y-axel: {yAxisLabel}</span>
-                    <span>X-axel: {xAxisLabel}</span>
+                    <span>{yAxisLabel}</span>
+                    <span>{xAxisLabel}</span>
                   </div>
                 </>
               ) : (

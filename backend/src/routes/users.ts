@@ -3,19 +3,10 @@ import { Pool } from "pg";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { authenticateToken } from "../middleware/auth";
-import rateLimit from "express-rate-limit";
+import { loginLimiter } from "../middleware/rateLimit";
 import { validateUserRegistration, sanitizeTextInputs } from "../middleware/validation";
 
 const ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
-
-// Rate limiting för login
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minuter
-  max: 5, // 5 försök per IP
-  message: { error: 'För många inloggningsförsök. Försök igen om 15 minuter.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 const users = (pool: Pool) => {
   const router = Router();
