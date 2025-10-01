@@ -4,6 +4,11 @@ import { authenticateToken } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import { getAuditLogger } from "../utils/auditLogger";
 
+const isMissingAuditTable = (error: unknown): boolean => {
+  const code = (error as { code?: string })?.code;
+  return code === '42P01';
+};
+
 export default function audit(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
@@ -104,6 +109,19 @@ export default function audit(pool: Pool) {
         }
       });
     } catch (err) {
+      if (isMissingAuditTable(err)) {
+        console.warn('⚠️  audit_log-tabell saknas – returnerar tom lista (ingen audit-loggning ännu).');
+        return res.json({
+          logs: [],
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total: 0,
+            pages: 0,
+          },
+        });
+      }
+
       console.error("Fel vid hämtning av audit log:", err);
       res.status(500).json({ error: "Kunde inte hämta audit log" });
     }
@@ -152,6 +170,11 @@ export default function audit(pool: Pool) {
         users: userStats.rows
       });
     } catch (err) {
+      if (isMissingAuditTable(err)) {
+        console.warn('⚠️  audit_log-tabell saknas – returnerar tom statistik (ingen audit-loggning ännu).');
+        return res.json({ daily: [], actions: [], users: [] });
+      }
+
       console.error("Fel vid hämtning av audit statistik:", err);
       res.status(500).json({ error: "Kunde inte hämta audit statistik" });
     }

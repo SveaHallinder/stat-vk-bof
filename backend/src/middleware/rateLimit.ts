@@ -32,8 +32,9 @@ export const loginLimiter: RequestHandler = config.rateLimit.loginMax > 0
       keyGenerator: (req: Request) => {
         const rawEmail = typeof req.body?.email === 'string' ? req.body.email : '';
         const email = rawEmail.trim().toLowerCase();
-        const ip = req.ip ?? 'unknown';
-        return `${ip}:${email}`;
+        const ip = req.ip ?? req.socket?.remoteAddress ?? 'unknown';
+        const ipKey = ipKeyGenerator(ip);
+        return `${ipKey}:${email}`;
       },
       message: TOO_MANY_REQUESTS_RESPONSE,
     })
