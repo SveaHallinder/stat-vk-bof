@@ -93,7 +93,8 @@ export const AdminPage = (): JSX.Element => {
       const res = await api(`/invites`);
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setInvites(data);
+      const pendingOnly = (data as Invite[]).filter(invite => invite.status === 'pending');
+      setInvites(pendingOnly);
     } catch {
       toast.error("Kunde inte hämta inbjudningar");
       setInvites([]);
@@ -253,6 +254,26 @@ export const AdminPage = (): JSX.Element => {
     toast.success('Verifieringskod kopierad');
   };
 
+  async function handleDeleteInvite(inviteId: number) {
+    if (!window.confirm('Är du säker på att du vill ta bort inbjudan?')) return;
+    try {
+      const res = await api(`/invites/${inviteId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok && res.status !== 204) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Kunde inte ta bort inbjudan');
+      }
+
+      toast.success('Inbjudan borttagen');
+      fetchInvites();
+    } catch (error) {
+      console.error('Error deleting invite:', error);
+      toast.error(error instanceof Error ? error.message : "Kunde inte ta bort inbjudan");
+    }
+  }
+
   const formatDateTime = (value?: string | null) => {
     if (!value) return '–';
     try {
@@ -334,112 +355,6 @@ export const AdminPage = (): JSX.Element => {
           </CardContent>
         </Card>
 
-        <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
-          <CardContent className="p-4 mobile:p-6 space-y-4">
-            <div className="flex flex-col mobile:flex-row mobile:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">Aktiva inbjudningar</h3>
-                <p className="text-sm text-gray-500">Kopiera eller generera om länkar till behandlare som inte skapat konto ännu.</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchInvites}
-                className="flex items-center gap-2"
-              >
-                <RefreshCcw className="w-4 h-4" /> Uppdatera
-              </Button>
-            </div>
-
-            {invitesLoading ? (
-              <div className="text-sm text-gray-500">Laddar inbjudningar...</div>
-            ) : invites.length === 0 ? (
-              <div className="text-sm text-gray-500">Inga aktiva inbjudningar just nu.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-sm text-gray-500 uppercase tracking-wide">
-                      <th className="px-4 py-3">E-post</th>
-                      <th className="px-4 py-3">Skapad</th>
-                      <th className="px-4 py-3">Går ut</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Kod</th>
-                      <th className="px-4 py-3">Åtgärder</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invites.map(invite => (
-                      <tr key={invite.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div className="text-sm font-medium text-gray-800">{invite.email}</div>
-                          <div className="text-xs text-gray-500">{invite.role === 'admin' ? 'Admin' : 'Behandlare'}</div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(invite.created_at)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(invite.expires_at)}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${invite.status === 'pending' ? 'bg-green-100 text-green-700' : invite.status === 'accepted' ? 'bg-blue-100 text-blue-700' : invite.status === 'cancelled' ? 'bg-gray-200 text-gray-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                            {invite.status_display || invite.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600 font-mono">
-                          {invite.verification_code ?? '–'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="secondary"
-                              className="flex items-center gap-2"
-                              disabled={!invite.token}
-                              onClick={() => {
-                                setInviteToken(invite.token);
-                                setInviteVerificationCode(invite.verification_code ?? null);
-                                setCopied(false);
-                              }}
-                            >
-                              Visa
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="flex items-center gap-2"
-                              disabled={!invite.token}
-                              onClick={() => handleCopyInviteLink(invite.token)}
-                            >
-                              <ClipboardCopy className="w-4 h-4" /> Länk
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="flex items-center gap-2"
-                              disabled={!invite.verification_code}
-                              onClick={() => handleCopyInviteCode(invite.verification_code)}
-                            >
-                              <ClipboardCopy className="w-4 h-4" /> Kod
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="flex items-center gap-2"
-                              onClick={() => handleRegenerateInvite(invite.id)}
-                            >
-                              <RefreshCcw className="w-4 h-4" /> Ny länk
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
           <Modal open={openModal} onClose={() => setOpenModal(false)}>
             <div className="p-4 mobile:p-8">
               <h2 className="text-lg mobile:text-xl font-semibold mb-4">Lägg till ny insats</h2>
@@ -573,6 +488,123 @@ export const AdminPage = (): JSX.Element => {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
+            <CardContent className="p-4 mobile:p-6 space-y-4">
+              <div className="flex flex-col mobile:flex-row mobile:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Aktiva inbjudningar</h3>
+                  <p className="text-sm text-gray-500">Kopiera eller generera om länkar till behandlare som inte skapat konto ännu.</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchInvites}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCcw className="w-4 h-4" /> Uppdatera
+                </Button>
+              </div>
+
+              {invitesLoading ? (
+                <div className="text-sm text-gray-500">Laddar inbjudningar...</div>
+              ) : invites.length === 0 ? (
+                <div className="text-sm text-gray-500">Inga aktiva inbjudningar just nu.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-sm text-gray-500 uppercase tracking-wide">
+                        <th className="px-4 py-3">E-post</th>
+                        <th className="px-4 py-3">Skapad</th>
+                        <th className="px-4 py-3">Går ut</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Kod</th>
+                        <th className="px-4 py-3">Åtgärder</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invites.map(invite => (
+                        <tr key={invite.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <div className="text-sm font-medium text-gray-800">{invite.email}</div>
+                            <div className="text-xs text-gray-500">{invite.role === 'admin' ? 'Admin' : 'Behandlare'}</div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(invite.created_at)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(invite.expires_at)}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${invite.status === 'pending' ? 'bg-green-100 text-green-700' : invite.status === 'accepted' ? 'bg-blue-100 text-blue-700' : invite.status === 'cancelled' ? 'bg-gray-200 text-gray-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                              {invite.status_display || invite.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 font-mono">
+                            {invite.verification_code ?? '–'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                className="flex items-center gap-2"
+                                disabled={!invite.token}
+                                onClick={() => {
+                                  setInviteToken(invite.token);
+                                  setInviteVerificationCode(invite.verification_code ?? null);
+                                  setCopied(false);
+                                }}
+                              >
+                                Visa
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="flex items-center gap-2"
+                                disabled={!invite.token}
+                                onClick={() => handleCopyInviteLink(invite.token)}
+                              >
+                                <ClipboardCopy className="w-4 h-4" /> Länk
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="flex items-center gap-2"
+                                disabled={!invite.verification_code}
+                                onClick={() => handleCopyInviteCode(invite.verification_code)}
+                              >
+                                <ClipboardCopy className="w-4 h-4" /> Kod
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="flex items-center gap-2"
+                                onClick={() => handleRegenerateInvite(invite.id)}
+                              >
+                                <RefreshCcw className="w-4 h-4" /> Ny länk
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                className="flex items-center gap-2"
+                                onClick={() => handleDeleteInvite(invite.id)}
+                              >
+                                Ta bort
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Modal open={openHandlerModal} onClose={() => setOpenHandlerModal(false)}>
             <div className="p-4 mobile:p-8">
               <h2 className="text-lg mobile:text-xl font-semibold mb-4">Lägg till ny behandlare</h2>

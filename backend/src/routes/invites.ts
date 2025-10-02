@@ -347,7 +347,7 @@ export default function invites(pool: Pool) {
     }
   });
 
-  router.post('/:id/regenerate', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
+router.post('/:id/regenerate', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const adminId = (req.user as any).id;
 
@@ -398,6 +398,49 @@ export default function invites(pool: Pool) {
     } catch (error) {
       console.error('Error regenerating invite:', error);
       res.status(500).json({ error: 'Kunde inte uppdatera inbjudan' });
+    }
+  });
+
+  router.delete('/:id', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const adminId = (req.user as any).id;
+
+    try {
+      const result = await pool.query(
+        `DELETE FROM invites
+         WHERE id = $1 AND status IN ('pending', 'expired')
+         RETURNING id, email, status`,
+        [id]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Inbjudan hittades inte eller kan inte tas bort' });
+      }
+
+      await logInviteEvent(Number(id), 'deleted', {
+        performedBy: adminId,
+        details: { deleted_at: new Date(), status: result.rows[0].status },
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting invite:', error);
+      res.status(500).json({ error: 'Kunde inte ta bort inbjudan' });
+    }
+  });
+
+  router.post('/cleanup/expired', authenticateToken, requireRole('admin'), async (_req: Request, res: Response) => {
+    try {
+      const result = await pool.query(
+        `DELETE FROM invites
+         WHERE status = 'pending' AND expires_at <= NOW()
+         RETURNING id`
+      );
+
+      res.json({ removed: result.rowCount });
+    } catch (error) {
+      console.error('Error cleaning up invites:', error);
+      res.status(500).json({ error: 'Kunde inte rensa inbjudningar' });
     }
   });
 
