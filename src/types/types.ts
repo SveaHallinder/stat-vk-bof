@@ -28,11 +28,19 @@ export interface Handler {
 
 export interface Invite {
   id: number;
-  handler_id: number;
   email: string;
-  token: string;
+  role: string;
+  status: string;
+  status_display?: string;
   created_at: string;
-  used: boolean;
+  expires_at: string | null;
+  created_by?: number | null;
+  created_by_name?: string | null;
+  token: string | null;
+  verification_code: string | null;
+  verification_expires_at: string | null;
+  invite_url?: string | null;
+  email_verified?: boolean;
 }
 
 export interface CaseBase {

@@ -6,6 +6,7 @@ import { requireRole } from "../middleware/requireRole";
 import rateLimit from "express-rate-limit";
 import bcrypt from "bcrypt";
 import { TOO_MANY_REQUESTS_RESPONSE, rateLimitKeyGenerator } from "../middleware/rateLimit";
+import { config } from "../config";
 // emailService borttagen - e-post skickas manuellt
 
 // Rate limiting för invite-accept
@@ -98,10 +99,10 @@ export default function invites(pool: Pool) {
       // Skapa invite
       const result = await pool.query(
         `INSERT INTO invites (
-          email, role, token_hash, expires_at, created_by, 
+          email, role, token, token_hash, expires_at, created_by, 
           verification_code, verification_expires_at, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-        [email, role, tokenHash, expiresAt, adminId, verificationCode, verificationExpiresAt, 'pending']
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [email, role, token, tokenHash, expiresAt, adminId, verificationCode, verificationExpiresAt, 'pending']
       );
 
       const inviteId = result.rows[0].id;
@@ -113,12 +114,15 @@ export default function invites(pool: Pool) {
       });
 
       // Returnera data för admin
+      const frontendBase = config.frontend.url.replace(/\/$/, '');
+
       res.status(201).json({ 
         id: inviteId,
         email,
         role,
         token,
         verification_code: verificationCode,
+        invite_url: `${frontendBase}/invite/${token}`,
         expires_at: expiresAt,
         message: 'Inbjudan skapad! Skicka länk och verifieringskod manuellt till användaren.'
       });
@@ -245,7 +249,7 @@ export default function invites(pool: Pool) {
 
       // Uppdatera invite-status
       await pool.query(
-        'UPDATE invites SET status = $1, used_at = NOW() WHERE id = $2',
+        'UPDATE invites SET status = $1, used_at = NOW(), token = NULL, verification_code = NULL WHERE id = $2',
         ['accepted', invite.id]
       );
 
@@ -280,12 +284,120 @@ export default function invites(pool: Pool) {
   router.get("/", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
     try {
       const result = await pool.query(
-        'SELECT * FROM active_invites ORDER BY created_at DESC'
+        `SELECT 
+            i.id,
+            i.email,
+            i.role,
+            i.status,
+            i.created_at,
+            i.expires_at,
+            i.created_by,
+            i.token,
+            i.verification_code,
+            i.verification_expires_at,
+            i.email_verified,
+            h.name AS created_by_name
+         FROM invites i
+         LEFT JOIN handlers h ON i.created_by = h.id
+         ORDER BY i.created_at DESC`
       );
-      res.json(result.rows);
+
+      const frontendBase = config.frontend.url.replace(/\/$/, '');
+
+      const invites = result.rows.map(row => {
+        const expiresAt = row.expires_at ? new Date(row.expires_at) : null;
+        let statusDisplay = 'Okänd';
+
+        if (row.status === 'pending') {
+          if (expiresAt && expiresAt <= new Date()) {
+            statusDisplay = 'Utgången';
+          } else {
+            statusDisplay = 'Aktiv';
+          }
+        } else if (row.status === 'accepted') {
+          statusDisplay = 'Accepterad';
+        } else if (row.status === 'cancelled') {
+          statusDisplay = 'Avbruten';
+        }
+
+        const inviteUrl = row.token ? `${frontendBase}/invite/${row.token}` : null;
+
+        return {
+          id: row.id,
+          email: row.email,
+          role: row.role,
+          status: row.status,
+          status_display: statusDisplay,
+          created_at: row.created_at,
+          expires_at: row.expires_at,
+          created_by: row.created_by,
+          created_by_name: row.created_by_name,
+          token: row.token,
+          verification_code: row.verification_code,
+          verification_expires_at: row.verification_expires_at,
+          email_verified: row.email_verified,
+          invite_url: inviteUrl,
+        };
+      });
+
+      res.json(invites);
     } catch (error) {
       console.error('Error fetching invites:', error);
       res.status(500).json({ error: "Kunde inte hämta inbjudningar" });
+    }
+  });
+
+  router.post('/:id/regenerate', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const adminId = (req.user as any).id;
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const verificationCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    try {
+      const result = await pool.query(
+        `UPDATE invites
+         SET token = $1,
+             token_hash = $2,
+             verification_code = $3,
+             verification_expires_at = $4,
+             expires_at = $5,
+             status = 'pending',
+             email_verified = false,
+             used_at = NULL
+         WHERE id = $6 AND status IN ('pending', 'expired')
+         RETURNING id, email, role, created_by`,
+        [token, tokenHash, verificationCode, verificationExpiresAt, expiresAt, id]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Inbjudan hittades inte eller kan inte återställas' });
+      }
+
+      const invite = result.rows[0];
+
+      await logInviteEvent(Number(id), 'regenerated', {
+        performedBy: adminId,
+        details: { regenerated_at: new Date(), performed_by: adminId },
+      });
+
+      const frontendBase = config.frontend.url.replace(/\/$/, '');
+
+      res.json({
+        id: invite.id,
+        email: invite.email,
+        role: invite.role,
+        token,
+        verification_code: verificationCode,
+        invite_url: `${frontendBase}/invite/${token}`,
+        expires_at: expiresAt,
+      });
+    } catch (error) {
+      console.error('Error regenerating invite:', error);
+      res.status(500).json({ error: 'Kunde inte uppdatera inbjudan' });
     }
   });
 
