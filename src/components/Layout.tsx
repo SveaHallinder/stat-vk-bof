@@ -59,9 +59,9 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa] flex">
-      {/* Desktop Sidebar - dold på mobil */}
-      <div className="hidden lg:block">
+    <div className="min-h-screen bg-[#f5f7fa] flex overflow-x-hidden">
+      {/* Desktop Sidebar - sticky bredvid innehållet */}
+      <div className="hidden lg:block lg:fixed lg:inset-y-0 lg:left-0 lg:w-[300px]">
         <Sidebar />
       </div>
       
@@ -75,12 +75,12 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col lg:ml-[300px]">
         <ApiHealthBanner />
         {/* Custom header med global sökning */}
-        <header className="flex h-24 items-center justify-between bg-white/95 px-4 lg:px-6">
-          <div className="max-w-5xl flex flex-row justify-between items-center mx-auto w-full">
-            <div className="flex items-center gap-4">
+        <header className="bg-white/95 w-full px-3 sm:px-4 lg:px-6 py-4 shadow-sm">
+          <div className="w-full max-w-screen-lg mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3 md:gap-4">
               {/* Mobile menu button */}
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
@@ -90,54 +90,42 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
                 <Menu className="w-6 h-6 text-gray-600" />
               </button>
               
-              <h1 className="text-h2 font-light text-gray-800">{title}</h1>
+              <h1 className="text-2xl md:text-3xl font-light text-gray-800 leading-tight">{title}</h1>
             </div>
-            <div className="flex items-center gap-2 lg:gap-4">
-              {/* Global search - dold på små mobiler */}
-              <div className="hidden sm:block">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 w-full md:w-auto">
+              <div className="w-full sm:w-auto">
                 <GlobalSearch onResultSelect={handleSearchResult} />
               </div>
-              {/* Onboarding Guide trigger */}
               <button
                 onClick={() => startOnboarding()}
-                className="hidden sm:flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="hidden md:flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 title="Öppna guide"
                 aria-label="Öppna guide"
               >
                 <HelpCircle className="w-5 h-5 text-gray-600" />
                 <span className="text-sm text-gray-700">Guide</span>
               </button>
-              
-              {/* User profile section */}
-              <div className="flex items-center gap-2 lg:gap-3">
-                <button
-                  onClick={() => navigate('/min-profil')}
-                  className="group flex items-center gap-2 lg:gap-2.5 p-2 lg:p-2.5 rounded-lg hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-200 hover:shadow-sm hover:border-gray-200"
-                >
-                  <div className="w-8 h-8 lg:w-9 lg:h-9 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200">
-                    <User className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-green-600" />
+              <button
+                onClick={() => navigate('/min-profil')}
+                className="group flex items-center gap-2 lg:gap-2.5 p-2 rounded-lg hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-200 hover:shadow-sm hover:border-gray-200"
+              >
+                <div className="w-9 h-9 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200">
+                  <User className="w-4 h-4 text-green-600" />
+                </div>
+                <div className="hidden sm:block text-left">
+                  <div className="text-sm font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
+                    {user?.name}
                   </div>
-                  {/* User info - dold på små mobiler */}
-                  <div className="hidden md:block text-left">
-                    <div className="text-body-small font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
-                      {user?.name}
-                    </div>
-                    <div className="text-sm capitalize">
-                      {user?.role === 'handler' ? 'Behandlare' : user?.role === 'admin' ? 'Administratör' : user?.role}
-                    </div>
+                  <div className="text-xs capitalize text-gray-500">
+                    {user?.role === 'handler' ? 'Behandlare' : user?.role === 'admin' ? 'Administratör' : user?.role}
                   </div>
-                  <div className="hidden lg:block opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-              </div>
+                </div>
+              </button>
             </div>
           </div>
         </header>
-        <main className="flex-1 p-4 lg:p-6">
-          <div key={fadeKey} className="max-w-6xl mx-auto route-fade">
+        <main className="flex-1 w-full px-3 sm:px-4 lg:px-6 py-4">
+          <div key={fadeKey} className="w-full max-w-screen-lg mx-auto route-fade">
             {children}
           </div>
         </main>

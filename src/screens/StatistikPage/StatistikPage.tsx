@@ -286,7 +286,7 @@ export const StatistikPage = (): JSX.Element => {
 
     if (!rows || rows.length === 0) {
       return (
-        <div className="bg-white rounded-xl p-6 text-center text-gray-500 border border-gray-200">
+        <div className="bg-white rounded-xl text-center text-gray-500 border border-gray-200">
           Ingen data att visa för valt filter.
         </div>
       );
@@ -721,19 +721,18 @@ export const StatistikPage = (): JSX.Element => {
 
   return (
     <Layout title="Statistik">
-      {/* Responsiv container */}
-      <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
+      <div className="w-full max-w-[420px] sm:max-w-[640px] lg:max-w-4xl mx-auto px-3 sm:px-4 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
 
       <div className="space-y-6 mobile:space-y-8">
         {/* Filterrad */}
-        <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col gap-4 mobile:gap-6 shadow-sm border border-gray-200" data-tour="stats-filter">
-        <label className="font-normal text-base mobile:text-lg m-0 p-0 text-black">Filtrera</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-2 items-end">
-            <div className="gap-1 w-full flex flex-col" data-tour="stats-filter-daterange">
+        <div className="bg-white rounded-xl p-auto mobile:p-6 flex flex-col gap-4 mobile:gap-6 shadow-sm border border-gray-200 w-full min-w-0" data-tour="stats-filter">
+        <label className="font-normal text-base mobile:text-lg m-0 p-auto text-black">Filtrera</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-2 items-end min-w-0">
+            <div className="gap-1 w-full flex flex-col min-w-0" data-tour="stats-filter-daterange">
               <label className="font-normal text-xs text-gray-500">Tidsperiod</label>
               <DateRangePicker value={dateRange} onChange={setDateRange} />
             </div>
-            <div className="flex flex-col gap-1 w-full">
+            <div className="flex flex-col gap-1">
               <label className="font-normal text-xs text-gray-500">Kön</label>
               <MultiSelectCombobox
                 options={[
@@ -746,11 +745,11 @@ export const StatistikPage = (): JSX.Element => {
                 placeholder="Alla kön"
               />
             </div>
-            <div className="flex flex-col gap-1 w-full ">
+            <div className="flex flex-col gap-1 w-full min-w-0">
               <label className="font-normal text-xs text-gray-500">Födelseår</label>
               <MultiSelectCombobox options={yearOptions} value={selectedYears} onChange={setSelectedYears} placeholder="Alla år" />
             </div>
-            <div className="flex flex-col gap-1 w-full">
+            <div className="flex flex-col gap-1 w-full min-w-0">
               <label className="font-normal text-xs text-gray-500">Insats</label>
               <MultiSelectCombobox
                 options={effortOptions.map(e => ({ label: e.name, value: String(e.id) }))}
@@ -759,7 +758,7 @@ export const StatistikPage = (): JSX.Element => {
                 placeholder="Alla insatser"
               />
             </div>
-            <div className="flex flex-col gap-1 w-full">
+            <div className="flex flex-col gap-1 w-full min-w-0">
               <label className="font-normal text-xs text-gray-500">Insatskategori</label>
               <MultiSelectCombobox
                 options={[
@@ -774,7 +773,7 @@ export const StatistikPage = (): JSX.Element => {
                 placeholder="Alla kategorier"
               />
             </div>
-            <div className="flex flex-col gap-1 w-full">
+            <div className="flex flex-col gap-1 w-full min-w-0">
               <label className="font-normal text-xs text-gray-500">Tidsstatus</label>
               <Select value={shiftStatus} onValueChange={(v) => setShiftStatus(v as any)}>
                 <SelectTrigger className="h-10">
@@ -787,7 +786,7 @@ export const StatistikPage = (): JSX.Element => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-1 w-full">
+            <div className="flex flex-col gap-1 w-full min-w-0">
               <label className="font-normal text-xs text-gray-500">Behandlare</label>
               <MultiSelectCombobox
                 options={handlerOptions.map(h => ({ label: h.name, value: String(h.id) }))}
@@ -796,7 +795,7 @@ export const StatistikPage = (): JSX.Element => {
                 placeholder="Alla behandlare"
               />
             </div>
-            <div className="flex flex-col gap-1 w-full">
+            <div className="flex flex-col gap-1 w-full min-w-0">
               <label className="font-normal text-xs text-gray-500">Kund</label>
               <MultiSelectCombobox
                 options={customerOptions.map(c => {
@@ -815,8 +814,9 @@ export const StatistikPage = (): JSX.Element => {
                 Inkludera inaktiva
               </label>
             </div>
-            {/* Uppdatera och Rensa */}
-            <div className="flex justify-center mobile:justify-end w-full mobile:w-full gap-2">
+          </div>
+          {/* Uppdatera och Rensa */}
+            <div className="flex mobile:justify-start w-full mobile:w-full gap-2">
               <Button
                 variant="default"
                 size="default"
@@ -824,7 +824,7 @@ export const StatistikPage = (): JSX.Element => {
                 onClick={() => loadStats()}
                 data-tour="stats-update-btn"
                 disabled={loading}>
-                {loading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uppdaterar...</>) : 'Uppdatera'}
+                {loading ? (<><Loader2 className="animate-spin" /> Uppdaterar...</>) : 'Uppdatera'}
               </Button>
               <Button
                 variant="outline"
@@ -846,7 +846,6 @@ export const StatistikPage = (): JSX.Element => {
                 Rensa alla filter
               </Button>
             </div>
-          </div>
         </div>
 
         {/* Statistik-kort */}
@@ -878,7 +877,7 @@ export const StatistikPage = (): JSX.Element => {
           </div>
         )}
 
-        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="w-full">
+        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="w-full min-w-0">
           <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 bg-gray-100 rounded-2xl p-1">
             {viewOptions.map(option => (
               <TabsTrigger
@@ -893,7 +892,7 @@ export const StatistikPage = (): JSX.Element => {
         </Tabs>
 
         {/* Diagramkort */}
-        <div ref={chartRef} className="bg-white rounded-xl p-4 mobile:p-8 flex flex-col items-center relative shadow-sm overflow-x-auto" data-tour="stats-chart">
+        <div ref={chartRef} className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center relative shadow-sm overflow-x-auto min-w-0" data-tour="stats-chart">
           {showChart ? (
             <>
               <div className="text-sm mobile:text-base font-medium text-gray-800 mb-2 mobile:mb-4">
@@ -910,24 +909,24 @@ export const StatistikPage = (): JSX.Element => {
                       <span className="inline-block w-3 h-3 rounded-full bg-[#1769dc]" /> {chartSecondaryLabel}
                     </div>
                   </div>
-                  <div className="flex w-full h-56 mobile:h-72 mb-6 mobile:mb-8 min-w-max px-1 mobile:px-2">
-                    <div className="flex flex-col justify-between items-end pr-3 mobile:pr-5 py-2 w-12 mobile:w-16 select-none">
+                  <div className="flex w-full h-56 mobile:h-72 mb-4 mobile:mb-6 pl-1 pr-4 mobile:pl-2 mobile:pr-4 min-w-0">
+                    <div className="flex flex-col justify-between items-end pr-3 mobile:pr-5 py-2 w-12 mobile:w-16 select-none flex-shrink-0">
                       {chartScale.ticks.slice().reverse().map((tick, idx) => (
                         <span key={`${tick}-${idx}`} className="text-xs text-gray-400 tabular-nums">
                           {formatAxisTick(tick)}
                         </span>
                       ))}
                     </div>
-                    <div className="flex-1 flex flex-col h-full">
-                      <div className="flex items-end justify-center gap-6 mobile:gap-12 flex-1 pb-4">
+                    <div className="flex-1 flex flex-col h-full min-w-0">
+                      <div className="flex items-end justify-start gap-4 sm:gap-6 md:gap-8 flex-1 pb-4 min-w-0 overflow-x-auto">
                         {chartData.map((item, idx) => {
                           const primaryHeight = Math.max(((Number(item.primaryValue) || 0) / chartScale.niceMax) * barChartHeight, minBarHeight);
                           const secondaryHeight = Math.max(((Number(item.secondaryValue) || 0) / chartScale.niceMax) * barChartHeight, minBarHeight);
 
                           return (
-                            <div key={idx} className="flex flex-col items-center flex-1 max-w-[72px] mobile:max-w-[100px] min-w-[40px] mobile:min-w-[56px]">
+                            <div key={idx} className="flex flex-col items-center flex-shrink-0 min-w-[70px] max-w-[90px]">
                               <div
-                                className="flex gap-2 mobile:gap-3 items-end w-full justify-center"
+                                className="flex gap-2 sm:gap-3 items-end w-full justify-center mb-2"
                                 style={{ height: `${barChartHeight}px` }}
                               >
                                 <div
@@ -965,14 +964,9 @@ export const StatistikPage = (): JSX.Element => {
                                   onMouseLeave={() => setTooltip(null)}
                                 />
                               </div>
-                              <div className="text-gray-700 font-medium text-[11px] mobile:text-sm text-center mt-3 mobile:mt-4 max-w-full whitespace-nowrap overflow-hidden text-ellipsis">
+                              <span className="text-[11px] sm:text-xs text-gray-600 text-center leading-tight whitespace-no-wrap no-wrap overflow-hidden">
                                 {item.label}
-                              </div>
-                              {item.meta && (
-                                <div className="text-gray-400 text-[11px] mobile:text-xs text-center mt-1 max-w-full leading-tight">
-                                  {item.meta}
-                                </div>
-                              )}
+                              </span>
                             </div>
                           );
                         })}
@@ -1028,7 +1022,7 @@ export const StatistikPage = (): JSX.Element => {
           </Button>
         </div>
 
-        <div className="mt-6 w-full">
+        <div className="mt-6 w-full text-left justify-center items-center">
           {renderAggregatedTable()}
         </div>
       </div>

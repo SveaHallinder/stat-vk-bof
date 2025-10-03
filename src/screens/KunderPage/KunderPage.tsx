@@ -222,11 +222,12 @@ export const KunderPage = (): JSX.Element => {
 
   return (
     <Layout title="Kunder">
+      <div className="flex flex-col lg:items-start sm:items-center sm:justify-between gap-4 px-3 sm:px-4 lg:px-6">
       {/* Header section */}
-      <div className="flex flex-col items-center mobile:flex-row mobile:items-center mobile:justify-between mb-6 mobile:mb-8 gap-4 mobile:gap-0">
+      <div className="flex flex-row flext-start float-left lg:flex-row mobile:flex-col gap-3 sm:flex-col">
         <Button
           variant="outline"
-          className="w-full max-w-[350px] mobile:w-full flex items-center justify-center gap-3 px-4 mobile:px-7 py-3 rounded-lg text-base mobile:text-lg text-[#17694c] font-semibold bg-white hover:bg-[#eaf6f1] hover:shadow-md transition"
+          className="w-full sm:w-auto items-center justify-center gap-3 px-4 mobile:px-7 py-3 rounded-lg text-base mobile:text-lg text-[#17694c] font-semibold bg-white hover:bg-[#eaf6f1] hover:shadow-md transition"
           onClick={handleAddCustomer}
           data-tour="customers-add-btn"
         >
@@ -236,13 +237,15 @@ export const KunderPage = (): JSX.Element => {
         {newCustomers.length > 0 && (
           <Button
             variant="default"
-            className="w-full mobile:max-w-[350px] mobile:w-auto px-4 mobile:px-6 py-3 rounded-lg text-base mobile:text-lg font-semibold"
+            className="w-full sm:w-auto px-4 mobile:px-6 py-3 rounded-lg text-base mobile:text-lg font-semibold"
             onClick={handleSaveNewCustomers}
             disabled={savingNew || newCustomers.some((c) => Object.keys(validateCustomer(c)).length > 0)}>
             {savingNew ? <><Loader2 className="animate-spin w-5 h-5 mr-2 inline"/>Sparar...</> : "Spara alla"}
           </Button>
         )}
-        <label className="flex items-center gap-2 text-sm mt-2 mobile:mt-0" data-tour="customers-include-inactive">
+      </div>
+
+      <label className="flex items-left justify-start align-left gap-2 text-sm mt-2 mobile:mt-0" data-tour="customers-include-inactive">
           <input
             type="checkbox"
             checked={includeInactive}
@@ -250,15 +253,14 @@ export const KunderPage = (): JSX.Element => {
           />
           Inkludera inaktiva kunder
         </label>
-      </div>
 
       {/* Table card */}
-      <Card className="flex-1 w-full w-auto min-w-full bg-white rounded-xl shadow-sm mobile:w-full mobile:max-w-[350px]">
+        <Card className="bg-white rounded-xl shadow-sm w-full max-w-[400px] sm:max-w-[600px] lg:max-w-6xl">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left" data-tour="customers-table">
+          <div className="overflow-x-auto min-w-0">
+            <table className="text-left mt-3" data-tour="customers-table" style={{ minWidth: '700px' }}>
               <thead>
-                <tr className="border-b border-gray-200">
+                <tr >
                   {[
                     { label: "Kund-ID", field: "id" },
                   { label: "Initialer", field: "initials" },
@@ -269,7 +271,7 @@ export const KunderPage = (): JSX.Element => {
                   ].map(col => (
                     <th
                       key={col.field}
-                      className="px-3 mobile:px-6 py-3 mobile:py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-center cursor-pointer select-none group"
+                      className="px-auto max-w-[130px] mobile:px-6 py-3 mobile:py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-center cursor-pointer select-none group whitespace-nowrap"
                       onClick={() => {
                         if (sortField === col.field) {
                           setSortAsc(a => !a);
@@ -289,38 +291,28 @@ export const KunderPage = (): JSX.Element => {
                       </span>
                     </th>
                   ))}
-                  <th className="px-3 mobile:px-6 py-3 mobile:py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-right">Åtgärder</th>
+                  <th className="px-3 mobile:px-6 py-3 mobile:py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-left mobile:text-center whitespace-nowrap">Åtgärder</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="min-w-0 w-full">
                 {newCustomers.map((c, idx) => (
                   <tr key={idx} className="bg-gray-50">
-                    <td className="px-3 mobile:px-6 py-3 text-gray-400 italic text-center text-xs mobile:text-sm">(genereras)</td>
-                    <td className="px-3 mobile:px-6 py-3 text-center">
+                    <td className="px-3 mobile:px-6 py-3 text-gray-400 italic text-left mobile:text-center text-xs mobile:text-sm whitespace-nowrap">(genereras)</td>
+                    <td className="px-3 mobile:px-6 py-3 text-left mobile:text-center">
                       <input
                         type="text"
                         placeholder="Initialer"
-                        className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.initials ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                        className={`border rounded px-2 py-1 w-full max-w-[80px] text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.initials ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
                         value={c.initials}
                         onChange={e => handleChangeNewCustomer(idx, "initials", e.target.value)}
                       />
                       {errors[idx]?.initials && <span className="text-red-500 text-xs mt-1 block">{errors[idx].initials}</span>}
                     </td>
-                    <td className="px-3 mobile:px-6 py-3 text-center">
-                      <label className="inline-flex items-center justify-center gap-2 text-xs mobile:text-sm">
-                        <input
-                          type="checkbox"
-                          checked={c.is_group}
-                          onChange={e => handleChangeNewCustomer(idx, "is_group", e.target.checked)}
-                        />
-                        Grupp
-                      </label>
-                    </td>
-                    <td className="px-3 mobile:px-6 py-3 text-center">
+                    <td className="px-3 mobile:px-6 py-3 text-left mobile:text-center">
                       {!c.is_group ? (
                         <>
                           <select
-                            className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                            className={`border rounded px-2 py-1 w-full max-w-[100px] text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
                             value={c.gender}
                             onChange={e => handleChangeNewCustomer(idx, "gender", e.target.value)}
                           >
@@ -332,39 +324,47 @@ export const KunderPage = (): JSX.Element => {
                           {errors[idx]?.gender && <span className="text-red-500 text-xs mt-1 block">{errors[idx].gender}</span>}
                         </>
                       ) : (
-                        <span className="text-gray-400 text-xs">—</span>
+                        <span className="text-gray-400 text-xs whitespace-nowrap">—</span>
                       )}
                     </td>
-                    <td className="px-3 mobile:px-6 py-3 text-center">
+                    <td className="px-3 mobile:px-6 py-3 text-left mobile:text-center">
                       {!c.is_group ? (
                         <>
                           <input
                             type="text"
                             placeholder="Födelseår"
-                            className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.birth_year ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                            className={`border rounded px-auto py-1 w-full max-w-[80px] text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.birth_year ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
                             value={c.birth_year || ''}
                             onChange={e => handleChangeNewCustomer(idx, "birth_year", parseInt(e.target.value) || 0)}
                           />
                           {errors[idx]?.birth_year && <span className="text-red-500 text-xs mt-1 block">{errors[idx].birth_year}</span>}
                         </>
                       ) : (
-                        <span className="text-gray-400 text-xs">—</span>
+                        <span className="text-gray-400 text-xs whitespace-nowrap">—</span>
                       )}
                     </td>
-                    <td className="px-3 mobile:px-6 py-3 text-center">
+                    <td className="px-auto mobile:px-6 py-3 text-center whitespace-nowrap">
                       <span className="inline-block px-2 mobile:px-3 py-1 text-xs rounded-full font-semibold bg-green-100 text-green-800">
                         Pågående
                       </span>
                     </td>
-                    <td className="px-3 mobile:px-6 py-3 text-center">
+                    <td className="px-auto mobile:px-6 py-3 text-center">
                       <input
                         type="date"
-                        className="border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm"
+                        className="border rounded px-2 py-1 w-full max-w-[120px] text-center text-xs mobile:text-sm"
                         value={c.startDate}
                         onChange={e => handleChangeNewCustomer(idx, "startDate", e.target.value)}
                       />
                     </td>
-                    <td className="px-3 mobile:px-6 py-3 text-center">
+                    <td className="px-auto py-auto flex flex-row pt-auto justify-center align-center items-center gap-2 mobile:px-6 py-3 text-center whitespace-nowrap">
+                    <label className="inline-flex gap-2 min-w-[60px] text-xs mobile:text-sm">
+                        <input
+                          type="checkbox"
+                          checked={c.is_group}
+                          onChange={e => handleChangeNewCustomer(idx, "is_group", e.target.checked)}
+                        />
+                        Grupp
+                      </label>
                       <Button size="sm" variant="outline" onClick={() => handleCancelAdd(idx)} className="text-xs mobile:text-sm">
                         Avbryt
                       </Button>
@@ -374,11 +374,11 @@ export const KunderPage = (): JSX.Element => {
                 {sortedCustomers.map((customer) => (
                   <tr
                     key={customer.id}
-                    className={`hover:bg-gray-50 cursor-pointer border-t border-gray-200 ${!customer.active ? 'bg-gray-100 text-gray-400' : ''}`}
+                    className={`hover:bg-gray-50 cursor-pointer w-full min-w-0 m-auto border-t border-gray-200 ${!customer.active ? 'bg-gray-100 text-gray-400' : ''}`}
                     onClick={() => handleRowClick(customer)}
                   >
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 font-medium text-center text-xs mobile:text-sm">{customer.id}</td>
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">
+                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 font-medium text-center text-xs mobile:text-sm whitespace-nowrap">{customer.id}</td>
+                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">
                       <div className="flex items-center justify-center gap-2">
                         <span>{customer.active ? customer.initials : '—'}</span>
                         {customer.is_group && (
@@ -386,9 +386,9 @@ export const KunderPage = (): JSX.Element => {
                         )}
                       </div>
                     </td>
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.is_group ? '—' : customer.gender}</td>
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.is_group ? '—' : (customer.birth_year ?? '—')}</td>
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center">
+                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm whitespace-nowrap">{customer.is_group ? '—' : customer.gender}</td>
+                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm whitespace-nowrap">{customer.is_group ? '—' : (customer.birth_year ?? '—')}</td>
+                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-center whitespace-nowrap">
                       <span className={`inline-block px-2 mobile:px-3 py-1 text-xs rounded-full font-semibold ${
                         customer.active
                           ? "bg-green-100 text-green-800"
@@ -397,8 +397,8 @@ export const KunderPage = (): JSX.Element => {
                         {customer.active ? "Pågående" : "Avslutad"}
                       </span>
                     </td>
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">{customer.created_at?.slice(0, 10)}</td>
-                    <td className="px-3 mobile:px-6 py-3 mobile:py-4 text-right text-center">
+                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm whitespace-nowrap">{customer.created_at?.slice(0, 10)}</td>
+                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-right text-center whitespace-nowrap">
                       <div className="flex gap-2 items-center justify-end" onClick={e => e.stopPropagation()}>
                         {customer.active ? (
                           <button
@@ -468,7 +468,8 @@ export const KunderPage = (): JSX.Element => {
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </Layout>
   );
 };

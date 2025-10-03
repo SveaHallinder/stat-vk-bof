@@ -239,11 +239,11 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
   };
 
   return (
-    <div className="relative" ref={searchRef}>
+    <div className="relative w-full sm:w-72 md:w-80" ref={searchRef}>
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={22} />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
         <Input
-          className="w-64 pl-12 pr-4 py-2 h-11 rounded-full border border-gray-300 text-base placeholder:text-[#888888] focus:border-[#17694c] focus:ring-0"
+          className="w-full pl-11 pr-10 py-2 h-11 rounded-full border border-gray-300 text-base placeholder:text-[#888888] focus:border-[#17694c] focus:ring-0"
           placeholder="Sök allt..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}

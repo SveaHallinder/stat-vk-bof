@@ -143,15 +143,17 @@ export const AdminPage = (): JSX.Element => {
 
   // Radera insats
 
-  const [newHandler, setNewHandler] = React.useState({ name: "", email: "" });
+  const [newHandler, setNewHandler] = React.useState({ name: "", email: "", role: "handler" });
   const [openHandlerModal, setOpenHandlerModal] = React.useState(false);
-  const [handlerErrors, setHandlerErrors] = React.useState<{ name?: string; email?: string }>({});
+  const [handlerErrors, setHandlerErrors] = React.useState<{ name?: string; email?: string; role?: string }>({});
 
-  function validateHandler(handler: { name: string; email: string }) {
-    const errors: { name?: string; email?: string } = {};
+  function validateHandler(handler: { name: string; email: string; role: string }) {
+    const errors: { name?: string; email?: string; role?: string } = {};
     if (!handler.name) errors.name = "Namn är obligatoriskt";
     if (!handler.email) errors.email = "E-post är obligatoriskt";
     else if (!/^\S+@\S+\.\S+$/.test(handler.email)) errors.email = "Ogiltig e-postadress";
+    if (!handler.role) errors.role = "Roll är obligatorisk";
+    else if (!['handler', 'admin'].includes(handler.role)) errors.role = "Ogiltig roll";
     return errors;
   }
 
@@ -166,7 +168,7 @@ export const AdminPage = (): JSX.Element => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           email: newHandler.email, 
-          role: 'handler' 
+          role: newHandler.role 
         })
       });
       if (!inviteRes.ok) {
@@ -181,7 +183,7 @@ export const AdminPage = (): JSX.Element => {
       setInviteVerificationCode(invite.verification_code);
       
       // Rensa formuläret
-      setNewHandler({ name: "", email: "" });
+      setNewHandler({ name: "", email: "", role: "handler" });
       setHandlerErrors({});
       setOpenHandlerModal(false);
       
@@ -285,14 +287,13 @@ export const AdminPage = (): JSX.Element => {
 
   return (
     <Layout title="Admin">
-      {/* Responsiv container */}
-      <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
+      <div className="w-full max-w-[420px] sm:max-w-[640px] lg:max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
 
       <Tabs defaultValue="insatser" className="w-full">
-        <TabsList className="flex w-full bg-gray-100 rounded-2xl mb-2 p-1 gap-2">
-          <TabsTrigger value="insatser" className="flex-1 py-3 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Insatser</TabsTrigger>
-          <TabsTrigger value="behandlare" className="flex-1 py-3 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Behandlare</TabsTrigger>
-          <TabsTrigger value="logg" className="flex-1 py-3 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Granskningslogg</TabsTrigger>
+        <TabsList className="flex flex-col sm:flex-row w-full bg-gray-100 rounded-2xl mb-2 p-1 gap-2 overflow-x-auto">
+          <TabsTrigger value="insatser" className="w-full sm:flex-1 py-2 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Insatser</TabsTrigger>
+          <TabsTrigger value="behandlare" className="w-full sm:flex-1 py-2 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Behandlare</TabsTrigger>
+          <TabsTrigger value="logg" className="w-full sm:flex-1 py-2 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Granskningslogg</TabsTrigger>
         </TabsList>
         <TabsContent value="insatser">
           <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
@@ -633,10 +634,35 @@ export const AdminPage = (): JSX.Element => {
                   placeholder="Mail"
                 />
                 {handlerErrors.email && <span className="text-red-500 text-xs mt-1">{handlerErrors.email}</span>}
+                <label className="text-sm font-medium text-gray-700">Roll</label>
+                <select
+                  className={`border rounded px-3 py-2 ${handlerErrors.role ? 'border-red-500' : ''}`}
+                  value={newHandler.role}
+                  onChange={e => {
+                    const role = e.target.value;
+                    setNewHandler({ ...newHandler, role });
+                    setHandlerErrors(prev => ({ ...prev, role: undefined }));
+                  }}
+                >
+                  <option value="handler">Behandlare</option>
+                  <option value="admin">Admin</option>
+                </select>
+                {handlerErrors.role && <span className="text-red-500 text-xs mt-1">{handlerErrors.role}</span>}
               </div>
               <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-end mt-6">
-                <Button variant="outline" className="w-full mobile:w-auto" onClick={() => setOpenHandlerModal(false)}>Avbryt</Button>
-                <Button variant="default" className="w-full mobile:w-auto" onClick={handleAddHandler} disabled={!!handlerErrors.name || !!handlerErrors.email || !newHandler.name || !newHandler.email}>Spara</Button>
+                <Button variant="outline" className="w-full mobile:w-auto" onClick={() => {
+                  setOpenHandlerModal(false);
+                  setNewHandler({ name: "", email: "", role: "handler" });
+                  setHandlerErrors({});
+                }}>Avbryt</Button>
+                <Button
+                  variant="default"
+                  className="w-full mobile:w-auto"
+                  onClick={handleAddHandler}
+                  disabled={!!handlerErrors.name || !!handlerErrors.email || !!handlerErrors.role || !newHandler.name || !newHandler.email || !newHandler.role}
+                >
+                  Spara
+                </Button>
               </div>
             </div>
           </Modal>

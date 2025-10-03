@@ -334,11 +334,9 @@ export const RegisteraTidPage = (): JSX.Element => {
 
   return (
     <Layout title="Registrera tid">
-      {/* Responsiv container */}
-      <div className="w-full w-auto min-w-full mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
-
+      <div className="w-full max-w-[420px] sm:max-w-[640px] lg:max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
       {/* Tidsregistreringar - nu först eftersom det är huvudsyftet */}
-      <Card className="mb-8" data-tour="time-section">
+      <Card className="flex-1 bg-white rounded-xl" data-tour="time-section">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -358,7 +356,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                 Välj insats, datum, timmar och status. Registrera ett nytt insats nedan om du inte hittar insatst i listan.
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="mobile:p-6">
           {isLoadingData ? (
             <div className="space-y-4">
               <Skeleton className="h-20 w-full" />
@@ -367,7 +365,7 @@ export const RegisteraTidPage = (): JSX.Element => {
           ) : (
             <>
               {/* Tidsregistreringar */}
-              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 ml-4">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -389,8 +387,8 @@ export const RegisteraTidPage = (): JSX.Element => {
                     : filteredCases;
 
                   return (
-                  <div key={entry.id} className="flex flex-col gap-4 p-4 bg-white rounded-lg lg:flex-row" style={{ gridTemplateColumns: '1.75fr auto auto auto' }}>
-                    <div className="space-y-2 mobile:flex-1" data-tour="time-case-select">
+                  <div key={entry.id} className="flex flex-col gap-2 bg-white rounded-lg md:grid md:grid-cols-12 md:items-end">
+                    <div className="space-y-2 md:col-span-4" data-tour="time-case-select">
                       <Label className="text-sm font-medium text-gray-700">Insats *</Label>
                       <CaseCombobox
                         cases={casesForCombobox}
@@ -400,17 +398,17 @@ export const RegisteraTidPage = (): JSX.Element => {
                       />
                     </div>
                     
-                    <div className="space-y-2 mobile:flex-1" data-tour="time-date-input">
+                    <div className="space-y-2 md:col-span-3" data-tour="time-date-input">
                       <Label className="text-sm font-medium text-gray-700">Datum *</Label>
                       <Input
                         type="date"
                         value={entry.date}
                         onChange={(e) => updateTimeEntry(entry.id, 'date', e.target.value)}
-                        className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 w-52 h-10 mobile:flex-1"
+                        className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 w-full h-10"
                       />
                     </div>
                     
-                    <div className="space-y-2 mobile:flex-1" data-tour="time-hours-input">
+                    <div className="space-y-2 md:col-span-2" data-tour="time-hours-input">
                       <Label className="text-sm font-medium text-gray-700">Timmar *</Label>
                       <Input
                         type="number"
@@ -418,13 +416,13 @@ export const RegisteraTidPage = (): JSX.Element => {
                         step="0.5"
                         value={entry.hours}
                         onChange={(e) => updateTimeEntry(entry.id, 'hours', Number(e.target.value))}
-                        className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 w-52 h-10"
+                        className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 w-full h-10"
                         placeholder="0.5"
                       />
                     </div>
                     
-                    <div className="flex items-end gap-2">
-                      <div className="w-32" data-tour="time-status-select">
+                    <div className="flex flex-col sm:flex-row sm:items-end gap-3 md:col-span-2">
+                      <div className="sm:w-36" data-tour="time-status-select">
                         <Select 
                           value={entry.status} 
                           onValueChange={(value) => updateTimeEntry(entry.id, 'status', value)}
@@ -438,49 +436,51 @@ export const RegisteraTidPage = (): JSX.Element => {
                           </SelectContent>
                         </Select>
                       </div>
-                      {timeEntries.length === 1 ? (
-                        <Button 
-                          onClick={saveAllEntries} 
-                          size="sm" 
-                          disabled={isSaving || !hasUnsavedChanges}
-                          className={`${
-                            isSaving 
-                              ? 'bg-gray-400 cursor-not-allowed' 
-                              : hasUnsavedChanges 
-                                ? 'bg-blue-600 hover:bg-blue-700' 
-                                : 'bg-gray-300 cursor-not-allowed'
-                          } text-white transition-colors mb-1 max-h-9 h-full mobile:w-full mobile:min-h-10 mobile:mb-0`}
-                          data-tour="time-save-btn"
-                        >
-                          {isSaving ? (
-                            <>
-                              <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              Sparar...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="w-4 h-4 mr-2" />
-                              Spara ({getUnsavedCount()})
-                            </>
-                          )}
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeTimeEntry(entry.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <div className="flex sm:flex-col gap-2 sm:gap-3 w-full h-full justify-center items-center">
+                        {timeEntries.length === 1 ? (
+                          <Button 
+                            onClick={saveAllEntries} 
+                            size="default" 
+                            disabled={isSaving || !hasUnsavedChanges}
+                            className={`${
+                              isSaving 
+                                ? 'bg-gray-400 cursor-not-allowed' 
+                                : hasUnsavedChanges 
+                                  ? 'bg-blue-600 hover:bg-blue-700' 
+                                  : 'bg-gray-300 cursor-not-allowed'
+                            } text-white transition-colors h-full sm:h-auto`}
+                            data-tour="time-save-btn"
+                          >
+                            {isSaving ? (
+                              <>
+                                <div className="w-4 h-full mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Sparar...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-4 h-full m-0" />
+                                Spara ({getUnsavedCount()})
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeTimeEntry(entry.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-10" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   );
                 })}
                 
                 {/* Knapp för att lägga till fler tider - nu över linjen */}
-                <div className="pl-4 pt-2 pb-4">
+                <div className="pt-2 pb-4">
                   <Button 
                     onClick={addTimeEntry} 
                     variant="outline" 
@@ -495,7 +495,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                 
                 {/* Spara alla knapp när det finns fler än 1 tidsregistrering - nu under linjen */}
                 {timeEntries.length > 1 && (
-                  <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200 pl-4">
+                  <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
                     <Button 
                       onClick={saveAllEntries} 
                       disabled={isSaving || !hasUnsavedChanges}
@@ -515,7 +515,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                         </>
                       ) : (
                         <>
-                          <Save className="w-4 h-4 mr-2" />
+                          <Save className="w-4 h-4 m-0" />
                           Spara alla ({getUnsavedCount()})
                         </>
                       )}
@@ -548,13 +548,13 @@ export const RegisteraTidPage = (): JSX.Element => {
       <Card className="mb-6 ">
         <CardHeader className="pb-4">
           <CardTitle className="flex flex-col gap-3 text-gray-800">
-            <div className="flex items-center gap-3 mobile:mx-6 mobile:mb-4">
+            <div className="flex items-center gap-3 lg:ml-0 mobile:mx-6 mobile:mb-4">
               <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
                 <FileText className="w-4 h-4 text-white" />
               </div>
-              <span>Registrera nytt insats för kund</span>
+              <span>Registrera ny insats för kund</span>
             </div>
-            <div className="flex lg:ml-6 gap-3 mobile:w-full">
+            <div className="flex gap-3 mobile:w-full">
               <Button 
                 onClick={() => setShowCreateCase(!showCreateCase)} 
                 variant="outline"
@@ -571,12 +571,12 @@ export const RegisteraTidPage = (): JSX.Element => {
         
         {showCreateCase && (
           <CardContent className="pt-0">
-            <div className="p-6 bg-white rounded-lg">
+            <div className="py-6 bg-white rounded-lg">
               <div className="mb-4 text-sm text-gray-600">
                 Fyll i formuläret nedan för att skapa ett nytt insats:
               </div>
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="space-y-2 flex flex-col">
+                <div className="space-y-2 flex flex-col pb-0 mb-0">
                   <Label htmlFor="customer" className="text-sm font-medium text-gray-700">Kund *</Label>
                   <KundCombobox 
                     value={newCaseCustomerId} 
@@ -663,49 +663,49 @@ export const RegisteraTidPage = (): JSX.Element => {
       </Card>
 
       {/* Befintliga shifts */}
-      <Card className="mt-8 border-radius-lg">
+      <Card className="border-radius-lg">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-          <CardTitle className="flex items-center gap-3 text-blue-900">
+          <CardTitle className="flex items-center gap-2 text-blue-900">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
               <CheckCircle className="w-4 h-4 text-white" />
             </div>
             <div>
               <div className="text-lg font-semibold">Registrerade tider</div>
-              <div className="text-sm font-normal text-blue-700">Översikt över alla tidsregistreringar</div>
+              <div className="text-sm font-light text-blue-700">Översikt över alla tidsregistreringar</div>
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left" data-tour="time-history-table">
+        <CardContent className="p-0 w-full">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-center" data-tour="time-history-table">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Kund</th>
-                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Behandlare 1</th>
-                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Behandlare 2</th>
-                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Insats</th>
-                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Datum</th>
-                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-sm">Timmar</th>
-                  <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-sm">Status</th>
+                  <th className="px-4 py-4 font-medium text-gray-600 uppercase tracking-wide text-xs sm:text-sm whitespace-nowrap">Kund</th>
+                  <th className="px-4 py-4 font-medium text-gray-600 uppercase tracking-wide text-xs sm:text-sm whitespace-nowrap">Behandlare 1</th>
+                  <th className="px-4 py-4 font-medium text-gray-600 uppercase tracking-wide text-xs sm:text-sm whitespace-nowrap">Behandlare 2</th>
+                  <th className="px-4 py-4 font-medium text-gray-600 uppercase tracking-wide text-xs sm:text-sm whitespace-nowrap">Insats</th>
+                  <th className="px-4 py-4 font-medium text-gray-600 uppercase tracking-wide text-xs sm:text-sm whitespace-nowrap">Datum</th>
+                  <th className="px-4 py-4 font-medium text-gray-600 uppercase tracking-wide text-xs sm:text-sm whitespace-nowrap">Timmar</th>
+                  <th className="px-4 py-4 font-medium text-gray-600 uppercase tracking-wide text-xs sm:text-sm whitespace-nowrap">Status</th>
                 </tr>
               </thead>
-                              <tbody>
+              <tbody>
                   {isLoadingData ? (
                     // Skeleton loading för tabellen
                     [...Array(3)].map((_, index) => (
                       <tr key={index} className="border-t border-gray-200">
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-28" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-12" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                        <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
+                        <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
+                        <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
+                        <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
+                        <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
+                        <td className="px-4 py-4"><Skeleton className="h-4 w-16" /></td>
+                        <td className="px-4 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
                       </tr>
                     ))
                   ) : shifts.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
                         <div className="py-8">
                           <Clock className="w-12 h-12 text-gray-300 mx-auto mb-2" />
                           <p className="text-gray-500">Inga registrerade tider hittades.</p>
@@ -720,13 +720,13 @@ export const RegisteraTidPage = (): JSX.Element => {
                         className={`hover:bg-blue-50 border-t border-gray-200 transition-colors cursor-pointer`}
                         onClick={() => handleShiftClick(shift)}
                       >
-                        <td className="px-6 py-4 font-medium text-gray-800">{(shift as any).customer_active === false || shift.customer_name === 'ANONYM' ? '—' : shift.customer_name}</td>
-                        <td className="px-6 py-4 text-gray-600">{shift.handler1_name}</td>
-                        <td className="px-6 py-4 text-gray-600">{shift.handler2_name || "-"}</td>
-                        <td className="px-6 py-4 text-gray-600">{shift.effort_name}</td>
-                        <td className="px-6 py-4 text-gray-600">{shift.date ? shift.date.slice(0,10) : "-"}</td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">{shift.hours}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-4 font-medium text-gray-800">{(shift as any).customer_active === false || shift.customer_name === 'ANONYM' ? '—' : shift.customer_name}</td>
+                        <td className="px-4 py-4 text-gray-600">{shift.handler1_name}</td>
+                        <td className="px-4 py-4 text-gray-600">{shift.handler2_name || "-"}</td>
+                        <td className="px-4 py-4 text-gray-600">{shift.effort_name}</td>
+                        <td className="px-4 py-4 text-gray-600">{shift.date ? shift.date.slice(0,10) : "-"}</td>
+                        <td className="px-4 py-4 text-gray-600 font-medium">{shift.hours}</td>
+                        <td className="px-4 py-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             shift.status === 'Utförd' 
                               ? 'bg-green-100 text-green-800' 
@@ -813,7 +813,7 @@ export const RegisteraTidPage = (): JSX.Element => {
           </div>
         </div>
       )}
-    </div>
+      </div>
     </Layout>
   );
 };

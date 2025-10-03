@@ -73,8 +73,7 @@ export const ArendelistaPage = (): JSX.Element => {
 
   return (
     <Layout title="Insatslista">
-      {/* Responsiv container */}
-      <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
+      <div className="w-full max-w-[420px] sm:max-w-[640px] lg:max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
 
       <Card className="flex-1 bg-white rounded-xl">
         <CardContent className="p-4 mobile:p-6">
