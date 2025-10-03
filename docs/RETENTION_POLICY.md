@@ -23,7 +23,7 @@ Denna policy sammanfattar hur systemets data gallras och bevaras.
 - Verksamhetsdata (customers, cases, shifts, efforts, handlers):
   - Princip: ingen hård radering. Avaktivera i stället.
   - Kunder: vid avaktivering anonymiseras initialer permanent (GDPR) men övriga fält behålls för statistik.
-  - Behandlare/insatser: avaktiveras; referenser i insatsn/tider bevaras.
+  - Behandlare/insatser: avaktiveras; referenser i insatsen/tider bevaras.
   - Statistik: visas normalt på aktiva enheter; “Inkludera inaktiva” kan aktiveras vid behov.
 
 ## Schemaläggning av audit‑gallring

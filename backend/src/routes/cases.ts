@@ -42,7 +42,7 @@ export default function cases(pool: Pool) {
         return res.status(400).json({ error: 'Kunden är inaktiv eller saknas' });
       }
       if (custRow.is_protected && String(req.user?.role).toLowerCase() !== 'admin') {
-        return res.status(403).json({ error: 'Endast admin kan skapa insatsn för skyddad kund' });
+        return res.status(403).json({ error: 'Endast admin kan skapa insatsen för skyddad kund' });
       }
     } catch {}
 
@@ -60,7 +60,7 @@ export default function cases(pool: Pool) {
 
       if (existingCase.rows.length > 0) {
         return res.status(400).json({ 
-          error: "Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsn." 
+          error: "Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsen." 
         });
       }
     } catch (checkError) {
@@ -98,7 +98,7 @@ export default function cases(pool: Pool) {
     }
   });
 
-  // Hämta insatsn (med namn) + FILTER: all, customer_id, effort_id, active
+  // Hämta insatsen (med namn) + FILTER: all, customer_id, effort_id, active
   router.get("/", async (req, res) => {
     try {
       const { all, customer_id, effort_id, active } = req.query as {
@@ -207,7 +207,7 @@ export default function cases(pool: Pool) {
         };
       });
 
-      // Dölj skyddade insatsn helt för icke-admin och icke-tilldelade
+      // Dölj skyddade insatsen helt för icke-admin och icke-tilldelade
       const isAdmin = String(viewerRole).toLowerCase() === 'admin';
       if (!isAdmin) {
         rows = rows.filter((row: any) => !row.is_protected || row.handler1_id === viewerId || row.handler2_id === viewerId);
@@ -216,7 +216,7 @@ export default function cases(pool: Pool) {
       res.json(rows);
     } catch (e) {
       console.error("Error fetching cases:", e);
-      res.status(500).json({ error: "Kunde inte hämta insatsn" });
+      res.status(500).json({ error: "Kunde inte hämta insatsen" });
     }
   });
 
@@ -274,7 +274,7 @@ export default function cases(pool: Pool) {
 
       if (existingCase.rows.length > 0) {
         return res.status(400).json({ 
-          error: "Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsn." 
+          error: "Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsen." 
         });
       }
     } catch (checkError) {
@@ -300,7 +300,7 @@ export default function cases(pool: Pool) {
         return res.status(400).json({ error: 'Kunden är inaktiv eller saknas' });
       }
       if (custRow.is_protected && String(req.user?.role).toLowerCase() !== 'admin') {
-        return res.status(403).json({ error: 'Endast admin kan uppdatera insatsn för skyddad kund' });
+        return res.status(403).json({ error: 'Endast admin kan uppdatera insatsen för skyddad kund' });
       }
 
       // Validera att insats och behandlare är aktiva
@@ -341,7 +341,7 @@ export default function cases(pool: Pool) {
     }
   });
 
-  // INGEN DELETE ENDPOINT - insatsn ska aldrig raderas, bara avslutas/aktiveras
+  // INGEN DELETE ENDPOINT - insatsen ska aldrig raderas, bara avslutas/aktiveras
   // Detta skyddar statistiken och historiken
 
   return router;

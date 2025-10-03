@@ -158,22 +158,22 @@ const MinProfilPage: React.FC = () => {
 
   const fetchUserData = async () => {
     try {
-      // Hämta användarens kunder och insatsn
+      // Hämta användarens kunder och insatsen
       const [customersRes, casesRes] = await Promise.all([
         getCustomers(),
         getCases()
       ]);
       
-      // Filtrera kunder baserat på användarens insatsn
+      // Filtrera kunder baserat på användarens insatsen
       const userCases = casesRes.filter(c => 
         c.handler1_id === user?.id || c.handler2_id === user?.id
       );
       
-      // Hämta kunder för användarens insatsn
+      // Hämta kunder för användarens insatsen
       const userCustomerIds = [...new Set(userCases.map(c => c.customer_id))];
       const userCustomers = customersRes.filter(c => userCustomerIds.includes(c.id));
       
-      // Filtrera insatsn för den inloggade användaren
+      // Filtrera insatsen för den inloggade användaren
       const userCasesFiltered = casesRes.filter(c => 
         c.handler1_id === user?.id || c.handler2_id === user?.id
       );

@@ -110,7 +110,7 @@ export default function customers(pool: Pool) {
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Kund hittades inte eller är redan avaktiverad" });
       }
-      // Sätt alla kundens aktiva insatsn till inaktiva för att undvika inkonsekvens
+      // Sätt alla kundens aktiva insatsen till inaktiva för att undvika inkonsekvens
       await pool.query(
         'UPDATE cases SET active = FALSE WHERE customer_id = $1 AND active = TRUE',
         [id]
@@ -266,7 +266,7 @@ export default function customers(pool: Pool) {
         );
       }
 
-      // Om kunden nu är inaktiv, stäng alla aktiva insatsn
+      // Om kunden nu är inaktiv, stäng alla aktiva insatsen
       if (active === false) {
         await pool.query(
           'UPDATE cases SET active = FALSE WHERE customer_id = $1 AND active = TRUE',
@@ -394,7 +394,7 @@ export default function customers(pool: Pool) {
     }
   });
 
-  // Hämta alla insatsn för en viss kund och insats
+  // Hämta alla insatsen för en viss kund och insats
   router.get("/:customerId/efforts/:effortId/cases", async (req, res) => {
     const { customerId, effortId } = req.params;
     try {
@@ -435,7 +435,7 @@ export default function customers(pool: Pool) {
       );
       res.json(result.rows);
     } catch {
-      res.status(500).json({ error: "Kunde inte hämta insatsn för kund och insats" });
+      res.status(500).json({ error: "Kunde inte hämta insatsen för kund och insats" });
     }
   });
 

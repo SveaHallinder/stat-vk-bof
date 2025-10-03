@@ -46,7 +46,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
         // Endast aktiva behandlare (publik lista, ej admin-krav)
         getPublicHandlers().catch(() => []),
         getEfforts().catch(() => []),
-        // Endast aktiva insatsn
+        // Endast aktiva insatsen
         getCases().catch(() => []),
         getShifts().catch(() => [])
       ]);
@@ -102,7 +102,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
         }
       });
 
-      // Sök i insatsn
+      // Sök i insatsen
       cases.forEach(caseItem => {
         if (caseItem.customer_name?.toLowerCase().includes(lowerQuery) ||
             caseItem.effort_name?.toLowerCase().includes(lowerQuery) ||
