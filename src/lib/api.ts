@@ -143,28 +143,28 @@ export async function getCustomerEfforts(customerId: number) {
 export async function getCustomerCases(customerId: number) {
   const res = await api(`/cases?customer_id=${customerId}`);
   if (!res.ok) {
-    throw new Error(`Kunde inte hämta insatsn för kund ${customerId}`);
+    throw new Error(`Kunde inte hämta insatsen för kund ${customerId}`);
   }
   return res.json();
 }
 
 export async function getCasesForCustomerEffort(customerId: string, effortId: string): Promise<CaseWithNames[]> {
   const res = await api(`/cases?customer_id=${customerId}&effort_id=${effortId}`);
-  if (!res.ok) throw new Error("Kunde inte hämta insatsn för kund och insats");
+  if (!res.ok) throw new Error("Kunde inte hämta insatsen för kund och insats");
   return res.json();
 }
 
 export async function getCases(all = false, options?: RequestInit): Promise<CaseWithNames[]> {
   const res = await api(`/cases${all ? '?all=true' : ''}`, options);
-  if (!res.ok) throw new Error("Kunde inte hämta insatsn");
+  if (!res.ok) throw new Error("Kunde inte hämta insatsen");
   const data = await res.json();
   return data;
 }
 
-// Ny funktion för att hämta aktiva insatsn för en specifik kund
+// Ny funktion för att hämta aktiva insatsen för en specifik kund
 export async function getActiveCasesByCustomer(customerId: number): Promise<CaseWithNames[]> {
   const res = await api(`/cases?customer_id=${customerId}&active=true`);
-  if (!res.ok) throw new Error("Kunde inte hämta insatsn för kund");
+  if (!res.ok) throw new Error("Kunde inte hämta insatsen för kund");
   return res.json();
 }
 

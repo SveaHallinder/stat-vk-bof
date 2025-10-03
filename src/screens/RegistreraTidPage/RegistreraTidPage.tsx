@@ -114,7 +114,7 @@ export const RegisteraTidPage = (): JSX.Element => {
       setIsLoadingData(true);
       try {
         const [activeCasesData, effortsData, handlersData, shiftsData] = await Promise.all([
-          getCases(false), // false = endast aktiva insatsn
+          getCases(false), // false = endast aktiva insatsen
           getEfforts(),
           user?.role === 'admin' ? getHandlers(true) : getPublicHandlers(),
           getShifts()
@@ -197,7 +197,7 @@ export const RegisteraTidPage = (): JSX.Element => {
         active: true
       });
       
-      // Uppdatera aktiva insatsn
+      // Uppdatera aktiva insatsen
       setActiveCases(prev => [newCase, ...prev]);
       setShowCreateCase(false);
       
@@ -213,7 +213,7 @@ export const RegisteraTidPage = (): JSX.Element => {
       if (error.error && error.error.includes('samma kombination finns redan')) {
         enhancedToast.error(error.error, { duration: 8000 }); // 8 sekunder
       } else if (error.message && error.message.includes('samma kombination finns redan')) {
-        enhancedToast.error('Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsn.', { duration: 8000 }); // 8 sekunder
+        enhancedToast.error('Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsen.', { duration: 8000 }); // 8 sekunder
       } else {
         enhancedToast.error("Kunde inte skapa insats. Kontrollera din internetanslutning och försök igen.");
       }
@@ -352,7 +352,7 @@ export const RegisteraTidPage = (): JSX.Element => {
             )}
           </CardTitle>
           <p className="mb-2 text-sm max-w-xl">
-                Här kan du registrera tidsregistreringar för befintliga aktiva insatsn. 
+                Här kan du registrera tidsregistreringar för befintliga aktiva insatsen. 
                 Välj insats, datum, timmar och status. Registrera ett nytt insats nedan om du inte hittar insatst i listan.
           </p>
         </CardHeader>

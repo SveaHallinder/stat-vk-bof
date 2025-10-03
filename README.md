@@ -1,13 +1,13 @@
 # Vallentuna Kommun - Tidsregistreringssystem
 
-Ett modernt webbbaserat system för hantering av kunder, insatsn och tidsregistreringar för Vallentuna kommun.
+Ett modernt webbbaserat system för hantering av kunder, insatsen och tidsregistreringar för Vallentuna kommun.
 # Statistik Vallentuna
 
 ## Funktioner
 
 - **Kundhantering**: Registrera och hantera kunder
-- **Insatssystem**: Skapa och spåra insatsn med olika insatser
-- **Tidsregistrering**: Registrera arbetstid för olika insatsn
+- **Insatssystem**: Skapa och spåra insatsen med olika insatser
+- **Tidsregistrering**: Registrera arbetstid för olika insatsen
 - **Statistik**: Översikt och analys av aktiviteter
 - **Användarhantering**: Rollbaserad åtkomst (admin/behandlare)
 - **Responsiv design**: Fungerar på alla enheter
@@ -161,7 +161,7 @@ Om databasen är helt ny: skapa en första admin‑användare (exempel) genom at
 
 - Auditloggar gallras efter 5 år via funktionen `cleanup_old_audit_logs()` (se `create_audit_log_table.sql`).
 - Schemalägg gallring via cron/pg_cron eller anropa `/api/audit/cleanup` från ett serverjobb.
-- Verksamhetsdata (kunder/insatsn/tider/insatser/behandlare) hård‑raderas inte: avaktivera i stället. Kundinitialer anonymiseras vid avaktivering.
+- Verksamhetsdata (kunder/insatsen/tider/insatser/behandlare) hård‑raderas inte: avaktivera i stället. Kundinitialer anonymiseras vid avaktivering.
 
 ## Bidrag
 

@@ -55,7 +55,7 @@ export const CustomerProfile = () => {
   const { refreshKey, triggerRefresh } = useRefresh();
   const [totalHours, setTotalHours] = useState<number | null>(null);
   
-  // Toggle för att visa/dölja avslutade insatsn
+  // Toggle för att visa/dölja avslutade insatsen
   const [showClosedCases, setShowClosedCases] = useState(false);
 
 
@@ -528,7 +528,7 @@ export const CustomerProfile = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Toggle för att visa/dölja avslutade insatsn */}
+              {/* Toggle för att visa/dölja avslutade insatsen */}
 
               {cases.some(c => !c.active) && (
                 <div className="flex justify-end mb-4">
@@ -538,7 +538,7 @@ export const CustomerProfile = () => {
                     onClick={() => setShowClosedCases(!showClosedCases)}
                     className="text-gray-600 hover:text-gray-800"
                   >
-                    {showClosedCases ? "Dölj avslutade insatsn" : "Visa avslutade insatsn"}
+                    {showClosedCases ? "Dölj avslutade insatsen" : "Visa avslutade insatsen"}
                   </Button>
                 </div>
               )}
@@ -670,7 +670,7 @@ export const CustomerProfile = () => {
                       )}
                       
                       <div className="flex gap-2 justify-end mt-2">
-                        {/* Visa "Registrera tid" för aktiva insatsn */}
+                        {/* Visa "Registrera tid" för aktiva insatsen */}
                         {caseItem.active && (
                           <Button
                             variant="outline"
@@ -685,7 +685,7 @@ export const CustomerProfile = () => {
                           </Button>
                         )}
                         
-                        {/* Visa "Återuppta insats" för avslutade insatsn */}
+                        {/* Visa "Återuppta insats" för avslutade insatsen */}
                         {!caseItem.active && (
                           <Button
                             variant="outline"

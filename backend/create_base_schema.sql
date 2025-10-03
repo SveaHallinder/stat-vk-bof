@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS efforts (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- 4) Cases (insatsn)
+-- 4) Cases (insatsen)
 CREATE TABLE IF NOT EXISTS cases (
   id SERIAL PRIMARY KEY,
   customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,

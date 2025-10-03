@@ -33,7 +33,7 @@ export const ArendelistaPage = (): JSX.Element => {
         const data = await getCases(includeInactive, { signal: controller.signal }); // styr via checkbox
         setCases(data);
       } catch (err: any) {
-        if (err?.name !== 'AbortError') toast.error("Kunde inte hämta insatsn");
+        if (err?.name !== 'AbortError') toast.error("Kunde inte hämta insatsen");
       } finally {
         // finished
       }

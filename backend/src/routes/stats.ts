@@ -88,7 +88,7 @@ export default function stats(pool: Pool) {
       // Antal besök i valt filter
       const besokRes = await pool.query(`SELECT COUNT(*) ${baseQuery}`, params);
 
-      // Antal kunder med aktiva insatsn inom vald kategori (med filter)
+      // Antal kunder med aktiva insatsen inom vald kategori (med filter)
       const kunderRes = await pool.query(`SELECT COUNT(DISTINCT cases.customer_id) ${baseQuery}`, params);
 
       // Totala timmar (endast utförda besök)

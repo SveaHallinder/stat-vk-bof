@@ -207,13 +207,13 @@ export const MainContent = (): JSX.Element => {
   }, []);
 
   useEffect(() => {
-    // Ladda aktiva insatsn när tid-modalen öppnas
+    // Ladda aktiva insatsen när tid-modalen öppnas
     if (openModal === "tid") {
       loadActiveCases();
     }
   }, [openModal, loadActiveCases]);
 
-  // Ladda aktiva insatsn för dashboard-kortet
+  // Ladda aktiva insatsen för dashboard-kortet
   useEffect(() => {
     loadActiveCases();
   }, [loadActiveCases, refreshKey]);
@@ -271,7 +271,7 @@ export const MainContent = (): JSX.Element => {
       if (err.error && err.error.includes('samma kombination finns redan')) {
         toast.error(err.error, { duration: 8000 }); // 8 sekunder
       } else if (err.message && err.message.includes('samma kombination finns redan')) {
-        toast.error('Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsn.', { duration: 8000 }); // 8 sekunder
+        toast.error('Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsen.', { duration: 8000 }); // 8 sekunder
       } else {
         toast.error('Kunde inte skapa insats');
       }

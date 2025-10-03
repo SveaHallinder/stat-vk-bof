@@ -164,7 +164,7 @@ export default function shifts(pool: Pool) {
             } else { throw err; }
           }
           if (custRow?.is_protected && String(req.user?.role).toLowerCase() !== 'admin') {
-            return res.status(403).json({ error: 'Endast admin kan skapa nya insatsn för skyddad kund' });
+            return res.status(403).json({ error: 'Endast admin kan skapa nya insatsen för skyddad kund' });
           }
         } catch {}
         const existing = await pool.query(
