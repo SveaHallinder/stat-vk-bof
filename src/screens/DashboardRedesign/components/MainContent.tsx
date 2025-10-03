@@ -463,12 +463,12 @@ export const MainContent = (): JSX.Element => {
   }, [navigate]);
 
   return (
-    <div className="flex-1 flex flex-col items-center min-h-screen bg-[#f5f7fa]">
+    <div className="flex flex-col items-center min-h-screen">
       {/* Toaster is provided globally in src/index.tsx */}
       {/* Main Content Grid */}
-      <div className="w-full max-w-[350px] mobile:max-w-[350px] mobile:w-full tablet:max-w-2xl lg:max-w-7xl mx-auto px-2 mobile:px-4 tablet:px-6 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4">
+      <div className="flex flex-col min-w-0 w-full mx-auto mobile:px-auto px-auto flex flex-col gap-6 lg:gap-8 py-4">
         {/* Sammanfattning */}
-        <div className="grid grid-cols-1 mobile:grid-cols-1 lg:grid-cols-4 gap-4 mobile:gap-6 w-full" data-tour="stats-cards">
+        <div className="grid grid-cols-1 mobile:grid-cols-1 lg:grid-cols-4 gap-4 mobile:gap-6 min-w-0 w-full" data-tour="stats-cards">
           {isLoading ? (
             // Loading state
             Array.from({ length: 3 }).map((_, index) => (
@@ -958,9 +958,6 @@ export const MainContent = (): JSX.Element => {
           </div>
         </div>
       </Modal>
-      <p className="text-center text-xs text-gray-500 py-4 mt-auto">
-        © 2024 Vallentuna Biståndshandläggare
-      </p>
     </div>
   );
 };
