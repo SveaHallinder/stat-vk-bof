@@ -290,7 +290,7 @@ export const AdminPage = (): JSX.Element => {
       <div className="w-full max-w-[420px] sm:max-w-[640px] lg:max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
 
       <Tabs defaultValue="insatser" className="w-full">
-        <TabsList className="flex flex-col sm:flex-row w-full bg-gray-100 rounded-2xl mb-2 p-1 gap-2 overflow-x-auto">
+        <TabsList className="flex lg:flex-row sm:flex-col mobile:flex-col mobile:h-full w-full bg-gray-100 rounded-2xl mb-2 p-1 gap-2 ">
           <TabsTrigger value="insatser" className="w-full sm:flex-1 py-2 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Insatser</TabsTrigger>
           <TabsTrigger value="behandlare" className="w-full sm:flex-1 py-2 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Behandlare</TabsTrigger>
           <TabsTrigger value="logg" className="w-full sm:flex-1 py-2 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Granskningslogg</TabsTrigger>
