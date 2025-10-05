@@ -73,7 +73,7 @@ export const ArendelistaPage = (): JSX.Element => {
 
   return (
     <Layout title="Insatslista">
-      <div className="w-full max-w-[420px] sm:max-w-[640px] lg:max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
+      <div className="w-full flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
 
       <Card className="flex-1 bg-white rounded-xl">
         <CardContent className="p-4 mobile:p-6">
@@ -104,8 +104,8 @@ export const ArendelistaPage = (): JSX.Element => {
               Inkludera inaktiva
             </label>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left" data-tour="cases-table">
+          <div className="tablet:overflow-x-auto overflow-visible">
+            <table className="responsive-table text-left tablet:min-w-[720px]" data-tour="cases-table">
               <thead>
                 <tr className="border-b">
                   {[
@@ -145,12 +145,12 @@ export const ArendelistaPage = (): JSX.Element => {
                     className="border-t hover:bg-gray-50 cursor-pointer transition-colors group"
                     onClick={() => handleCaseClick(c)}
                   >
-                    <td className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] group-hover:font-medium text-xs mobile:text-sm">{(c as any).customer_active === false || c.customer_name === 'ANONYM' ? '—' : c.customer_name}</td>
-                    <td className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.effort_name}</td>
-                    <td className="py-2 mobile:py-3 px-2 mobile:px-4 text-xs mobile:text-sm">
+                    <td data-label="Kund" className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] group-hover:font-medium text-xs mobile:text-sm">{(c as any).customer_active === false || c.customer_name === 'ANONYM' ? '—' : c.customer_name}</td>
+                    <td data-label="Insats" className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.effort_name}</td>
+                    <td data-label="Startdatum" className="py-2 mobile:py-3 px-2 mobile:px-4 text-xs mobile:text-sm">
                       {new Date(c.created_at).toLocaleDateString('sv-SE')}
                     </td>
-                    <td className="py-2 mobile:py-3 px-2 mobile:px-4">
+                    <td data-label="Status" className="py-2 mobile:py-3 px-2 mobile:px-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         c.active 
                           ? 'bg-green-100 text-green-800' 
@@ -159,8 +159,8 @@ export const ArendelistaPage = (): JSX.Element => {
                         {c.active ? 'Aktivt' : 'Inaktivt'}
                       </span>
                     </td>
-                    <td className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.handler1_name}</td>
-                    <td className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.handler2_name || '-'}</td>
+                    <td data-label="Behandlare 1" className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.handler1_name}</td>
+                    <td data-label="Behandlare 2" className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.handler2_name || '-'}</td>
                   </tr>
                 ))}
               </tbody>

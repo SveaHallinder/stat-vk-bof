@@ -14,20 +14,20 @@ const CustomerRow = React.memo<{
   const isGroup = Boolean(customer.is_group || customer.isGroup);
   return (
     <tr className="hover:bg-gray-50 cursor-pointer">
-      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{customer.id}</td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center gap-2">
+      <td data-label="Kund-ID" className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{customer.id}</td>
+      <td data-label="Initialer" className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center gap-2">
         <span>{customer.initials}</span>
         {isGroup && <span className="inline-block px-2 py-0.5 text-[10px] rounded-full bg-blue-100 text-blue-700 uppercase">Grupp</span>}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{isGroup ? '—' : (customer.birth_year ?? '—')}</td>
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td data-label="Födelseår" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{isGroup ? '—' : (customer.birth_year ?? '—')}</td>
+      <td data-label="Status" className="px-6 py-4 whitespace-nowrap">
         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
           customer.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
         }`}>
           {customer.active ? 'Aktiv' : 'Inaktiv'}
         </span>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td data-label="Åtgärd" className="actions px-6 py-4 whitespace-nowrap">
         <button 
           onClick={() => onViewProfile(customer.id)}
           className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
@@ -91,8 +91,8 @@ const CustomersTable = React.memo<{
     </div>
     <div className="p-6">
       {customers.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="tablet:overflow-x-auto overflow-visible">
+          <table className="responsive-table divide-y divide-gray-200 tablet:min-w-[640px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kund-ID</th>
@@ -197,7 +197,7 @@ const MinProfilPage: React.FC = () => {
 
   return (
     <Layout title="Min Profil">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profilinformation */}
           <div className="lg:col-span-1">

@@ -239,7 +239,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
   };
 
   return (
-    <div className="relative w-full sm:w-72 md:w-80" ref={searchRef}>
+    <div className="relative w-full max-w-full sm:w-72 md:w-80" ref={searchRef}>
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
         <Input

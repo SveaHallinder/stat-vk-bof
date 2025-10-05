@@ -222,7 +222,7 @@ export const KunderPage = (): JSX.Element => {
 
   return (
     <Layout title="Kunder">
-      <div className="flex flex-col lg:items-start sm:items-center sm:justify-between gap-4 px-3 sm:px-4 lg:px-6">
+      <div className="w-full flex flex-col gap-4 lg:items-start sm:items-center sm:justify-between">
       {/* Header section */}
       <div className="flex flex-row flext-start float-left lg:flex-row mobile:flex-col gap-3 sm:flex-col">
         <Button
@@ -255,10 +255,10 @@ export const KunderPage = (): JSX.Element => {
         </label>
 
       {/* Table card */}
-        <Card className="bg-white rounded-xl shadow-sm w-full max-w-[400px] sm:max-w-[600px] lg:max-w-6xl">
+        <Card className="bg-white rounded-xl shadow-sm w-full">
         <CardContent className="p-0">
-          <div className="overflow-x-auto min-w-0">
-            <table className="text-left mt-3" data-tour="customers-table" style={{ minWidth: '700px' }}>
+          <div className="tablet:overflow-x-auto overflow-visible min-w-0">
+            <table className="responsive-table text-left mt-3 tablet:min-w-[800px]" data-tour="customers-table">
               <thead>
                 <tr >
                   {[
@@ -271,7 +271,7 @@ export const KunderPage = (): JSX.Element => {
                   ].map(col => (
                     <th
                       key={col.field}
-                      className="px-auto max-w-[130px] mobile:px-6 py-3 mobile:py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-center cursor-pointer select-none group whitespace-nowrap"
+                      className="px-1 mobile:px-4 py-2 mobile:py-3 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-center cursor-pointer select-none group whitespace-nowrap"
                       onClick={() => {
                         if (sortField === col.field) {
                           setSortAsc(a => !a);
@@ -291,14 +291,14 @@ export const KunderPage = (): JSX.Element => {
                       </span>
                     </th>
                   ))}
-                  <th className="px-3 mobile:px-6 py-3 mobile:py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-left mobile:text-center whitespace-nowrap">Åtgärder</th>
+                  <th className="px-2 mobile:px-4 py-2 mobile:py-3 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-center whitespace-nowrap">Åtgärder</th>
                 </tr>
               </thead>
               <tbody className="min-w-0 w-full">
                 {newCustomers.map((c, idx) => (
                   <tr key={idx} className="bg-gray-50">
-                    <td className="px-3 mobile:px-6 py-3 text-gray-400 italic text-left mobile:text-center text-xs mobile:text-sm whitespace-nowrap">(genereras)</td>
-                    <td className="px-3 mobile:px-6 py-3 text-left mobile:text-center">
+                    <td data-label="Kund-ID" className="px-2 mobile:px-4 py-2 mobile:py-3 text-gray-400 italic text-center text-xs mobile:text-sm whitespace-nowrap">(genereras)</td>
+                    <td data-label="Initialer" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center">
                       <input
                         type="text"
                         placeholder="Initialer"
@@ -308,11 +308,11 @@ export const KunderPage = (): JSX.Element => {
                       />
                       {errors[idx]?.initials && <span className="text-red-500 text-xs mt-1 block">{errors[idx].initials}</span>}
                     </td>
-                    <td className="px-3 mobile:px-6 py-3 text-left mobile:text-center">
+                    <td data-label="Kön" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center">
                       {!c.is_group ? (
                         <>
                           <select
-                            className={`border rounded px-2 py-1 w-full max-w-[100px] text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
+                            className={`border rounded px-2 py-1 w-full text-center text-xs mobile:text-sm focus:outline-none focus:ring-2 ${errors[idx]?.gender ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#17694c]'}`}
                             value={c.gender}
                             onChange={e => handleChangeNewCustomer(idx, "gender", e.target.value)}
                           >
@@ -327,7 +327,7 @@ export const KunderPage = (): JSX.Element => {
                         <span className="text-gray-400 text-xs whitespace-nowrap">—</span>
                       )}
                     </td>
-                    <td className="px-3 mobile:px-6 py-3 text-left mobile:text-center">
+                    <td data-label="Födelseår" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center">
                       {!c.is_group ? (
                         <>
                           <input
@@ -343,12 +343,12 @@ export const KunderPage = (): JSX.Element => {
                         <span className="text-gray-400 text-xs whitespace-nowrap">—</span>
                       )}
                     </td>
-                    <td className="px-auto mobile:px-6 py-3 text-center whitespace-nowrap">
+                    <td data-label="Status" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center whitespace-nowrap">
                       <span className="inline-block px-2 mobile:px-3 py-1 text-xs rounded-full font-semibold bg-green-100 text-green-800">
                         Pågående
                       </span>
                     </td>
-                    <td className="px-auto mobile:px-6 py-3 text-center">
+                    <td data-label="Startdatum" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center">
                       <input
                         type="date"
                         className="border rounded px-2 py-1 w-full max-w-[120px] text-center text-xs mobile:text-sm"
@@ -356,18 +356,20 @@ export const KunderPage = (): JSX.Element => {
                         onChange={e => handleChangeNewCustomer(idx, "startDate", e.target.value)}
                       />
                     </td>
-                    <td className="px-auto py-auto flex flex-row pt-auto justify-center align-center items-center gap-2 mobile:px-6 py-3 text-center whitespace-nowrap">
-                    <label className="inline-flex gap-2 min-w-[60px] text-xs mobile:text-sm">
-                        <input
-                          type="checkbox"
-                          checked={c.is_group}
-                          onChange={e => handleChangeNewCustomer(idx, "is_group", e.target.checked)}
-                        />
-                        Grupp
-                      </label>
-                      <Button size="sm" variant="outline" onClick={() => handleCancelAdd(idx)} className="text-xs mobile:text-sm">
-                        Avbryt
-                      </Button>
+                    <td data-label="Åtgärder" className="actions px-2 mobile:px-4 py-2 mobile:py-3 text-center whitespace-nowrap">
+                      <div className="flex flex-col gap-1 items-center">
+                        <label className="inline-flex gap-2 min-w-[60px] text-xs mobile:text-sm">
+                          <input
+                            type="checkbox"
+                            checked={c.is_group}
+                            onChange={e => handleChangeNewCustomer(idx, "is_group", e.target.checked)}
+                          />
+                          Grupp
+                        </label>
+                        <Button size="sm" variant="outline" onClick={() => handleCancelAdd(idx)} className="text-xs mobile:text-sm">
+                          Avbryt
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -377,8 +379,8 @@ export const KunderPage = (): JSX.Element => {
                     className={`hover:bg-gray-50 cursor-pointer w-full min-w-0 m-auto border-t border-gray-200 ${!customer.active ? 'bg-gray-100 text-gray-400' : ''}`}
                     onClick={() => handleRowClick(customer)}
                   >
-                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 font-medium text-center text-xs mobile:text-sm whitespace-nowrap">{customer.id}</td>
-                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm">
+                    <td data-label="Kund-ID" className="px-2 mobile:px-4 py-2 mobile:py-3 font-medium text-center text-xs mobile:text-sm whitespace-nowrap">{customer.id}</td>
+                    <td data-label="Initialer" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center text-xs mobile:text-sm">
                       <div className="flex items-center justify-center gap-2">
                         <span>{customer.active ? customer.initials : '—'}</span>
                         {customer.is_group && (
@@ -386,9 +388,9 @@ export const KunderPage = (): JSX.Element => {
                         )}
                       </div>
                     </td>
-                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm whitespace-nowrap">{customer.is_group ? '—' : customer.gender}</td>
-                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm whitespace-nowrap">{customer.is_group ? '—' : (customer.birth_year ?? '—')}</td>
-                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-center whitespace-nowrap">
+                    <td data-label="Kön" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center text-xs mobile:text-sm whitespace-nowrap">{customer.is_group ? '—' : customer.gender}</td>
+                    <td data-label="Födelseår" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center text-xs mobile:text-sm whitespace-nowrap">{customer.is_group ? '—' : (customer.birth_year ?? '—')}</td>
+                    <td data-label="Status" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center whitespace-nowrap">
                       <span className={`inline-block px-2 mobile:px-3 py-1 text-xs rounded-full font-semibold ${
                         customer.active
                           ? "bg-green-100 text-green-800"
@@ -397,9 +399,9 @@ export const KunderPage = (): JSX.Element => {
                         {customer.active ? "Pågående" : "Avslutad"}
                       </span>
                     </td>
-                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-center text-xs mobile:text-sm whitespace-nowrap">{customer.created_at?.slice(0, 10)}</td>
-                    <td className="px-auto mobile:px-6 py-3 mobile:py-4 text-right text-center whitespace-nowrap">
-                      <div className="flex gap-2 items-center justify-end" onClick={e => e.stopPropagation()}>
+                    <td data-label="Startdatum" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center text-xs mobile:text-sm whitespace-nowrap">{customer.created_at?.slice(0, 10)}</td>
+                    <td data-label="Åtgärder" className="actions px-2 mobile:px-4 py-2 mobile:py-3 text-center whitespace-nowrap">
+                      <div className="flex gap-2 items-center justify-center" onClick={e => e.stopPropagation()}>
                         {customer.active ? (
                           <button
                             className="p-1.5 mobile:p-2 hover:bg-gray-200 rounded-full"

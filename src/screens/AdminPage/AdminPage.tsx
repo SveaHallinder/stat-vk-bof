@@ -21,8 +21,23 @@ const TableRow = ({ children }: { children: React.ReactNode }) => (
   <tr className="hover:bg-gray-50 border-t border-gray-200">{children}</tr>
 );
 
-const TableCell = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
-  <td className={`px-6 py-4 text-gray-600 ${className}`}>{children}</td>
+const TableCell = ({
+  children,
+  className = "",
+  label,
+  isActions = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  label?: string;
+  isActions?: boolean;
+}) => (
+  <td
+    data-label={label}
+    className={`px-6 py-4 text-gray-600 ${isActions ? "actions " : ""}${className}`}
+  >
+    {children}
+  </td>
 );
 
 export const AdminPage = (): JSX.Element => {
@@ -287,7 +302,7 @@ export const AdminPage = (): JSX.Element => {
 
   return (
     <Layout title="Admin">
-      <div className="w-full max-w-[420px] sm:max-w-[640px] lg:max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
+      <div className="w-full flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
 
       <Tabs defaultValue="insatser" className="w-full">
         <TabsList className="flex lg:flex-row sm:flex-col mobile:flex-col mobile:h-full w-full bg-gray-100 rounded-2xl mb-2 p-1 gap-2 ">
@@ -307,8 +322,8 @@ export const AdminPage = (): JSX.Element => {
                   Visa inaktiva insatser
                 </label>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
+              <div className="tablet:overflow-x-auto overflow-visible">
+                <table className="responsive-table text-left tablet:min-w-[720px]">
                   <thead>
                     <tr className="border-b border-gray-200">
                       <TableHeader>Insats</TableHeader>
@@ -319,9 +334,9 @@ export const AdminPage = (): JSX.Element => {
                   <tbody>
                     {insatser.map((i, idx) => (
                       <TableRow key={i.id}>
-                        <TableCell className={`font-medium ${i.active ? "text-gray-800" : "text-gray-400 italic"}`}>{i.name}</TableCell>
-                        <TableCell className={i.active ? "" : "text-gray-400 italic"}>{formatAvailableFor(i.name, i.available_for)}</TableCell>
-                        <TableCell>
+                        <TableCell label="Insats" className={`font-medium ${i.active ? "text-gray-800" : "text-gray-400 italic"}`}>{i.name}</TableCell>
+                        <TableCell label="Tillgänglig för" className={i.active ? "" : "text-gray-400 italic"}>{formatAvailableFor(i.name, i.available_for)}</TableCell>
+                        <TableCell label="Åtgärder" isActions>
                           {i.active ? (
                             <Button variant="ghost" size="icon" onClick={() => {
                               setEditIdx(idx);
@@ -442,8 +457,8 @@ export const AdminPage = (): JSX.Element => {
                   Visa inaktiva behandlare
                 </label>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
+              <div className="tablet:overflow-x-auto overflow-visible">
+                <table className="responsive-table text-left tablet:min-w-[720px]">
                   <thead>
                     <tr className="border-b border-gray-200">
                       <TableHeader>Namn</TableHeader>
@@ -454,9 +469,9 @@ export const AdminPage = (): JSX.Element => {
                   <tbody>
                     {handlers.map(h => (
                       <TableRow key={h.id}>
-                        <TableCell className={`font-medium ${h.active ? "text-gray-800" : "text-gray-400 italic"}`}>{h.name}</TableCell>
-                        <TableCell className={h.active ? "" : "text-gray-400 italic"}>{h.email}</TableCell>
-                        <TableCell>
+                        <TableCell label="Namn" className={`font-medium ${h.active ? "text-gray-800" : "text-gray-400 italic"}`}>{h.name}</TableCell>
+                        <TableCell label="Mail" className={h.active ? "" : "text-gray-400 italic"}>{h.email}</TableCell>
+                        <TableCell label="Åtgärder" isActions>
                           {h.active ? (
                             <Button variant="ghost" size="icon" onClick={() => {
                               setEditHandler({ id: h.id, name: h.name, email: h.email });
@@ -512,8 +527,8 @@ export const AdminPage = (): JSX.Element => {
               ) : invites.length === 0 ? (
                 <div className="text-sm text-gray-500">Inga aktiva inbjudningar just nu.</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
+                <div className="tablet:overflow-x-auto overflow-visible">
+                  <table className="responsive-table text-left tablet:min-w-[760px]">
                     <thead>
                       <tr className="border-b border-gray-200 text-sm text-gray-500 uppercase tracking-wide">
                         <th className="px-4 py-3">E-post</th>
@@ -527,21 +542,21 @@ export const AdminPage = (): JSX.Element => {
                     <tbody>
                       {invites.map(invite => (
                         <tr key={invite.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="px-4 py-3">
+                          <td data-label="E-post" className="px-4 py-3">
                             <div className="text-sm font-medium text-gray-800">{invite.email}</div>
                             <div className="text-xs text-gray-500">{invite.role === 'admin' ? 'Admin' : 'Behandlare'}</div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(invite.created_at)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(invite.expires_at)}</td>
-                          <td className="px-4 py-3">
+                          <td data-label="Skapad" className="px-4 py-3 text-sm text-gray-600">{formatDateTime(invite.created_at)}</td>
+                          <td data-label="Går ut" className="px-4 py-3 text-sm text-gray-600">{formatDateTime(invite.expires_at)}</td>
+                          <td data-label="Status" className="px-4 py-3">
                             <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${invite.status === 'pending' ? 'bg-green-100 text-green-700' : invite.status === 'accepted' ? 'bg-blue-100 text-blue-700' : invite.status === 'cancelled' ? 'bg-gray-200 text-gray-700' : 'bg-yellow-100 text-yellow-700'}`}>
                               {invite.status_display || invite.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600 font-mono">
+                          <td data-label="Kod" className="px-4 py-3 text-sm text-gray-600 font-mono">
                             {invite.verification_code ?? '–'}
                           </td>
-                          <td className="px-4 py-3">
+                          <td data-label="Åtgärder" className="actions px-4 py-3">
                             <div className="flex flex-wrap gap-2">
                               <Button
                                 type="button"
