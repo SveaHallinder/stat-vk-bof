@@ -25,7 +25,6 @@ import audit from "./routes/audit";
 import auth from "./routes/auth";
 import { initAuditLogger } from "./utils/auditLogger";
 import { config } from "./config";
-import { sanitizeTextInputs } from "./middleware/validation";
 import { normalizeAvailableFor } from "./utils/efforts";
 import { globalLimiter } from "./middleware/rateLimit";
 
@@ -52,7 +51,6 @@ if (compression) {
 }
 
 app.use(express.json({ limit: '1mb' }));
-app.use(sanitizeTextInputs);
 
 app.get('/health', (_req, res) => {
   res.status(200).json({ ok: true });
@@ -141,8 +139,10 @@ async function ensureSchema() {
   }
 }
 
-// Kör schema-säkring i bakgrunden
-ensureSchema();
+// Kör schema-säkring endast i utvecklingsmiljö
+if (config.isDevelopment) {
+  void ensureSchema();
+}
 
 
 

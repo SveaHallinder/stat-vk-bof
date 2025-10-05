@@ -2,11 +2,16 @@ import { Router, Request, Response } from "express";
 import { Pool } from "pg";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { authenticateToken } from "../middleware/auth";
 import { loginLimiter } from "../middleware/rateLimit";
 import { validateUserRegistration, sanitizeTextInputs } from "../middleware/validation";
 
 const ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
+
+const hashRefreshToken = (token: string): string => {
+  return crypto.createHash('sha256').update(token).digest('hex');
+};
 
 const users = (pool: Pool) => {
   const router = Router();
@@ -67,7 +72,7 @@ const users = (pool: Pool) => {
       // Spara refresh token i databasen (för att kunna invalidera vid behov)
       await pool.query(
         'UPDATE handlers SET refresh_token = $1, last_login = NOW() WHERE id = $2',
-        [refreshToken, user.id]
+        [hashRefreshToken(refreshToken), user.id]
       );
 
       // Returnera användardata och tokens
@@ -163,7 +168,7 @@ const users = (pool: Pool) => {
       // Kontrollera att token finns i databasen
       const result = await pool.query(
         'SELECT id, name, email, role FROM handlers WHERE id = $1 AND refresh_token = $2 AND active = true',
-        [decoded.id, refreshToken]
+        [decoded.id, hashRefreshToken(refreshToken)]
       );
 
       if (result.rows.length === 0) {
