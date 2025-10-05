@@ -22,7 +22,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Customer, Handler, Effort } from "@/types/types";
 import { api } from "@/lib/apiClient";
 import toast from "react-hot-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 import { useRefresh } from "@/contexts/RefreshContext";
 
 const minBarHeight = 24;
@@ -86,6 +86,31 @@ const viewOptions = [
 
 type ViewMode = typeof viewOptions[number]['value'];
 
+const useMediaQuery = (query: string) => {
+  const [matches, setMatches] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia(query);
+    const listener = (event: MediaQueryListEvent) => setMatches(event.matches);
+
+    setMatches(mediaQuery.matches);
+
+    if (mediaQuery.addEventListener) mediaQuery.addEventListener('change', listener);
+    else mediaQuery.addListener(listener);
+
+    return () => {
+      if (mediaQuery.removeEventListener) mediaQuery.removeEventListener('change', listener);
+      else mediaQuery.removeListener(listener);
+    };
+  }, [query]);
+
+  return matches;
+};
+
 const formatCategoryLabel = (value: string) => value
   .split(',')
   .map(token => {
@@ -123,6 +148,13 @@ export const StatistikPage = (): JSX.Element => {
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('effort');
   const chartRef = useRef<HTMLDivElement>(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false);
+  const isTabletUp = useMediaQuery('(min-width: 640px)');
+
+  useEffect(() => {
+    // Öppna filterpanelen som standard på mobil för att göra fälten direkt tillgängliga
+    setMobileFiltersOpen(!isTabletUp);
+  }, [isTabletUp]);
 
   const chartSettings = useMemo(() => {
     const formatMeta = ({ customers, totalHours }: { customers?: number; totalHours?: number }) => {
@@ -292,10 +324,45 @@ export const StatistikPage = (): JSX.Element => {
       );
     }
 
-    return (
+    const [primaryColumn, ...metricColumns] = columns;
+
+    const mobileCards = !isTabletUp && primaryColumn ? (
+      <div className="space-y-3">
+        {rows.map((row, index) => (
+          <div
+            key={`${viewMode}-mobile-${index}`}
+            className="bg-white border border-gray-200 rounded-xl shadow-sm p-4"
+          >
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-900">
+                  {primaryColumn.render(row)}
+                </span>
+              </div>
+              {metricColumns.length > 0 && (
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  {metricColumns.map(col => (
+                    <div key={col.header} className="flex flex-col gap-1">
+                      <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                        {col.header}
+                      </span>
+                      <span className={`text-sm font-medium text-gray-900 ${col.align === 'right' ? 'text-right' : 'text-left'}`}>
+                        {col.render(row)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : null;
+
+    const desktopTable = isTabletUp ? (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="tablet:overflow-x-auto overflow-visible">
+          <table className="responsive-table stats-responsive-table divide-y divide-gray-200 tablet:min-w-[720px]">
             <thead className="bg-gray-50">
               <tr>
                 {columns.map(col => (
@@ -310,10 +377,11 @@ export const StatistikPage = (): JSX.Element => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {rows.map((row, index) => (
-                <tr key={index} className="hover:bg-gray-50">
+                <tr key={`${viewMode}-desktop-${index}`} className="hover:bg-gray-50">
                   {columns.map(col => (
                     <td
                       key={col.header}
+                      data-label={col.header}
                       className={`px-4 py-3 text-sm text-gray-700 ${col.align === 'right' ? 'text-right font-medium' : ''}`}
                     >
                       {col.render(row)}
@@ -325,8 +393,134 @@ export const StatistikPage = (): JSX.Element => {
           </table>
         </div>
       </div>
-    );
+    ) : null;
+
+    return mobileCards ?? desktopTable;
   };
+
+  const renderFilterFields = () => (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-2 items-end min-w-0">
+        <div className="gap-1 w-full flex flex-col min-w-0" data-tour="stats-filter-daterange">
+          <label className="font-normal text-xs text-gray-500">Tidsperiod</label>
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="font-normal text-xs text-gray-500">Kön</label>
+          <MultiSelectCombobox
+            options={[
+              { label: "Flicka", value: "Flicka" },
+              { label: "Pojke", value: "Pojke" },
+              { label: "Icke-binär", value: "Icke-binär" },
+            ]}
+            value={selectedGenders}
+            onChange={setSelectedGenders}
+            placeholder="Alla kön"
+          />
+        </div>
+        <div className="flex flex-col gap-1 w-full min-w-0">
+          <label className="font-normal text-xs text-gray-500">Födelseår</label>
+          <MultiSelectCombobox options={yearOptions} value={selectedYears} onChange={setSelectedYears} placeholder="Alla år" />
+        </div>
+        <div className="flex flex-col gap-1 w-full min-w-0">
+          <label className="font-normal text-xs text-gray-500">Insats</label>
+          <MultiSelectCombobox
+            options={effortOptions.map(e => ({ label: e.name, value: String(e.id) }))}
+            value={selectedEfforts}
+            onChange={setSelectedEfforts}
+            placeholder="Alla insatser"
+          />
+        </div>
+        <div className="flex flex-col gap-1 w-full min-w-0">
+          <label className="font-normal text-xs text-gray-500">Insatskategori</label>
+          <MultiSelectCombobox
+            options={[
+              { label: "Biståndsbedömda", value: "Biståndsbedömda" },
+              { label: "Förebyggande arbete", value: "Förebyggande arbete" },
+              { label: "Biståndsbedömda, Förebyggande arbete", value: "Biståndsbedömda, Förebyggande arbete" },
+              { label: "IUB", value: "IUB" },
+              { label: "Biståndsbedömda, IUB", value: "Biståndsbedömda, IUB" }
+            ]}
+            value={selectedEffortCategories}
+            onChange={setSelectedEffortCategories}
+            placeholder="Alla kategorier"
+          />
+        </div>
+        <div className="flex flex-col gap-1 w-full min-w-0">
+          <label className="font-normal text-xs text-gray-500">Tidsstatus</label>
+          <Select value={shiftStatus} onValueChange={(v) => setShiftStatus(v as any)}>
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder="Alla" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Alla">Alla</SelectItem>
+              <SelectItem value="Utförd">Utförd</SelectItem>
+              <SelectItem value="Avbokad">Avbokad</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1 w-full min-w-0">
+          <label className="font-normal text-xs text-gray-500">Behandlare</label>
+          <MultiSelectCombobox
+            options={handlerOptions.map(h => ({ label: h.name, value: String(h.id) }))}
+            value={selectedHandlers}
+            onChange={setSelectedHandlers}
+            placeholder="Alla behandlare"
+          />
+        </div>
+        <div className="flex flex-col gap-1 w-full min-w-0">
+          <label className="font-normal text-xs text-gray-500">Kund</label>
+          <MultiSelectCombobox
+            options={customerOptions.map(c => {
+              const isGroup = c.is_group || c.isGroup;
+              const label = isGroup ? `${c.initials} (Grupp)` : `${c.initials} (${c.birthYear ?? '—'})`;
+              return { label, value: String(c.id) };
+            })}
+            value={selectedCustomers}
+            onChange={setSelectedCustomers}
+            placeholder="Alla kunder"
+          />
+        </div>
+        <div className="flex items-end w-full h-10">
+          <label className="flex items-center gap-2 text-sm px-3 py-2 border rounded-lg bg-white w-full justify-center md:justify-start">
+            <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} />
+            Inkludera inaktiva
+          </label>
+        </div>
+      </div>
+      <div className="flex mobile:justify-start w-full mobile:w-full gap-2">
+        <Button
+          variant="default"
+          size="default"
+          className="text-sm font-medium w-full mobile:w-auto"
+          onClick={() => loadStats()}
+          data-tour="stats-update-btn"
+          disabled={loading}
+        >
+          {loading ? (<span className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" /> Uppdaterar...</span>) : 'Uppdatera'}
+        </Button>
+        <Button
+          variant="outline"
+          size="default"
+          className="text-sm font-normal w-full mobile:w-auto"
+          onClick={() => {
+            setDateRange({ from: null, to: null });
+            setSelectedGenders([]);
+            setSelectedYears([]);
+            setSelectedEfforts([]);
+            setSelectedEffortCategories([]);
+            setSelectedHandlers([]);
+            setSelectedCustomers([]);
+            setIncludeInactive(false);
+            setShiftStatus('Alla');
+          }}
+          data-tour="stats-reset-btn"
+        >
+          Rensa alla filter
+        </Button>
+      </div>
+    </>
+  );
 
   // Valbara alternativ
   type CustomerItem = Customer & { birthYear: number };
@@ -721,136 +915,38 @@ export const StatistikPage = (): JSX.Element => {
 
   return (
     <Layout title="Statistik">
-      <div className="w-full max-w-[420px] sm:max-w-[640px] lg:max-w-4xl mx-auto px-3 sm:px-4 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
+      <div className="w-full flex flex-col gap-6 lg:gap-8 py-4 min-w-0 lg:max-w-[100%] mobile:max-w-[45%]">
 
       <div className="space-y-6 mobile:space-y-8">
         {/* Filterrad */}
-        <div className="bg-white rounded-xl p-auto mobile:p-6 flex flex-col gap-4 mobile:gap-6 shadow-sm border border-gray-200 w-full min-w-0" data-tour="stats-filter">
-        <label className="font-normal text-base mobile:text-lg m-0 p-auto text-black">Filtrera</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-2 items-end min-w-0">
-            <div className="gap-1 w-full flex flex-col min-w-0" data-tour="stats-filter-daterange">
-              <label className="font-normal text-xs text-gray-500">Tidsperiod</label>
-              <DateRangePicker value={dateRange} onChange={setDateRange} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="font-normal text-xs text-gray-500">Kön</label>
-              <MultiSelectCombobox
-                options={[
-                  { label: "Flicka", value: "Flicka" },
-                  { label: "Pojke", value: "Pojke" },
-                  { label: "Icke-binär", value: "Icke-binär" },
-                ]}
-                value={selectedGenders}
-                onChange={setSelectedGenders}
-                placeholder="Alla kön"
-              />
-            </div>
-            <div className="flex flex-col gap-1 w-full min-w-0">
-              <label className="font-normal text-xs text-gray-500">Födelseår</label>
-              <MultiSelectCombobox options={yearOptions} value={selectedYears} onChange={setSelectedYears} placeholder="Alla år" />
-            </div>
-            <div className="flex flex-col gap-1 w-full min-w-0">
-              <label className="font-normal text-xs text-gray-500">Insats</label>
-              <MultiSelectCombobox
-                options={effortOptions.map(e => ({ label: e.name, value: String(e.id) }))}
-                value={selectedEfforts}
-                onChange={setSelectedEfforts}
-                placeholder="Alla insatser"
-              />
-            </div>
-            <div className="flex flex-col gap-1 w-full min-w-0">
-              <label className="font-normal text-xs text-gray-500">Insatskategori</label>
-              <MultiSelectCombobox
-                options={[
-                  { label: "Biståndsbedömda", value: "Biståndsbedömda" },
-                  { label: "Förebyggande arbete", value: "Förebyggande arbete" },
-                  { label: "Biståndsbedömda, Förebyggande arbete", value: "Biståndsbedömda, Förebyggande arbete" },
-                  { label: "IUB", value: "IUB" },
-                  { label: "Biståndsbedömda, IUB", value: "Biståndsbedömda, IUB" }
-                ]}
-                value={selectedEffortCategories}
-                onChange={setSelectedEffortCategories}
-                placeholder="Alla kategorier"
-              />
-            </div>
-            <div className="flex flex-col gap-1 w-full min-w-0">
-              <label className="font-normal text-xs text-gray-500">Tidsstatus</label>
-              <Select value={shiftStatus} onValueChange={(v) => setShiftStatus(v as any)}>
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Alla" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Alla">Alla</SelectItem>
-                  <SelectItem value="Utförd">Utförd</SelectItem>
-                  <SelectItem value="Avbokad">Avbokad</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1 w-full min-w-0">
-              <label className="font-normal text-xs text-gray-500">Behandlare</label>
-              <MultiSelectCombobox
-                options={handlerOptions.map(h => ({ label: h.name, value: String(h.id) }))}
-                value={selectedHandlers}
-                onChange={setSelectedHandlers}
-                placeholder="Alla behandlare"
-              />
-            </div>
-            <div className="flex flex-col gap-1 w-full min-w-0">
-              <label className="font-normal text-xs text-gray-500">Kund</label>
-              <MultiSelectCombobox
-                options={customerOptions.map(c => {
-                  const isGroup = c.is_group || c.isGroup;
-                  const label = isGroup ? `${c.initials} (Grupp)` : `${c.initials} (${c.birthYear ?? '—'})`;
-                  return { label, value: String(c.id) };
-                })}
-                value={selectedCustomers}
-                onChange={setSelectedCustomers}
-                placeholder="Alla kunder"
-              />
-            </div>
-            <div className="flex items-end w-full h-10">
-              <label className="flex items-center gap-2 text-sm px-3 py-2 border rounded-lg bg-white w-full justify-center md:justify-start">
-                <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} />
-                Inkludera inaktiva
-              </label>
-            </div>
+        {!isTabletUp ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 w-full" data-tour="stats-filter-mobile">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              onClick={() => setMobileFiltersOpen(open => !open)}
+            >
+              <span className="text-base font-medium text-gray-900">Filtrera</span>
+              <ChevronDown className={`w-5 h-5 transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {mobileFiltersOpen && (
+              <div className="px-4 pb-4 pt-2 space-y-4">
+                {renderFilterFields()}
+              </div>
+            )}
           </div>
-          {/* Uppdatera och Rensa */}
-            <div className="flex mobile:justify-start w-full mobile:w-full gap-2">
-              <Button
-                variant="default"
-                size="default"
-                className="text-sm font-medium w-full mobile:w-auto"
-                onClick={() => loadStats()}
-                data-tour="stats-update-btn"
-                disabled={loading}>
-                {loading ? (<><Loader2 className="animate-spin" /> Uppdaterar...</>) : 'Uppdatera'}
-              </Button>
-              <Button
-                variant="outline"
-                size="default"
-                className="text-sm font-normal w-full mobile:w-auto"
-                onClick={() => {
-                  setDateRange({ from: null, to: null });
-                  setSelectedGenders([]);
-                  setSelectedYears([]);
-                  setSelectedEfforts([]);
-                  setSelectedEffortCategories([]);
-                  setSelectedHandlers([]);
-                  setSelectedCustomers([]);
-                  setIncludeInactive(false);
-                  setShiftStatus('Alla');
-                }}
-                data-tour="stats-reset-btn"
-              >
-                Rensa alla filter
-              </Button>
+        ) : (
+          <div className="flex flex-col gap-4 bg-white rounded-xl p-6 shadow-sm border border-gray-200 w-full" data-tour="stats-filter-desktop">
+            <div className="flex items-center justify-between">
+              <label className="font-normal text-lg text-gray-900">Filtrera</label>
             </div>
-        </div>
+            {renderFilterFields()}
+          </div>
+        )}
 
         {/* Statistik-kort */}
         {loading ? (
-          <div className="flex justify-center items-center py-16">
+          <div className="flex justify-center items-center py-16 ">
             <Loader2 className="animate-spin w-10 h-10 text-[#17694c] mr-3" />
             <span className="text-lg text-[#17694c]">Laddar statistik...</span>
           </div>

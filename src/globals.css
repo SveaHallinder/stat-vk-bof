@@ -91,15 +91,103 @@
   
   /* Konsekvent container-bredd */
   .content-container {
-    @apply max-w-5xl mx-auto;
+    @apply w-full max-w-full sm:max-w-6xl mx-auto px-3 mobile:px-4 lg:px-6;
   }
   
   .content-container-wide {
-    @apply max-w-6xl mx-auto;
+    @apply w-full max-w-full sm:max-w-7xl mx-auto px-3 mobile:px-4 lg:px-6;
   }
   
   .content-container-narrow {
-    @apply max-w-4xl mx-auto;
+    @apply w-full max-w-full sm:max-w-4xl mx-auto px-3 mobile:px-4 lg:px-6;
+  }
+
+  .responsive-table {
+    @apply w-full;
+  }
+
+  @media (max-width: 639px) {
+    .responsive-table thead {
+      display: none;
+    }
+
+    .responsive-table tbody {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .responsive-table tbody tr {
+      display: grid;
+      gap: 0.5rem;
+      border-radius: 0.75rem;
+      border: 1px solid #e5e7eb;
+      background-color: #ffffff;
+      padding: 0.75rem 1rem;
+      box-shadow: 0 10px 24px -14px rgba(15, 23, 42, 0.25);
+    }
+
+    .responsive-table tbody tr:hover {
+      box-shadow: 0 16px 32px -18px rgba(15, 23, 42, 0.28);
+    }
+
+    .responsive-table tbody td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 0 !important;
+      text-align: left !important;
+    }
+
+    .responsive-table tbody td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .responsive-table tbody td.actions {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .responsive-table tbody td.actions::before {
+      margin-bottom: 0.25rem;
+    }
+  }
+
+  /* Statistik-tabell: tre spalter → staplade grupper */
+  @media (max-width: 639px) {
+    .stats-responsive-table tbody tr {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+
+    .stats-responsive-table tbody td {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 0.25rem 0 !important;
+    }
+
+    .stats-responsive-table tbody td::before {
+      margin-bottom: 0.25rem;
+    }
+
+    .stats-responsive-table tbody td[data-label='Insats'],
+    .stats-responsive-table tbody td[data-label='Kön'],
+    .stats-responsive-table tbody td[data-label='Behandlare'],
+    .stats-responsive-table tbody td[data-label='Födelseår'] {
+      grid-column: 1 / -1;
+      padding-top: 0.4rem !important;
+    }
+
+    .stats-responsive-table tbody td.actions {
+      grid-column: 1 / -1;
+    }
   }
 }
 

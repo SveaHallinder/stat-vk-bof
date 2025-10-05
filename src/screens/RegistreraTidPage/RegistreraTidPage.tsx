@@ -334,7 +334,7 @@ export const RegisteraTidPage = (): JSX.Element => {
 
   return (
     <Layout title="Registrera tid">
-      <div className="w-full max-w-[420px] sm:max-w-[640px] lg:max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
+      <div className="w-full flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
       {/* Tidsregistreringar - nu först eftersom det är huvudsyftet */}
       <Card className="flex-1 bg-white rounded-xl" data-tour="time-section">
         <CardHeader>
@@ -676,8 +676,8 @@ export const RegisteraTidPage = (): JSX.Element => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0 w-full">
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-center" data-tour="time-history-table">
+          <div className="w-full tablet:overflow-x-auto overflow-visible">
+            <table className="responsive-table text-center tablet:min-w-[780px]" data-tour="time-history-table">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-4 py-4 font-medium text-gray-600 uppercase tracking-wide text-xs sm:text-sm whitespace-nowrap">Kund</th>
@@ -694,13 +694,13 @@ export const RegisteraTidPage = (): JSX.Element => {
                     // Skeleton loading för tabellen
                     [...Array(3)].map((_, index) => (
                       <tr key={index} className="border-t border-gray-200">
-                        <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
-                        <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
-                        <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
-                        <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
-                        <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
-                        <td className="px-4 py-4"><Skeleton className="h-4 w-16" /></td>
-                        <td className="px-4 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                        <td data-label="Kund" className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
+                        <td data-label="Behandlare 1" className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
+                        <td data-label="Behandlare 2" className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
+                        <td data-label="Insats" className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
+                        <td data-label="Datum" className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
+                        <td data-label="Timmar" className="px-4 py-4"><Skeleton className="h-4 w-16" /></td>
+                        <td data-label="Status" className="actions px-4 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
                       </tr>
                     ))
                   ) : shifts.length === 0 ? (
@@ -720,13 +720,13 @@ export const RegisteraTidPage = (): JSX.Element => {
                         className={`hover:bg-blue-50 border-t border-gray-200 transition-colors cursor-pointer`}
                         onClick={() => handleShiftClick(shift)}
                       >
-                        <td className="px-4 py-4 font-medium text-gray-800">{(shift as any).customer_active === false || shift.customer_name === 'ANONYM' ? '—' : shift.customer_name}</td>
-                        <td className="px-4 py-4 text-gray-600">{shift.handler1_name}</td>
-                        <td className="px-4 py-4 text-gray-600">{shift.handler2_name || "-"}</td>
-                        <td className="px-4 py-4 text-gray-600">{shift.effort_name}</td>
-                        <td className="px-4 py-4 text-gray-600">{shift.date ? shift.date.slice(0,10) : "-"}</td>
-                        <td className="px-4 py-4 text-gray-600 font-medium">{shift.hours}</td>
-                        <td className="px-4 py-4">
+                        <td data-label="Kund" className="px-4 py-4 font-medium text-gray-800">{(shift as any).customer_active === false || shift.customer_name === 'ANONYM' ? '—' : shift.customer_name}</td>
+                        <td data-label="Behandlare 1" className="px-4 py-4 text-gray-600">{shift.handler1_name}</td>
+                        <td data-label="Behandlare 2" className="px-4 py-4 text-gray-600">{shift.handler2_name || "-"}</td>
+                        <td data-label="Insats" className="px-4 py-4 text-gray-600">{shift.effort_name}</td>
+                        <td data-label="Datum" className="px-4 py-4 text-gray-600">{shift.date ? shift.date.slice(0,10) : "-"}</td>
+                        <td data-label="Timmar" className="px-4 py-4 text-gray-600 font-medium">{shift.hours}</td>
+                        <td data-label="Status" className="actions px-4 py-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             shift.status === 'Utförd' 
                               ? 'bg-green-100 text-green-800' 
