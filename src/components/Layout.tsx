@@ -78,7 +78,7 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
       <div className="flex-1 flex flex-col lg:ml-[300px]">
         <ApiHealthBanner />
         {/* Custom header med global sökning */}
-        <header className="bg-white/95 w-full py-4 shadow-sm overflow-hidden mobile:max-w-[420px] lg:max-w-[100%]">
+        <header className="bg-white/95 w-full py-4 shadow-sm overflow-visible mobile:max-w-[420px] lg:max-w-[100%]">
           <div className="content-container flex flex-col gap-4 md:flex-row md:items-center md:justify-between w-full min-w-0">
             <div className="flex items-center gap-3 md:gap-4 min-w-0">
               {/* Mobile menu button */}
