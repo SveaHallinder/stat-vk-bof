@@ -26,6 +26,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const latestSearchId = useRef(0);
 
   const performSearch = async (query: string) => {
     if (!query.trim()) {
@@ -34,6 +35,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
     }
 
     setIsLoading(true);
+    const searchId = ++latestSearchId.current;
     
     try {
       const searchResults: SearchResult[] = [];
@@ -141,12 +143,18 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
         return bRelevance - aRelevance;
       });
 
-      setResults(searchResults);
+      if (searchId === latestSearchId.current) {
+        setResults(searchResults);
+      }
     } catch (error) {
       console.error('Sökfel:', error);
-      setResults([]);
+      if (searchId === latestSearchId.current) {
+        setResults([]);
+      }
     } finally {
-      setIsLoading(false);
+      if (searchId === latestSearchId.current) {
+        setIsLoading(false);
+      }
     }
   };
 
