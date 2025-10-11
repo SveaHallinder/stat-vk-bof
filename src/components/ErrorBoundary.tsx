@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </h1>
             
             <p className="text-gray-600 mb-6">
-              Ett oväntat fel uppstod. Du kan försöka ladda om sidan eller gå tillbaka till startsidan.
+              Ett oväntat fel uppstod. Ladda om sidan eller gå tillbaka till startsidan.
             </p>
 
             {import.meta.env.DEV && this.state.error && (

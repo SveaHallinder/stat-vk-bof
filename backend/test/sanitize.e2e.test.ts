@@ -41,12 +41,12 @@ describe('Sanitization middleware', () => {
       const res = await fetch(`${base}/api/efforts`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${admin}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: '<script>alert(1)</script>Insats', available_for: 'Biståndsbedömda' })
+        body: JSON.stringify({ name: '<script>alert(1)</script>Insats', available_for: 'Behovsprövad' })
       });
       const body = await res.json();
       expect(res.status).toBe(201);
       expect(body.name.includes('<') || body.name.includes('>')).toBe(false);
-      expect(body.available_for).toBe('Biståndsbedömda');
+      expect(body.available_for).toBe('Behovsprövad');
     } finally { server.close(); }
   });
 });

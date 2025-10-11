@@ -319,7 +319,7 @@ export const StatistikPage = (): JSX.Element => {
     if (!rows || rows.length === 0) {
       return (
         <div className="bg-white rounded-xl text-center text-gray-500 border border-gray-200">
-          Ingen data att visa för valt filter.
+          Ingen data att visa för valda filter.
         </div>
       );
     }
@@ -331,22 +331,22 @@ export const StatistikPage = (): JSX.Element => {
         {rows.map((row, index) => (
           <div
             key={`${viewMode}-mobile-${index}`}
-            className="bg-white border border-gray-200 rounded-xl shadow-sm p-4"
+            className="bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4"
           >
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-900">
+                <span className="text-sm sm:text-base font-semibold text-gray-900">
                   {primaryColumn.render(row)}
                 </span>
               </div>
               {metricColumns.length > 0 && (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div className="grid grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-2">
                   {metricColumns.map(col => (
                     <div key={col.header} className="flex flex-col gap-1">
-                      <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                      <span className="text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-500">
                         {col.header}
                       </span>
-                      <span className={`text-sm font-medium text-gray-900 ${col.align === 'right' ? 'text-right' : 'text-left'}`}>
+                      <span className={`text-xs sm:text-sm font-medium text-gray-900 ${col.align === 'right' ? 'text-right' : 'text-left'}`}>
                         {col.render(row)}
                       </span>
                     </div>
@@ -360,7 +360,7 @@ export const StatistikPage = (): JSX.Element => {
     ) : null;
 
     const desktopTable = isTabletUp ? (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="tablet:overflow-x-auto overflow-visible">
           <table className="responsive-table stats-responsive-table divide-y divide-gray-200 tablet:min-w-[720px]">
             <thead className="bg-gray-50">
@@ -400,7 +400,7 @@ export const StatistikPage = (): JSX.Element => {
 
   const renderFilterFields = () => (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-2 items-end min-w-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-4 items-end min-w-0">
         <div className="gap-1 w-full flex flex-col min-w-0" data-tour="stats-filter-daterange">
           <label className="font-normal text-xs text-gray-500">Tidsperiod</label>
           <DateRangePicker value={dateRange} onChange={setDateRange} />
@@ -435,11 +435,11 @@ export const StatistikPage = (): JSX.Element => {
           <label className="font-normal text-xs text-gray-500">Insatskategori</label>
           <MultiSelectCombobox
             options={[
-              { label: "Biståndsbedömda", value: "Biståndsbedömda" },
+              { label: "Behovsprövad", value: "Behovsprövad" },
               { label: "Förebyggande arbete", value: "Förebyggande arbete" },
-              { label: "Biståndsbedömda, Förebyggande arbete", value: "Biståndsbedömda, Förebyggande arbete" },
+              { label: "Behovsprövad, Förebyggande arbete", value: "Behovsprövad, Förebyggande arbete" },
               { label: "IUB", value: "IUB" },
-              { label: "Biståndsbedömda, IUB", value: "Biståndsbedömda, IUB" }
+              { label: "Behovsprövad, IUB", value: "Behovsprövad, IUB" }
             ]}
             value={selectedEffortCategories}
             onChange={setSelectedEffortCategories}
@@ -488,11 +488,11 @@ export const StatistikPage = (): JSX.Element => {
           </label>
         </div>
       </div>
-      <div className="flex mobile:justify-start w-full mobile:w-full gap-2">
+      <div className="flex flex-col sm:flex-row gap-2 w-full">
         <Button
           variant="default"
           size="default"
-          className="text-sm font-medium w-full mobile:w-auto"
+          className="text-sm font-medium w-full sm:w-auto"
           onClick={() => loadStats()}
           data-tour="stats-update-btn"
           disabled={loading}
@@ -502,7 +502,7 @@ export const StatistikPage = (): JSX.Element => {
         <Button
           variant="outline"
           size="default"
-          className="text-sm font-normal w-full mobile:w-auto"
+          className="text-sm font-normal w-full sm:w-auto"
           onClick={() => {
             setDateRange({ from: null, to: null });
             setSelectedGenders([]);
@@ -528,7 +528,6 @@ export const StatistikPage = (): JSX.Element => {
   const [effortOptions, setEffortOptions] = useState<Effort[]>([]);
   const [handlerOptions, setHandlerOptions] = useState<Handler[]>([]);
   const [customerOptions, setCustomerOptions] = useState<CustomerItem[]>([]);
-  // Födelseårsalternativ (hårdkodat för demo, kan hämtas från kunder)
   const [yearOptions, setYearOptions] = useState<{ label: string; value: string }[]>([]);
   const yearLabel = (() => {
     if (dateRange.from && dateRange.to) {
@@ -915,12 +914,12 @@ export const StatistikPage = (): JSX.Element => {
 
   return (
     <Layout title="Statistik">
-      <div className="w-full flex flex-col gap-6 lg:gap-8 py-4 min-w-0 lg:max-w-[100%] mobile:max-w-[45%]">
+      <div className="flex flex-col w-full max-w-full sm:max-w-2xl lg:max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 gap-4 sm:gap-6 lg:gap-8 py-2 sm:py-4">
 
-      <div className="space-y-6 mobile:space-y-8">
+      <div className="space-y-4 sm:space-y-6">
         {/* Filterrad */}
         {!isTabletUp ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 w-full" data-tour="stats-filter-mobile">
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 w-full" data-tour="stats-filter-mobile">
             <button
               type="button"
               className="w-full flex items-center justify-between px-4 py-3 text-left"
@@ -930,15 +929,15 @@ export const StatistikPage = (): JSX.Element => {
               <ChevronDown className={`w-5 h-5 transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} />
             </button>
             {mobileFiltersOpen && (
-              <div className="px-4 pb-4 pt-2 space-y-4">
+              <div className="px-4 pb-4 pt-2 space-y-3">
                 {renderFilterFields()}
               </div>
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-4 bg-white rounded-xl p-6 shadow-sm border border-gray-200 w-full" data-tour="stats-filter-desktop">
+          <div className="flex flex-col gap-4 bg-white rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 w-full" data-tour="stats-filter-desktop">
             <div className="flex items-center justify-between">
-              <label className="font-normal text-lg text-gray-900">Filtrera</label>
+              <label className="font-normal text-base sm:text-lg text-gray-900">Filtrera</label>
             </div>
             {renderFilterFields()}
           </div>
@@ -946,40 +945,40 @@ export const StatistikPage = (): JSX.Element => {
 
         {/* Statistik-kort */}
         {loading ? (
-          <div className="flex justify-center items-center py-16 ">
-            <Loader2 className="animate-spin w-10 h-10 text-[#17694c] mr-3" />
-            <span className="text-lg text-[#17694c]">Laddar statistik...</span>
+          <div className="flex justify-center items-center py-12 sm:py-16">
+            <Loader2 className="animate-spin w-8 h-8 sm:w-10 sm:h-10 text-[#17694c] mr-3" />
+            <span className="text-base sm:text-lg text-[#17694c]">Laddar statistik...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mobile:gap-6 text-center" data-tour="stats-summary-cards">
-            <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
-              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Antal besök</div>
-              <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">{stats ? stats.antal_besok.toLocaleString() : "-"}</div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-center" data-tour="stats-summary-cards">
+            <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col items-center justify-center shadow-sm min-h-[80px] sm:min-h-[100px]">
+              <div className="text-gray-600 text-[11px] sm:text-xs lg:text-sm font-medium mb-2 sm:mb-3 tracking-wide uppercase leading-tight">Antal besök</div>
+              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-light">{stats ? stats.antal_besok.toLocaleString() : "-"}</div>
             </div>
-            <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
-              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Antal kunder</div>
-              <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">{stats ? stats.antal_kunder : "-"}</div>
+            <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col items-center justify-center shadow-sm min-h-[80px] sm:min-h-[100px]">
+              <div className="text-gray-600 text-[11px] sm:text-xs lg:text-sm font-medium mb-2 sm:mb-3 tracking-wide uppercase leading-tight">Antal kunder</div>
+              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-light">{stats ? stats.antal_kunder : "-"}</div>
             </div>
-            <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
-              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Besökstimmar</div>
-              <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">
+            <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col items-center justify-center shadow-sm min-h-[80px] sm:min-h-[100px]">
+              <div className="text-gray-600 text-[11px] sm:text-xs lg:text-sm font-medium mb-2 sm:mb-3 tracking-wide uppercase leading-tight">Besökstimmar</div>
+              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-light">
                 {stats ? `${stats.totala_timmar.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}` : "-"}
               </div>
             </div>
-            <div className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center justify-center shadow-sm">
-              <div className="text-gray-600 text-xs mobile:text-sm font-medium mb-2 tracking-wide uppercase">Avbokningsgrad</div>
-              <div className="text-[#222] text-2xl mobile:text-3xl font-light mt-1">{stats ? `${stats.avbokningsgrad}%` : "-"}</div>
+            <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col items-center justify-center shadow-sm min-h-[80px] sm:min-h-[100px]">
+              <div className="text-gray-600 text-[11px] sm:text-xs lg:text-sm font-medium mb-2 sm:mb-3 tracking-wide uppercase leading-tight">Avbokningsgrad</div>
+              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-light">{stats ? `${stats.avbokningsgrad}%` : "-"}</div>
             </div>
           </div>
         )}
 
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="w-full min-w-0">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 bg-gray-100 rounded-2xl p-1">
+          <TabsList className="grid grid-cols-2 mobile:grid-cols-4 gap-2 bg-gray-100 rounded-lg mobile:rounded-2xl p-1">
             {viewOptions.map(option => (
               <TabsTrigger
                 key={option.value}
                 value={option.value}
-                className="text-xs sm:text-sm rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#17694c] data-[state=active]:shadow-sm"
+                className="text-xs mobile:text-sm rounded-lg mobile:rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#17694c] data-[state=active]:shadow-sm py-2 mobile:py-2.5 font-medium"
               >
                 {option.label}
               </TabsTrigger>
@@ -988,16 +987,16 @@ export const StatistikPage = (): JSX.Element => {
         </Tabs>
 
         {/* Diagramkort */}
-        <div ref={chartRef} className="bg-white rounded-xl p-4 mobile:p-6 flex flex-col items-center relative shadow-sm overflow-x-auto min-w-0" data-tour="stats-chart">
+        <div ref={chartRef} className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 lg:p-6 flex flex-col items-center relative shadow-sm min-w-0" data-tour="stats-chart">
           {showChart ? (
             <>
-              <div className="text-sm mobile:text-base font-medium text-gray-800 mb-2 mobile:mb-4">
+              <div className="text-sm sm:text-base font-medium text-gray-800 mb-2 sm:mb-4 text-center">
                 {chartTitle}{' '}
                 <span className="text-gray-400 text-xs">({yearLabel})</span>
               </div>
               {hasChartData ? (
                 <>
-                  <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs text-gray-500 mb-4">
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-3 h-3 rounded-full bg-[#17694c]" /> {chartPrimaryLabel}
                     </div>
@@ -1005,67 +1004,69 @@ export const StatistikPage = (): JSX.Element => {
                       <span className="inline-block w-3 h-3 rounded-full bg-[#1769dc]" /> {chartSecondaryLabel}
                     </div>
                   </div>
-                  <div className="flex w-full h-56 mobile:h-72 mb-4 mobile:mb-6 pl-1 pr-4 mobile:pl-2 mobile:pr-4 min-w-0">
-                    <div className="flex flex-col justify-between items-end pr-3 mobile:pr-5 py-2 w-12 mobile:w-16 select-none flex-shrink-0">
-                      {chartScale.ticks.slice().reverse().map((tick, idx) => (
-                        <span key={`${tick}-${idx}`} className="text-xs text-gray-400 tabular-nums">
-                          {formatAxisTick(tick)}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex-1 flex flex-col h-full min-w-0">
-                      <div className="flex items-end justify-start gap-4 sm:gap-6 md:gap-8 flex-1 pb-4 min-w-0 overflow-x-auto">
-                        {chartData.map((item, idx) => {
-                          const primaryHeight = Math.max(((Number(item.primaryValue) || 0) / chartScale.niceMax) * barChartHeight, minBarHeight);
-                          const secondaryHeight = Math.max(((Number(item.secondaryValue) || 0) / chartScale.niceMax) * barChartHeight, minBarHeight);
+                  <div className="w-full mb-4 mobile:mb-6 overflow-x-auto">
+                    <div className="flex h-48 mobile:h-56 laptop:h-72 pl-1 pr-2 mobile:pr-4 laptop:pl-2 laptop:pr-4" style={{ minWidth: 'max-content' }}>
+                      <div className="flex flex-col justify-between items-end pr-1 mobile:pr-2 laptop:pr-5 py-2 w-8 mobile:w-10 laptop:w-16 select-none flex-shrink-0">
+                        {chartScale.ticks.slice().reverse().map((tick, idx) => (
+                          <span key={`${tick}-${idx}`} className="text-[10px] mobile:text-xs text-gray-400 tabular-nums">
+                            {formatAxisTick(tick)}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex flex-col h-full flex-shrink-0">
+                        <div className="flex items-end justify-start gap-1 mobile:gap-2 laptop:gap-4 xl:gap-6 flex-1 pb-4" style={{ width: `${chartData.length * 30}px` }}>
+                          {chartData.map((item, idx) => {
+                            const primaryHeight = Math.max(((Number(item.primaryValue) || 0) / chartScale.niceMax) * barChartHeight, minBarHeight);
+                            const secondaryHeight = Math.max(((Number(item.secondaryValue) || 0) / chartScale.niceMax) * barChartHeight, minBarHeight);
 
-                          return (
-                            <div key={idx} className="flex flex-col items-center flex-shrink-0 min-w-[70px] max-w-[90px]">
-                              <div
-                                className="flex gap-2 sm:gap-3 items-end w-full justify-center mb-2"
-                                style={{ height: `${barChartHeight}px` }}
-                              >
+                            return (
+                              <div key={idx} className="flex flex-col items-center flex-shrink-0 w-[25px] mobile:w-[30px] laptop:w-[40px] xl:w-[50px]">
                                 <div
-                                  className="bg-[#17694c] rounded-lg transition-all duration-700 cursor-pointer relative"
-                                  style={{
-                                    width: '28px',
-                                    height: `${primaryHeight}px`,
-                                    minHeight: minBarHeight,
-                                  }}
-                                  onMouseEnter={e => {
-                                    const rect = (e.target as HTMLElement).getBoundingClientRect();
-                                    setTooltip({
-                                      x: rect.left + rect.width / 2,
-                                      y: rect.top,
-                                      value: `${chartPrimaryLabel}: ${Number(item.primaryValue || 0).toLocaleString('sv-SE')}`
-                                    });
-                                  }}
-                                  onMouseLeave={() => setTooltip(null)}
-                                />
-                                <div
-                                  className="bg-[#1769dc] rounded-lg transition-all duration-700 cursor-pointer relative"
-                                  style={{
-                                    width: '28px',
-                                    height: `${secondaryHeight}px`,
-                                    minHeight: minBarHeight,
-                                  }}
-                                  onMouseEnter={e => {
-                                    const rect = (e.target as HTMLElement).getBoundingClientRect();
-                                    setTooltip({
-                                      x: rect.left + rect.width / 2,
-                                      y: rect.top,
-                                      value: `${chartSecondaryLabel}: ${Number(item.secondaryValue || 0).toLocaleString('sv-SE')}${chartSecondarySuffix ?? ''}`
-                                    });
-                                  }}
-                                  onMouseLeave={() => setTooltip(null)}
-                                />
+                                  className="flex gap-0.5 mobile:gap-1 laptop:gap-2 items-end w-full justify-center mb-2"
+                                  style={{ height: `${barChartHeight}px` }}
+                                >
+                                  <div
+                                    className="bg-[#17694c] rounded-lg transition-all duration-700 cursor-pointer relative"
+                                    style={{
+                                      width: '8px',
+                                      height: `${primaryHeight}px`,
+                                      minHeight: minBarHeight,
+                                    }}
+                                    onMouseEnter={e => {
+                                      const rect = (e.target as HTMLElement).getBoundingClientRect();
+                                      setTooltip({
+                                        x: rect.left + rect.width / 2,
+                                        y: rect.top,
+                                        value: `${chartPrimaryLabel}: ${Number(item.primaryValue || 0).toLocaleString('sv-SE')}`
+                                      });
+                                    }}
+                                    onMouseLeave={() => setTooltip(null)}
+                                  />
+                                  <div
+                                    className="bg-[#1769dc] rounded-lg transition-all duration-700 cursor-pointer relative"
+                                    style={{
+                                      width: '8px',
+                                      height: `${secondaryHeight}px`,
+                                      minHeight: minBarHeight,
+                                    }}
+                                    onMouseEnter={e => {
+                                      const rect = (e.target as HTMLElement).getBoundingClientRect();
+                                      setTooltip({
+                                        x: rect.left + rect.width / 2,
+                                        y: rect.top,
+                                        value: `${chartSecondaryLabel}: ${Number(item.secondaryValue || 0).toLocaleString('sv-SE')}${chartSecondarySuffix ?? ''}`
+                                      });
+                                    }}
+                                    onMouseLeave={() => setTooltip(null)}
+                                  />
+                                </div>
+                                <span className="text-[5px] mobile:text-[6px] laptop:text-[7px] text-gray-600 text-center leading-tight whitespace-nowrap overflow-hidden max-w-full">
+                                  {item.label}
+                                </span>
                               </div>
-                              <span className="text-[11px] sm:text-xs text-gray-600 text-center leading-tight whitespace-no-wrap no-wrap overflow-hidden">
-                                {item.label}
-                              </span>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                     {tooltip && (
@@ -1082,7 +1083,7 @@ export const StatistikPage = (): JSX.Element => {
                       </div>
                     )}
                   </div>
-                  <div className="flex justify-between w-full text-[11px] text-gray-500 px-1 mobile:px-2">
+                  <div className="flex justify-between w-full text-[10px] sm:text-[11px] text-gray-500 px-1 sm:px-2">
                     <span>{yAxisLabel}</span>
                     <span>{xAxisLabel}</span>
                   </div>
@@ -1099,10 +1100,10 @@ export const StatistikPage = (): JSX.Element => {
         </div>
 
         {/* Export-knappar utanför diagrammet */}
-        <div className="flex flex-col lg:flex-row mobile:flex-col gap-3 mobile:gap-4 justify-center">
-          <Button variant="outline" className="rounded-lg text-sm font-medium w-full mobile:w-auto" onClick={handleExportPDF} data-tour="stats-export-pdf">Exportera som PDF</Button>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+          <Button variant="outline" className="rounded-lg text-sm font-medium w-full sm:w-auto" onClick={handleExportPDF} data-tour="stats-export-pdf">Exportera som PDF</Button>
           <Button
-            className="rounded-lg text-sm font-medium"
+            className="rounded-lg text-sm font-medium w-full sm:w-auto"
             variant="outline"
             onClick={handleExportExcel}
             data-tour="stats-export-excel"

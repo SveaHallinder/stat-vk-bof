@@ -65,7 +65,7 @@ export default function cases(pool: Pool) {
       }
     } catch (checkError) {
       console.error("Error checking for duplicate case:", checkError);
-      // Fortsätt med att skapa insatst om kontrollen misslyckas
+      // Fortsätt med att skapa insats om kontrollen misslyckas
     }
 
     try {
@@ -279,7 +279,7 @@ export default function cases(pool: Pool) {
       }
     } catch (checkError) {
       console.error("Error checking for duplicate case:", checkError);
-      // Fortsätt med att uppdatera insatst om kontrollen misslyckas
+      // Fortsätt med att uppdatera insats om kontrollen misslyckas
     }
 
     try {

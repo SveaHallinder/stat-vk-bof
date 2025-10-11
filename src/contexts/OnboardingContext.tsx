@@ -63,7 +63,7 @@ const baseSteps: OnboardingStep[] = [
   {
     id: 'dashboard-chart',
     title: 'Startsida – Besöksstatistik',
-    description: 'Snabb överblick över månadens besök och kunder per insatstyp.',
+    description: 'Snabb överblick över månadens besök och kunder per insatsyp.',
     route: '/dashboard',
     selector: '[data-tour="chart-section"]',
     placement: 'top',
@@ -73,7 +73,7 @@ const baseSteps: OnboardingStep[] = [
   {
     id: 'customers-add',
     title: 'Kunder – Lägg till ny kund',
-    description: 'Börja med att registrera din kund. Därefter kan du skapa insatsen och registrera tider. Du kan även lägga till flera kunder samtidigt.',
+    description: 'Börja med att registrera din kund. Därefter kan du skapa insatser och registrera tider. Du kan även lägga till flera kunder samtidigt.',
     route: '/kunder',
     selector: '[data-tour="customers-add-btn"]',
     placement: 'bottom',
@@ -198,7 +198,7 @@ const baseSteps: OnboardingStep[] = [
   {
     id: 'stats-chart',
     title: 'Statistik – Diagram',
-    description: 'Besök och kunder per insatstyp. Hovra för detaljer och exportera vid behov.',
+    description: 'Besök och kunder per insatsyp. Hovra för detaljer och exportera vid behov.',
     route: '/statistik',
     selector: '[data-tour="stats-chart"]',
     placement: 'top',
@@ -216,7 +216,7 @@ const baseSteps: OnboardingStep[] = [
   {
     id: 'profile',
     title: 'Min profil',
-    description: 'Se dina uppgifter, logga ut och se dina insatser. Vill du ändra info eller har glömt lösenord – kontakta admin.',
+    description: 'Se dina uppgifter, insatser och logga ut. Vill du ändra info eller har glömt lösenord – kontakta admin.',
     route: '/min-profil',
     placement: 'center',
   },

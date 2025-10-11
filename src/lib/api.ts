@@ -225,7 +225,7 @@ export async function getShifts(): Promise<ShiftEntry[]> {
 
 export async function getShiftsForCase(caseId: string): Promise<ShiftEntry[]> {
   const res = await api(`/shifts?case_id=${caseId}`);
-  if (!res.ok) throw new Error("Kunde inte hämta besök för insatst");
+  if (!res.ok) throw new Error("Kunde inte hämta besök för insats");
   return res.json();
 }
 

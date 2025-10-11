@@ -51,7 +51,7 @@ describe('RBAC and routes', () => {
       res = await fetch(`${base}/api/efforts`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Namn', available_for: 'Biståndsbedömda' })
+        body: JSON.stringify({ name: 'Namn', available_for: 'Behovsprövad' })
       });
       expect(res.status).toBe(403);
     } finally {
@@ -73,7 +73,7 @@ describe('RBAC and routes', () => {
       res = await fetch(`${base}/api/efforts`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'InsatsX', available_for: 'Biståndsbedömda' })
+        body: JSON.stringify({ name: 'InsatsX', available_for: 'Behovsprövad' })
       });
       expect(res.status).toBe(201);
     } finally {

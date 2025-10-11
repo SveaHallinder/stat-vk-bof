@@ -17,10 +17,10 @@ export const FilterBar = ({
   setSelectedFilter 
 }: FilterBarProps): JSX.Element => {
   const filters = [
-    { id: "alla", label: "Alla kunder", count: 46 },
-    { id: "aktiva", label: "Aktiva", count: 32 },
-    { id: "inaktiva", label: "Inaktiva", count: 14 },
-    { id: "nya", label: "Nya denna månad", count: 5 },
+    { id: "alla", label: "Alla kunder" },
+    { id: "aktiva", label: "Aktiva" },
+    { id: "inaktiva", label: "Inaktiva" },
+    { id: "nya", label: "Nya denna månad" },
   ];
 
   return (
@@ -55,13 +55,6 @@ export const FilterBar = ({
             }`}
           >
             {filter.label}
-            <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-              selectedFilter === filter.id
-                ? "bg-white/20 text-white"
-                : "bg-gray-100 text-[#666666]"
-            }`}>
-              {filter.count}
-            </span>
           </Button>
         ))}
       </div>

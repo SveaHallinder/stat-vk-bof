@@ -207,13 +207,13 @@ export const RegisteraTidPage = (): JSX.Element => {
       setNewCaseHandler1Id("");
       setNewCaseHandler2Id("none");
       
-      enhancedToast.success("Insats registrerat");
+      enhancedToast.success("Insats registrerad");
       triggerRefresh();
     } catch (error: any) {
       if (error.error && error.error.includes('samma kombination finns redan')) {
         enhancedToast.error(error.error, { duration: 8000 }); // 8 sekunder
       } else if (error.message && error.message.includes('samma kombination finns redan')) {
-        enhancedToast.error('Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsen.', { duration: 8000 }); // 8 sekunder
+        enhancedToast.error('En aktiv insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatser.', { duration: 8000 }); // 8 sekunder
       } else {
         enhancedToast.error("Kunde inte skapa insats. Kontrollera din internetanslutning och försök igen.");
       }
@@ -352,8 +352,8 @@ export const RegisteraTidPage = (): JSX.Element => {
             )}
           </CardTitle>
           <p className="mb-2 text-sm max-w-xl">
-                Här kan du registrera tidsregistreringar för befintliga aktiva insatsen. 
-                Välj insats, datum, timmar och status. Registrera ett nytt insats nedan om du inte hittar insatst i listan.
+                Här kan du registrera tider för befintliga aktiva insatser. 
+                Välj insats, datum, timmar och status. Registrera en ny insats nedan om du inte hittar insatsen i listan.
           </p>
         </CardHeader>
         <CardContent className="mobile:p-6">
@@ -365,7 +365,7 @@ export const RegisteraTidPage = (): JSX.Element => {
           ) : (
             <>
               {/* Tidsregistreringar */}
-              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-4">
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -573,7 +573,7 @@ export const RegisteraTidPage = (): JSX.Element => {
           <CardContent className="pt-0">
             <div className="py-6 bg-white rounded-lg">
               <div className="mb-4 text-sm text-gray-600">
-                Fyll i formuläret nedan för att skapa ett nytt insats:
+                Fyll i formuläret nedan för att skapa en ny insats:
               </div>
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2 flex flex-col pb-0 mb-0">

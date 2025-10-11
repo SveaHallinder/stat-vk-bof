@@ -41,7 +41,7 @@ export const ArendelistaPage = (): JSX.Element => {
     load();
   }, [includeInactive, refreshKey]);
 
-  const statusOptions = ["Aktivt", "Inaktivt"];
+  const statusOptions = ["Aktivt", "inaktiv"];
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -54,7 +54,7 @@ export const ArendelistaPage = (): JSX.Element => {
       !term || 
       (c.customer_name || "").toLowerCase().includes(term) || 
       (c.effort_name || "").toLowerCase().includes(term);
-    const matchesStatus = statusFilter === "all" || (c.active ? "Aktivt" : "Inaktivt") === statusFilter;
+    const matchesStatus = statusFilter === "all" || (c.active ? "Aktivt" : "inaktiv") === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -66,7 +66,7 @@ export const ArendelistaPage = (): JSX.Element => {
     return 0;
   });
 
-  // Navigera till kundens profil med insatst markerat
+  // Navigera till kundens profil med insats markerat
   const handleCaseClick = (caseItem: CaseWithNames) => {
     navigate(`/kunder/${caseItem.customer_id}?caseId=${caseItem.id}`);
   };
@@ -89,7 +89,7 @@ export const ArendelistaPage = (): JSX.Element => {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alla status</SelectItem>
+                <SelectItem value="all">All status</SelectItem>
                 {statusOptions.map(s => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
@@ -156,7 +156,7 @@ export const ArendelistaPage = (): JSX.Element => {
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {c.active ? 'Aktivt' : 'Inaktivt'}
+                        {c.active ? 'Aktiv' : 'Inaktiv'}
                       </span>
                     </td>
                     <td data-label="Behandlare 1" className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.handler1_name}</td>

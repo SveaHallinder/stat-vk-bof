@@ -43,9 +43,9 @@ const TableCell = ({
 export const AdminPage = (): JSX.Element => {
   const [insatser, setInsatser] = React.useState<Effort[]>([]);
   const [openModal, setOpenModal] = React.useState(false);
-  const [newInsats, setNewInsats] = React.useState({ name: "", for: "Biståndsbedömda" });
+  const [newInsats, setNewInsats] = React.useState({ name: "", for: "Behovsprövad" });
   const [editIdx, setEditIdx] = React.useState<number | null>(null);
-  const [editInsats, setEditInsats] = React.useState<{ name: string; for: string }>({ name: "", for: "Biståndsbedömda" });
+  const [editInsats, setEditInsats] = React.useState<{ name: string; for: string }>({ name: "", for: "Behovsprövad" });
   const [openEditModal, setOpenEditModal] = React.useState(false);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [handlers, setHandlers] = React.useState<Handler[]>([]);
@@ -129,7 +129,7 @@ export const AdminPage = (): JSX.Element => {
         if (!res.ok) throw new Error();
       const created = await res.json();
       setInsatser(prev => [...prev, created]);
-      setNewInsats({ name: "", for: "Biståndsbedömda" });
+      setNewInsats({ name: "", for: "Behovsprövad" });
       setOpenModal(false);
       triggerRefresh();
     } catch {
@@ -302,23 +302,23 @@ export const AdminPage = (): JSX.Element => {
 
   return (
     <Layout title="Admin">
-      <div className="w-full flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
+      <div className="flex flex-col w-full max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 gap-4 sm:gap-6 lg:gap-8 py-2 sm:py-14">
 
       <Tabs defaultValue="insatser" className="w-full">
-        <TabsList className="flex lg:flex-row sm:flex-col mobile:flex-col mobile:h-full w-full bg-gray-100 rounded-2xl mb-2 p-1 gap-2 ">
-          <TabsTrigger value="insatser" className="w-full sm:flex-1 py-2 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Insatser</TabsTrigger>
-          <TabsTrigger value="behandlare" className="w-full sm:flex-1 py-2 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Behandlare</TabsTrigger>
-          <TabsTrigger value="logg" className="w-full sm:flex-1 py-2 text-base rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition">Granskningslogg</TabsTrigger>
+        <TabsList className="flex flex-col mobile:flex-row w-full bg-gray-100 rounded-lg mobile:rounded-2xl mb-4 p-1 gap-2 mobile:gap-2">
+          <TabsTrigger value="insatser" className="w-full mobile:flex-1 py-3 px-3 text-sm mobile:text-base rounded-lg mobile:rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition font-medium whitespace-normal mobile:whitespace-nowrap mobile:mt-12">Insatser</TabsTrigger>
+          <TabsTrigger value="behandlare" className="w-full mobile:flex-1 py-3 px-3 text-sm mobile:text-base rounded-lg mobile:rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition font-medium whitespace-normal mobile:whitespace-nowrap">Behandlare</TabsTrigger>
+          <TabsTrigger value="logg" className="w-full mobile:flex-1 py-3 px-3 text-sm mobile:text-base rounded-lg mobile:rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition font-medium whitespace-normal mobile:whitespace-nowrap">Granskningslogg</TabsTrigger>
         </TabsList>
         <TabsContent value="insatser">
-          <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
-            <CardContent className="p-4 mobile:p-6">
-              <div className="flex flex-col lg:flex-row justify-start mb-4 gap-4 mobile:gap-6 items-start mobile:items-center mobile:w-full">
-                <Button variant="outline" className="flex items-center gap-2 w-full mobile:w-auto" onClick={() => setOpenModal(true)}>
-                  <PlusCircle className="w-5 h-5" /> Lägg till ny insats
+          <Card className="flex-1 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-4 sm:mt-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6">
+              <div className="flex flex-col sm:flex-row justify-start mb-4 gap-3 sm:gap-4 lg:gap-6 items-start sm:items-center w-full">
+                <Button variant="outline" className="flex items-center gap-2 w-full sm:w-auto text-sm sm:text-base py-2.5 sm:py-3" onClick={() => setOpenModal(true)}>
+                  <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" /> Lägg till ny insats
                 </Button>
-                <label className="flex items-center gap-2 text-sm w-full mobile:w-auto">
-                  <input type="checkbox" checked={showInactiveEfforts} onChange={e => setShowInactiveEfforts(e.target.checked)} />
+                <label className="flex items-center gap-2 text-sm w-full sm:w-auto py-2">
+                  <input type="checkbox" checked={showInactiveEfforts} onChange={e => setShowInactiveEfforts(e.target.checked)} className="w-4 h-4" />
                   Visa inaktiva insatser
                 </label>
               </div>
@@ -372,59 +372,59 @@ export const AdminPage = (): JSX.Element => {
         </Card>
 
           <Modal open={openModal} onClose={() => setOpenModal(false)}>
-            <div className="p-4 mobile:p-8">
-              <h2 className="text-lg mobile:text-xl font-semibold mb-4">Lägg till ny insats</h2>
+            <div className="w-full max-w-lg p-4 sm:p-6 lg:p-8 bg-white rounded-lg sm:rounded-2xl shadow-lg">
+              <h2 className="text-base sm:text-lg lg:text-xl font-semibold mb-4">Lägg till ny insats</h2>
               <div className="flex flex-col gap-4">
                 <label className="text-sm font-medium text-gray-700">Namn på insats</label>
                 <input type="text" className="border rounded px-3 py-2" value={newInsats.name} onChange={e => setNewInsats({ ...newInsats, name: e.target.value })} placeholder="Namn på insats" />
                 <label className="text-sm font-medium text-gray-700">Tillgänglig för</label>
                 <select className="border rounded px-3 py-2" value={newInsats.for} onChange={e => setNewInsats({ ...newInsats, for: e.target.value })}>
-                  <option value="Biståndsbedömda">Biståndsbedömda</option>
+                  <option value="Behovsprövad">Behovsprövad</option>
                   <option value="Förebyggande arbete">Förebyggande arbete</option>
-                  <option value="Biståndsbedömda, Förebyggande arbete">Biståndsbedömda, Förebyggande arbete</option>
+                  <option value="Behovsprövad, Förebyggande arbete">Behovsprövad, Förebyggande arbete</option>
                   <option value="IUB">IUB</option>
-                  <option value="Biståndsbedömda, IUB">Biståndsbedömda, IUB</option>
+                  <option value="Behovsprövad, IUB">Behovsprövad, IUB</option>
                 </select>
               </div>
-              <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-end mt-6">
-                <Button variant="outline" className="w-full mobile:w-auto" onClick={() => setOpenModal(false)}>Avbryt</Button>
-                <Button variant="default" className="w-full mobile:w-auto" onClick={handleAddInsats}>Spara</Button>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-end mt-6">
+                <Button variant="outline" className="w-full sm:w-auto" onClick={() => setOpenModal(false)}>Avbryt</Button>
+                <Button variant="default" className="w-full sm:w-auto" onClick={handleAddInsats}>Spara</Button>
               </div>
             </div>
           </Modal>
           <Modal open={openEditModal} onClose={() => setOpenEditModal(false)}>
-            <div className="p-4 mobile:p-8">
-              <h2 className="text-lg mobile:text-xl font-semibold mb-4">Redigera insats</h2>
+            <div className="w-full max-w-lg p-4 sm:p-6 lg:p-8 bg-white rounded-lg sm:rounded-2xl shadow-lg">
+              <h2 className="text-base sm:text-lg lg:text-xl font-semibold mb-4">Redigera insats</h2>
               <div className="flex flex-col gap-4">
                 <label className="text-sm font-medium text-gray-700">Namn på insats</label>
                 <input type="text" className="border rounded px-3 py-2" value={editInsats.name} onChange={e => setEditInsats({ ...editInsats, name: e.target.value })} placeholder="Namn på insats" />
                 <label className="text-sm font-medium text-gray-700">Tillgänglig för</label>
                 <select className="border rounded px-3 py-2" value={editInsats.for} onChange={e => setEditInsats({ ...editInsats, for: e.target.value })}>
-                  <option value="Biståndsbedömda">Biståndsbedömda</option>
+                  <option value="Behovsprövad">Behovsprövad</option>
                   <option value="Förebyggande arbete">Förebyggande arbete</option>
-                  <option value="Biståndsbedömda, Förebyggande arbete">Biståndsbedömda, Förebyggande arbete</option>
+                  <option value="Behovsprövad, Förebyggande arbete">Behovsprövad, Förebyggande arbete</option>
                   <option value="IUB">IUB</option>
-                  <option value="Biståndsbedömda, IUB">Biståndsbedömda, IUB</option>
+                  <option value="Behovsprövad, IUB">Behovsprövad, IUB</option>
                 </select>
               </div>
-              <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-between mt-6">
-                <Button variant="destructive" className="w-full mobile:w-auto" onClick={() => setShowDeleteModal(true)}>Radera</Button>
-                <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4">
-                  <Button variant="outline" className="w-full mobile:w-auto" onClick={() => setOpenEditModal(false)}>Avbryt</Button>
-                  <Button variant="default" className="w-full mobile:w-auto" onClick={handleEditInsats}>Spara</Button>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between mt-6">
+                <Button variant="destructive" className="w-full sm:w-auto" onClick={() => setShowDeleteModal(true)}>Radera</Button>
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  <Button variant="outline" className="w-full sm:w-auto" onClick={() => setOpenEditModal(false)}>Avbryt</Button>
+                  <Button variant="default" className="w-full sm:w-auto" onClick={handleEditInsats}>Spara</Button>
                 </div>
               </div>
             </div>
           </Modal>
           <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-            <div className="p-4 mobile:p-8">
-              <h2 className="text-lg mobile:text-xl font-semibold mb-4">Radera insats</h2>
+            <div className="w-full max-w-lg p-4 sm:p-6 lg:p-8 bg-white rounded-lg sm:rounded-2xl shadow-lg">
+              <h2 className="text-base sm:text-lg lg:text-xl font-semibold mb-4">Radera insats</h2>
               <p>Är du säker på att du vill avaktivera insatsen?</p>
-              <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-end mt-6">
-                <Button variant="outline" className="w-full mobile:w-auto" onClick={() => setShowDeleteModal(false)}>Avbryt</Button>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-end mt-6">
+                <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowDeleteModal(false)}>Avbryt</Button>
                 <Button
                   variant="destructive"
-                  className="w-full mobile:w-auto"
+                  className="w-full sm:w-auto"
                   onClick={async () => {
                     if (editIdx != null) {
                       try {
@@ -446,14 +446,14 @@ export const AdminPage = (): JSX.Element => {
           </Modal>
         </TabsContent>
         <TabsContent value="behandlare">
-          <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
-            <CardContent className="p-4 mobile:p-6">
-              <div className="flex flex-col lg:flex-row justify-start mb-4 gap-4 mobile:gap-6 items-start mobile:items-center">
-                <Button variant="outline" className="flex items-center gap-2 w-full mobile:w-auto" onClick={() => setOpenHandlerModal(true)}>
-                  <PlusCircle className="w-5 h-5" /> Lägg till ny behandlare
+          <Card className="flex-1 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-4 sm:mt-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6">
+              <div className="flex flex-col sm:flex-row justify-start mb-4 gap-3 sm:gap-4 lg:gap-6 items-start sm:items-center">
+                <Button variant="outline" className="flex items-center gap-2 w-full sm:w-auto text-sm sm:text-base py-2.5 sm:py-3" onClick={() => setOpenHandlerModal(true)}>
+                  <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" /> Lägg till ny behandlare
                 </Button>
-                <label className="flex items-center gap-2 text-sm w-full mobile:w-auto">
-                  <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} />
+                <label className="flex items-center gap-2 text-sm w-full sm:w-auto py-2">
+                  <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="w-4 h-4" />
                   Visa inaktiva behandlare
                 </label>
               </div>
@@ -505,12 +505,12 @@ export const AdminPage = (): JSX.Element => {
             </CardContent>
           </Card>
 
-          <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
-            <CardContent className="p-4 mobile:p-6 space-y-4">
-              <div className="flex flex-col mobile:flex-row mobile:items-center justify-between gap-4">
+          <Card className="flex-1 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-4 sm:mt-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">Aktiva inbjudningar</h3>
-                  <p className="text-sm text-gray-500">Kopiera eller generera om länkar till behandlare som inte skapat konto ännu.</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800">Aktiva inbjudningar</h3>
+                  <p className="text-xs sm:text-sm text-gray-500">Kopiera eller generera om länkar till behandlare som inte skapat konto ännu.</p>
                 </div>
                 <Button
                   variant="outline"
@@ -622,8 +622,8 @@ export const AdminPage = (): JSX.Element => {
           </Card>
 
           <Modal open={openHandlerModal} onClose={() => setOpenHandlerModal(false)}>
-            <div className="p-4 mobile:p-8">
-              <h2 className="text-lg mobile:text-xl font-semibold mb-4">Lägg till ny behandlare</h2>
+            <div className="w-full max-w-lg p-4 sm:p-6 lg:p-8 bg-white rounded-lg sm:rounded-2xl shadow-lg">
+              <h2 className="text-base sm:text-lg lg:text-xl font-semibold mb-4">Lägg till ny behandlare</h2>
               <div className="flex flex-col gap-4">
                 <label className="text-sm font-medium text-gray-700">Namn</label>
                 <input
@@ -664,15 +664,15 @@ export const AdminPage = (): JSX.Element => {
                 </select>
                 {handlerErrors.role && <span className="text-red-500 text-xs mt-1">{handlerErrors.role}</span>}
               </div>
-              <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-end mt-6">
-                <Button variant="outline" className="w-full mobile:w-auto" onClick={() => {
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-end mt-6">
+                <Button variant="outline" className="w-full sm:w-auto" onClick={() => {
                   setOpenHandlerModal(false);
                   setNewHandler({ name: "", email: "", role: "handler" });
                   setHandlerErrors({});
                 }}>Avbryt</Button>
                 <Button
                   variant="default"
-                  className="w-full mobile:w-auto"
+                  className="w-full sm:w-auto"
                   onClick={handleAddHandler}
                   disabled={!!handlerErrors.name || !!handlerErrors.email || !!handlerErrors.role || !newHandler.name || !newHandler.email || !newHandler.role}
                 >
@@ -682,8 +682,8 @@ export const AdminPage = (): JSX.Element => {
             </div>
           </Modal>
           <Modal open={openEditHandlerModal} onClose={() => setOpenEditHandlerModal(false)}>
-            <div className="p-4 mobile:p-8">
-              <h2 className="text-lg mobile:text-xl font-semibold mb-4">Redigera behandlare</h2>
+            <div className="w-full max-w-lg p-4 sm:p-6 lg:p-8 bg-white rounded-lg sm:rounded-2xl shadow-lg">
+              <h2 className="text-base sm:text-lg lg:text-xl font-semibold mb-4">Redigera behandlare</h2>
               <div className="flex flex-col gap-4">
                 <label className="text-sm font-medium text-gray-700">Namn</label>
                 <input
@@ -721,10 +721,10 @@ export const AdminPage = (): JSX.Element => {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4 justify-between mt-6">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between mt-6">
                 <Button
                   variant="destructive"
-                  className="w-full mobile:w-auto"
+                  className="w-full sm:w-auto"
                   onClick={async () => {
                     if (editHandler) {
                       try {
@@ -740,11 +740,11 @@ export const AdminPage = (): JSX.Element => {
                 >
                   Radera
                 </Button>
-                <div className="flex flex-col mobile:flex-row gap-3 mobile:gap-4">
-                  <Button variant="outline" className="w-full mobile:w-auto" onClick={() => setOpenEditHandlerModal(false)}>Avbryt</Button>
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  <Button variant="outline" className="w-full sm:w-auto" onClick={() => setOpenEditHandlerModal(false)}>Avbryt</Button>
                   <Button
                     variant="default"
-                    className="w-full mobile:w-auto"
+                    className="w-full sm:w-auto"
                     onClick={async () => {
                       if (editHandler) {
                         try {
@@ -770,9 +770,9 @@ export const AdminPage = (): JSX.Element => {
           </Modal>
           {/* Popup för lösenordsåterställning */}
           {resetPasswordToken && (
-            <div className="fixed top-8 right-8 bg-white border border-blue-400 shadow-lg rounded-lg p-4 mobile:p-6 z-50 max-w-md">
+            <div className="fixed top-4 right-4 sm:top-8 sm:right-8 bg-white border border-blue-400 shadow-lg rounded-lg p-3 sm:p-4 lg:p-6 z-50 max-w-sm sm:max-w-md">
               <div className="mb-4">
-                <div className="font-semibold text-blue-700 text-base mobile:text-lg mb-2">🔐 Lösenordsåterställning skapad!</div>
+                <div className="font-semibold text-blue-700 text-sm sm:text-base lg:text-lg mb-2">🔐 Lösenordsåterställning skapad!</div>
                 <div className="text-sm text-gray-600 mb-4">
                   Skicka följande information till behandlaren:
                 </div>
@@ -785,7 +785,7 @@ export const AdminPage = (): JSX.Element => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   🔗 Återställningslänk
                 </label>
-                <div className="flex flex-col mobile:flex-row items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-center gap-2">
                   <input
                     className="w-full border rounded px-2 py-2 text-sm"
                     value={`${window.location.origin}/reset-password/${resetPasswordToken}`}
@@ -793,7 +793,7 @@ export const AdminPage = (): JSX.Element => {
                     onFocus={e => e.target.select()}
                   />
                   <button
-                    className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 w-full mobile:w-auto"
+                    className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 w-full sm:w-auto"
                     onClick={() => {
                       navigator.clipboard.writeText(`${window.location.origin}/reset-password/${resetPasswordToken}`);
                       setResetPasswordCopied(true);
@@ -811,7 +811,7 @@ export const AdminPage = (): JSX.Element => {
               {/* Status */}
               {resetPasswordCopied && (
                 <div className="text-green-600 text-sm text-center mb-3">
-                  ✅ Kopierat till urklipp!
+                  Kopierat till urklipp!
                 </div>
               )}
 
@@ -827,9 +827,9 @@ export const AdminPage = (): JSX.Element => {
           )}
 
           {inviteToken && (
-            <div className="fixed top-8 right-8 bg-white border border-green-400 shadow-lg rounded-lg p-4 mobile:p-6 z-50 max-w-md">
+            <div className="fixed top-4 right-4 sm:top-8 sm:right-8 bg-white border border-green-400 shadow-lg rounded-lg p-3 sm:p-4 lg:p-6 z-50 max-w-sm sm:max-w-md">
               <div className="mb-4">
-                <div className="font-semibold text-green-700 text-base mobile:text-lg mb-2">🎉 Inbjudning skapad!</div>
+                <div className="font-semibold text-green-700 text-sm sm:text-base lg:text-lg mb-2">🎉 Inbjudan skapad!</div>
                 <div className="text-sm text-gray-600 mb-4">
                   Skicka följande information till användaren:
                 </div>
@@ -838,9 +838,9 @@ export const AdminPage = (): JSX.Element => {
               {/* Verifieringskod */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🔐 Verifieringskod (8 siffror)
+                  erifieringskod (8 siffror)
                 </label>
-                <div className="flex flex-col mobile:flex-row items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-center gap-2">
                   <input
                     className="w-full border rounded px-3 py-2 font-mono text-lg tracking-widest text-center bg-gray-50"
                     value={inviteVerificationCode || "Laddar..."}
@@ -848,7 +848,7 @@ export const AdminPage = (): JSX.Element => {
                     onFocus={e => e.target.select()}
                   />
                   <button
-                    className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 w-full mobile:w-auto"
+                    className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 w-full sm:w-auto"
                     onClick={() => {
                       if (inviteVerificationCode) {
                         navigator.clipboard.writeText(inviteVerificationCode);
@@ -868,9 +868,9 @@ export const AdminPage = (): JSX.Element => {
               {/* Invite-länk */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🔗 Inbjudningslänk
+                  Inbjudningslänk
                 </label>
-                <div className="flex flex-col mobile:flex-row items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-center gap-2">
                   <input
                     className="w-full border rounded px-2 py-2 text-sm"
                     value={`${window.location.origin}/invite/${inviteToken}`}
@@ -878,7 +878,7 @@ export const AdminPage = (): JSX.Element => {
                     onFocus={e => e.target.select()}
                   />
                   <button
-                    className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 w-full mobile:w-auto"
+                    className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 w-full sm:w-auto"
                     onClick={() => {
                       navigator.clipboard.writeText(`${window.location.origin}/invite/${inviteToken}`);
                       setCopied(true);
@@ -896,7 +896,7 @@ export const AdminPage = (): JSX.Element => {
               {/* Status */}
               {copied && (
                 <div className="text-green-600 text-sm text-center mb-3">
-                  ✅ Kopierat till urklipp!
+                  Kopierat till urklipp!
                 </div>
               )}
 
@@ -912,8 +912,8 @@ export const AdminPage = (): JSX.Element => {
           )}
         </TabsContent>
         <TabsContent value="logg">
-          <Card className="flex-1 bg-white border border-gray-200 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-6">
-            <CardContent className="p-4 mobile:p-6">
+          <Card className="flex-1 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] mt-4 sm:mt-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6">
               <AuditLog />
             </CardContent>
           </Card>

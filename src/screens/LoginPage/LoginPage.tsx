@@ -72,7 +72,7 @@ export const LoginPage = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="din.email@vallentuna.se"
+                placeholder="exempel@vallentuna.se"
                 className="w-full"
                 required
                 disabled={isLoading}

@@ -36,7 +36,7 @@ describe('Efforts activate/deactivate with POST and PUT', () => {
       let res = await fetch(`${base}/api/efforts`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'E1', available_for: 'Biståndsbedömda' })
+        body: JSON.stringify({ name: 'E1', available_for: 'Behovsprövad' })
       });
       expect(res.status).toBe(201);
       const created = await res.json();
