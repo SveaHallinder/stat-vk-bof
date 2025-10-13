@@ -306,7 +306,7 @@ export const AdminPage = (): JSX.Element => {
 
       <Tabs defaultValue="insatser" className="w-full">
         <TabsList className="flex flex-col mobile:flex-row w-full bg-gray-100 rounded-lg mobile:rounded-2xl mb-4 p-1 gap-2 mobile:gap-2">
-          <TabsTrigger value="insatser" className="w-full mobile:flex-1 py-3 px-3 text-sm mobile:text-base rounded-lg mobile:rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition font-medium whitespace-normal mobile:whitespace-nowrap mobile:mt-12">Insatser</TabsTrigger>
+          <TabsTrigger value="insatser" className="w-full mobile:flex-1 py-3 px-3 text-sm mobile:text-base rounded-lg mobile:rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition font-medium whitespace-normal mobile:whitespace-nowrap">Insatser</TabsTrigger>
           <TabsTrigger value="behandlare" className="w-full mobile:flex-1 py-3 px-3 text-sm mobile:text-base rounded-lg mobile:rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition font-medium whitespace-normal mobile:whitespace-nowrap">Behandlare</TabsTrigger>
           <TabsTrigger value="logg" className="w-full mobile:flex-1 py-3 px-3 text-sm mobile:text-base rounded-lg mobile:rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#17694c] data-[state=inactive]:text-gray-500 transition font-medium whitespace-normal mobile:whitespace-nowrap">Granskningslogg</TabsTrigger>
         </TabsList>
