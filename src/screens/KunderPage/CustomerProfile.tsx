@@ -110,7 +110,7 @@ export const CustomerProfile = () => {
       const targetCase = cases.find(c => c.id.toString() === caseId);
       if (targetCase) {
         handleToggleCase(targetCase);
-        // Scrolla till insatst
+        // Scrolla till insats
         setTimeout(() => {
           const element = document.getElementById(`case-${targetCase.id}`);
           if (element) {
@@ -386,11 +386,11 @@ export const CustomerProfile = () => {
       // Uppdatera lokalt state
       setCases(prev => [...prev, newCaseData]);
       setShowNewCase(false);
-      toast.success("Nytt insats skapat!");
+      toast.success("Ny insats skapad!");
       triggerRefresh();
     } catch (error: any) {
       if (error.message && error.message.includes('samma kombination finns redan')) {
-        toast.error('Ett aktivt insats med samma kombination finns redan för denna kund.');
+        toast.error('En aktiv insats med samma kombination finns redan för denna kund.');
       } else {
         toast.error("Kunde inte skapa insats");
       }
@@ -523,7 +523,7 @@ export const CustomerProfile = () => {
                   onClick={openNewCase}
                   className="bg-green-50 hover:bg-green-100 text-green-700 border-green-300"
                 >
-                  + Lägg till insats på kund
+                  + Lägg till insats för kund
                 </Button>
               </CardTitle>
             </CardHeader>
@@ -538,7 +538,7 @@ export const CustomerProfile = () => {
                     onClick={() => setShowClosedCases(!showClosedCases)}
                     className="text-gray-600 hover:text-gray-800"
                   >
-                    {showClosedCases ? "Dölj avslutade insatsen" : "Visa avslutade insatsen"}
+                    {showClosedCases ? "Dölj avslutade insatser" : "Visa avslutade insatser"}
                   </Button>
                 </div>
               )}
@@ -593,7 +593,7 @@ export const CustomerProfile = () => {
                       {openCaseId === caseItem.id && (
                         <div className="mt-4 border-t pt-4">
                           {(shiftsByCase[caseItem.id] ?? []).length === 0 ? (
-                            <div className="text-gray-400 text-sm">Inga besök registrerade.</div>
+                            <div className="text-gray-400 text-sm">Inga registrerade besök.</div>
                           ) : (
                             <div className="space-y-2">
                               {(shiftsByCase[caseItem.id] ?? []).map(s => (
@@ -711,7 +711,7 @@ export const CustomerProfile = () => {
       
       {/* Modal för Redigera kund */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)}>
-        <div className="p-8 max-w-lg w-full" style={{ minWidth: 500 }}>
+        <div className="w-full max-w-lg p-6 sm:p-8 bg-white rounded-2xl shadow-lg">
           <h2 className="text-xl font-semibold mb-4">Redigera kund</h2>
           {(editCustomer !== null) ? (
             <div className="flex flex-col gap-4">
@@ -788,7 +788,7 @@ export const CustomerProfile = () => {
 
       {/* Modal för Redigera insats */}
       <Modal open={!!editingCase} onClose={() => setEditingCase(null)}>
-        <div className="p-8 max-w-lg w-full" style={{ minWidth: 500 }}>
+        <div className="w-full max-w-lg p-6 sm:p-8 bg-white rounded-2xl shadow-lg">
           <h2 className="text-xl font-semibold mb-4">Redigera insats</h2>
           {editingCase && (
             <div className="flex flex-col gap-4">
@@ -818,7 +818,7 @@ export const CustomerProfile = () => {
                   checked={editActive} 
                   onChange={e => setEditActive(e.target.checked)} 
                 />
-                Aktivt insats
+                Aktiv insats
               </label>
             </div>
           )}
@@ -833,7 +833,7 @@ export const CustomerProfile = () => {
 
       {/* Modal för Registrera tid */}
       <Modal open={showTimeRegistration} onClose={() => setShowTimeRegistration(false)}>
-        <div className="p-8 max-w-lg w-full" style={{ minWidth: 500 }}>
+        <div className="w-full max-w-lg p-6 sm:p-8 bg-white rounded-2xl shadow-lg">
           <h2 className="text-xl font-semibold mb-4">Registrera tid</h2>
           {selectedCaseForTime && (
             <div className="flex flex-col gap-4">
@@ -890,8 +890,8 @@ export const CustomerProfile = () => {
 
       {/* Modal för Skapa nytt insats */}
       <Modal open={showNewCase} onClose={() => setShowNewCase(false)}>
-        <div className="p-8 max-w-lg w-full" style={{ minWidth: 500 }}>
-          <h2 className="text-xl font-semibold mb-4">Skapa nytt insats</h2>
+        <div className="w-full max-w-lg p-6 sm:p-8 bg-white rounded-2xl shadow-lg">
+          <h2 className="text-xl font-semibold mb-4">Skapa ny insats</h2>
           <div className="flex flex-col gap-4">
             <div className="bg-gray-50 p-3 rounded">
               <div className="text-sm text-gray-600">Kund: {customer.initials}</div>

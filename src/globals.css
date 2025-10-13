@@ -91,15 +91,15 @@
   
   /* Konsekvent container-bredd */
   .content-container {
-    @apply w-full max-w-full sm:max-w-6xl mx-auto px-3 mobile:px-4 lg:px-6;
+    @apply w-full max-w-full sm:max-w-6xl mx-auto px-3 sm:px-4 lg:px-6;
   }
   
   .content-container-wide {
-    @apply w-full max-w-full sm:max-w-7xl mx-auto px-3 mobile:px-4 lg:px-6;
+    @apply w-full max-w-full sm:max-w-7xl mx-auto px-3 sm:px-4 lg:px-6;
   }
   
   .content-container-narrow {
-    @apply w-full max-w-full sm:max-w-4xl mx-auto px-3 mobile:px-4 lg:px-6;
+    @apply w-full max-w-full sm:max-w-4xl mx-auto px-3 sm:px-4 lg:px-6;
   }
 
   .responsive-table {
@@ -187,6 +187,47 @@
 
     .stats-responsive-table tbody td.actions {
       grid-column: 1 / -1;
+    }
+  }
+
+  /* Mobiloptimering för mindre skärmar */
+  @media (max-width: 480px) {
+    .content-container {
+      @apply px-2;
+    }
+    
+    .content-container-wide {
+      @apply px-2;
+    }
+    
+    .content-container-narrow {
+      @apply px-2;
+    }
+  }
+
+  /* Förbättrad scrollbar för mobil */
+  @media (max-width: 768px) {
+    .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+    
+    .overflow-x-auto::-webkit-scrollbar {
+      height: 4px;
+    }
+    
+    .overflow-x-auto::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 2px;
+    }
+    
+    .overflow-x-auto::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 2px;
+    }
+    
+    .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
   }
 }

@@ -56,15 +56,7 @@ export const MainContent = (): JSX.Element => {
       
       if (handlersResult.status === 'fulfilled') {
         setHandlers(handlersResult.value);
-      } else {
-        // Sätt fallback-data för handlers
-        setHandlers([
-          { id: "13", name: "Svea" },
-          { id: "14", name: "Anders" },
-          { id: "15", name: "Sandra" },
-          { id: "2", name: "System Admin" }
-        ]);
-      }
+      } 
     } catch (error) {
       // Silent error handling
     } finally {
@@ -262,7 +254,7 @@ export const MainContent = (): JSX.Element => {
       
       setOpenModal(null);
       setNewCase({ customerId: "", effortId: "", handler1Id: "", handler2Id: "" });
-      toast.success('Insats registrerat!');
+      toast.success('Insats registrerad!');
       setNewCaseErrors({});
       triggerRefresh();
     } catch (err: any) {
@@ -271,7 +263,7 @@ export const MainContent = (): JSX.Element => {
       if (err.error && err.error.includes('samma kombination finns redan')) {
         toast.error(err.error, { duration: 8000 }); // 8 sekunder
       } else if (err.message && err.message.includes('samma kombination finns redan')) {
-        toast.error('Ett aktivt insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatsen.', { duration: 8000 }); // 8 sekunder
+        toast.error('En aktiv insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatser.', { duration: 8000 }); // 8 sekunder
       } else {
         toast.error('Kunde inte skapa insats');
       }
@@ -330,7 +322,7 @@ export const MainContent = (): JSX.Element => {
       // Find the selected case to get its details
       const selectedCase = activeCases.find(c => c.id.toString() === registerTime.customer);
       if (!selectedCase) {
-        toast.error("Välj ett insats");
+        toast.error("Välj insats");
         return;
       }
 
@@ -466,36 +458,36 @@ export const MainContent = (): JSX.Element => {
     <div className="flex flex-col items-center min-h-screen">
       {/* Toaster is provided globally in src/index.tsx */}
       {/* Main Content Grid */}
-      <div className="flex flex-col min-w-0 w-full mx-auto mobile:px-auto px-auto flex flex-col gap-6 lg:gap-8 py-4">
+      <div className="flex flex-col w-full max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 gap-4 sm:gap-6 lg:gap-8 py-2 sm:py-4">
         {/* Sammanfattning */}
-        <div className="grid grid-cols-1 mobile:grid-cols-1 lg:grid-cols-4 gap-4 mobile:gap-6 min-w-0 w-full" data-tour="stats-cards">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-w-0 w-full" data-tour="stats-cards">
           {isLoading ? (
             // Loading state
             Array.from({ length: 3 }).map((_, index) => (
               <div
                 key={index}
-                className="bg-white rounded-2xl shadow-sm p-4 mobile:p-6 flex flex-col justify-center animate-pulse"
+                className="bg-white rounded-lg sm:rounded-2xl shadow-sm p-3 sm:p-4 lg:p-6 flex flex-col justify-center animate-pulse"
               >
-                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                <div className="h-10 bg-gray-200 rounded w-16 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-32"></div>
+                <div className="h-3 sm:h-4 bg-gray-200 rounded w-20 sm:w-24 mb-2"></div>
+                <div className="h-8 sm:h-10 bg-gray-200 rounded w-12 sm:w-16 mb-2"></div>
+                <div className="h-2.5 sm:h-3 bg-gray-200 rounded w-24 sm:w-32"></div>
               </div>
             ))
           ) : (
             statsCards.map((card, index) => (
               <div
                 key={index}
-                className="bg-white rounded-2xl shadow-sm p-2 mobile:p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
+                className="bg-white rounded-lg sm:rounded-2xl shadow-sm p-3 sm:p-4 lg:p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => handleCardClick(['customers', 'cases', 'visits'][index])}
               >
-                <div className="text-gray-500 text-sm font-semibold tracking-wide uppercase">
+                <div className="text-gray-500 text-xs sm:text-sm font-semibold tracking-wide uppercase">
                   {card.title}
                 </div>
-                <div className="text-2xl mobile:text-3xl lg:text-4xl text-[#222] font-light mt-2">
+                <div className="text-lg sm:text-2xl lg:text-3xl xl:text-4xl text-[#222] font-light mt-1 sm:mt-2">
                   {card.value}
                 </div>
                 {card.note && (
-                  <div className="text-gray-400 text-xs mt-2 font-light">
+                  <div className="text-gray-400 text-[10px] sm:text-xs mt-1 sm:mt-2 font-light">
                     {card.note}
                   </div>
                 )}
@@ -505,12 +497,12 @@ export const MainContent = (): JSX.Element => {
         </div>
         
         {/* Snabbåtgärder */}
-        <div className="bg-white rounded-xl p-4 sm:p-6 flex flex-col shadow-sm items-start" data-tour="quick-actions">
-          <h3 className="text-[#333] text-lg font-light mb-4 sm:mb-6 tracking-tight">Snabbåtgärder</h3>
-          <div className="flex laptop:flex-row mobile:flex-col h-auto gap-3 sm:gap-4 lg:gap-8 w-auto mobile:w-full">
+        <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 lg:p-6 flex flex-col shadow-sm items-start" data-tour="quick-actions">
+          <h3 className="text-[#333] text-base sm:text-lg font-light mb-3 sm:mb-4 lg:mb-6 tracking-tight">Snabbåtgärder</h3>
+          <div className="grid w-full gap-2 sm:gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <Button
               variant="outline"
-              className="flex-1 w-auto rounded-lg border max-h-10 h-auto border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-4 sm:px-7 py-3 sm:w-full"
+              className="w-full rounded-lg border border-gray-200 text-[#17694c] font-normal text-sm sm:text-base bg-white hover:bg-[#eaf6f1] transition px-3 sm:px-4 lg:px-7 py-2.5 sm:py-3"
               onClick={() => setOpenModal("kund")}
               data-tour="add-customer-btn"
             >
@@ -518,7 +510,7 @@ export const MainContent = (): JSX.Element => {
             </Button>
             <Button
               variant="outline"
-              className="flex-1 mobile:h-auto max-h-10 w-auto rounded-lg border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-4 sm:px-7 py-3 sm:w-full"
+              className="w-full rounded-lg border border-gray-200 text-[#17694c] font-normal text-sm sm:text-base bg-white hover:bg-[#eaf6f1] transition px-3 sm:px-4 lg:px-7 py-2.5 sm:py-3"
               onClick={() => setOpenModal("ny-insats")}
               data-tour="register-case-btn"
             >
@@ -526,7 +518,7 @@ export const MainContent = (): JSX.Element => {
             </Button>
             <Button
               variant="outline"
-              className="flex-1 w-auto rounded-lg max-h-10 h-auto border border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-4 sm:px-7 py-3 sm:w-full"
+              className="w-full rounded-lg border border-gray-200 text-[#17694c] font-normal text-sm sm:text-base bg-white hover:bg-[#eaf6f1] transition px-3 sm:px-4 lg:px-7 py-2.5 sm:py-3"
               onClick={() => {
                 setOpenModal("tid");
                 setRegisterTime(rt => ({ ...rt, date: getToday() }));
@@ -537,7 +529,7 @@ export const MainContent = (): JSX.Element => {
             </Button>
             <Button
               variant="outline"
-              className="flex-1 w-auto rounded-lg border max-h-10 h-auto border-gray-200 text-[#17694c] font-normal text-base bg-white hover:bg-[#eaf6f1] transition px-4 sm:px-7 py-3 sm:w-full"
+              className="w-full rounded-lg border border-gray-200 text-[#17694c] font-normal text-sm sm:text-base bg-white hover:bg-[#eaf6f1] transition px-3 sm:px-4 lg:px-7 py-2.5 sm:py-3"
               onClick={() => setOpenModal("statistik")}
               data-tour="statistics-btn"
             >
@@ -546,7 +538,7 @@ export const MainContent = (): JSX.Element => {
           </div>
         </div>
         {/* Diagram */}
-        <div data-tour="chart-section" className="w-full bg-white rounded-xl p-4 mobile:p-6 shadow-sm">
+        <div data-tour="chart-section" className="w-full bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 lg:p-6 shadow-sm">
           <BarChartStatistik
             data={chartData}
             titel={`Besöksstatistik (${new Date().toLocaleString('sv-SE', { month: 'long' })})`}
@@ -557,7 +549,7 @@ export const MainContent = (): JSX.Element => {
       {/* Modals - keeping them as they were before */}
       <Modal open={openModal === "kund"} onClose={handleCustomerCancel}>
         <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-0">
-          <div className="bg-[#17694c] rounded-t-2xl px-8 pt-7 pb-5 flex items-center justify-between">
+          <div className="bg-[#17694c] rounded-t-2xl px-6 sm:px-8 pt-7 pb-5 flex items-center justify-between">
             <h2 className="text-xl font-light text-white tracking-tight">Lägg till ny kund</h2>
             <button
               type="button"
@@ -568,7 +560,7 @@ export const MainContent = (): JSX.Element => {
               <X size={24} />
             </button>
           </div>
-          <form className="pt-8 pb-10 px-8 flex flex-col gap-7" style={{borderRadius: '0 0 1rem 1rem'}}>
+          <form className="pt-8 pb-10 px-6 sm:px-8 flex flex-col gap-7" style={{borderRadius: '0 0 1rem 1rem'}}>
             <div className="flex flex-col gap-2">
               <label className="text-[#17694c] font-normal text-base">Initialer</label>
               <input
@@ -647,7 +639,7 @@ export const MainContent = (): JSX.Element => {
       {/* Registrera insats modal */}
       <Modal open={openModal === "ny-insats"} onClose={handleNewCaseCancel}>
         <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-0">
-          <div className="bg-[#17694c] rounded-t-2xl px-8 pt-7 pb-5 flex items-center justify-between">
+          <div className="bg-[#17694c] rounded-t-2xl px-6 sm:px-8 pt-7 pb-5 flex items-center justify-between">
             <h2 className="text-xl font-light text-white tracking-tight">Registrera insats</h2>
             <button
               type="button"
@@ -658,7 +650,7 @@ export const MainContent = (): JSX.Element => {
               <X size={24} />
             </button>
           </div>
-          <form className="pt-8 pb-10 px-8 flex flex-col gap-7" style={{borderRadius: '0 0 1rem 1rem'}}>
+          <form className="pt-8 pb-10 px-6 sm:px-8 flex flex-col gap-7" style={{borderRadius: '0 0 1rem 1rem'}}>
             <div className="flex flex-col gap-2">
               <label className="text-[#17694c] font-normal text-base">Kund</label>
               <KundCombobox 
@@ -718,8 +710,8 @@ export const MainContent = (): JSX.Element => {
 
       <Modal open={openModal === "tid"} onClose={handleRegisterTimeCancel}>
         <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-0">
-          <div className="bg-[#17694c] rounded-t-2xl px-8 pt-7 pb-5 flex items-center justify-between">
-            <h2 className="text-xl font-light text-white tracking-tight">Registrera tid på insats</h2>
+          <div className="bg-[#17694c] rounded-t-2xl px-6 sm:px-8 pt-7 pb-5 flex items-center justify-between">
+            <h2 className="text-xl font-light text-white tracking-tight">Registrera tid för en insats</h2>
             <button
               type="button"
               onClick={handleRegisterTimeCancel}
@@ -729,7 +721,7 @@ export const MainContent = (): JSX.Element => {
               <X size={24} />
             </button>
           </div>
-          <form className="pt-8 pb-10 px-8 flex flex-col gap-7" style={{borderRadius: '0 0 1rem 1rem'}}>
+          <form className="pt-8 pb-10 px-6 sm:px-8 flex flex-col gap-7" style={{borderRadius: '0 0 1rem 1rem'}}>
             <div className="flex flex-col gap-2">
               <label className="text-[#17694c] font-normal text-base">Välj insats *</label>
               <Select value={registerTime.customer} onValueChange={value => {
@@ -797,11 +789,18 @@ export const MainContent = (): JSX.Element => {
         </div>
       </Modal>
       <Modal open={openModal === "statistik"} onClose={handleStatistikCancel}>
-        <div className={`bg-white rounded-2xl shadow-xl p-16 w-full transition-all min-w-[450px] duration-300 ${showStatistikChart ? 'max-w-6xl min-w-[900px] flex flex-col' : 'max-w-4xl'} `}>
+        <div
+          className={`bg-white rounded-2xl shadow-xl w-full transition-all duration-300 p-6 sm:p-10 lg:p-16 max-w-[calc(100vw-2rem)] ${
+            showStatistikChart ? 'sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl' : 'sm:max-w-2xl lg:max-w-3xl xl:max-w-4xl'
+          }`}
+        >
           <h2 className="text-2xl font-light mb-8">Ta ut statistik</h2>
-          <div className={`flex ${showStatistikChart ? 'flex-row gap-12' : 'flex-col'}`}>
+          <div className={`flex flex-col gap-8 ${showStatistikChart ? 'lg:flex-row lg:gap-12' : ''}`}>
             {/* Vänsterkolumn: Filter */}
-            <form className={`flex flex-col gap-6 ${showStatistikChart ? 'w-80 max-w-sm' : 'w-full'}`} onSubmit={handleStatistikApply}>
+            <form
+              className={`flex flex-col gap-6 w-full ${showStatistikChart ? 'lg:w-80 lg:max-w-sm' : ''}`}
+              onSubmit={handleStatistikApply}
+            >
               <div>
                 <label className="block text-sm font-medium text-gray-700">Tidsperiod</label>
                 <DateRangePicker
@@ -823,11 +822,11 @@ export const MainContent = (): JSX.Element => {
                 <label className="block text-sm font-medium text-gray-700">Insatskategori</label>
                 <MultiSelectCombobox
                   options={[
-                    { value: "Biståndsbedömda", label: "Biståndsbedömda" },
+                    { value: "Behovsprövad", label: "Behovsprövad" },
                     { value: "Förebyggande arbete", label: "Förebyggande arbete" },
-                    { value: "Biståndsbedömda, Förebyggande arbete", label: "Biståndsbedömda, Förebyggande arbete" },
+                    { value: "Behovsprövad, Förebyggande arbete", label: "Behovsprövad, Förebyggande arbete" },
                     { value: "IUB", label: "IUB" },
-                    { value: "Biståndsbedömda, IUB", label: "Biståndsbedömda, IUB" }
+                    { value: "Behovsprövad, IUB", label: "Behovsprövad, IUB" }
                   ]}
                   value={statistik.effortCategory}
                   onChange={(values) => setStatistik({ ...statistik, effortCategory: values })}
@@ -838,12 +837,7 @@ export const MainContent = (): JSX.Element => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Behandlare</label>
                 <MultiSelectCombobox
-                  options={handlers?.map(handler => ({ value: handler.id, label: handler.name })) || [
-                    { value: "13", label: "Svea" },
-                    { value: "14", label: "Anders" },
-                    { value: "15", label: "Sandra" },
-                    { value: "2", label: "System Admin" }
-                  ]}
+                  options={handlers?.map(handler => ({ value: handler.id, label: handler.name })) || []}
                   value={statistik.handler}
                   onChange={(values) => setStatistik({ ...statistik, handler: values })}
                   placeholder="Välj behandlare"
@@ -882,17 +876,17 @@ export const MainContent = (): JSX.Element => {
             {showStatistikChart && (
               <div className="flex-1 flex flex-col gap-8 justify-center items-center" id="statistik-export">
                 <div className="w-full flex flex-col items-center">
-                  <h3 className="text-xl font-light mb-4">Besök och kunder per insatstyp</h3>
+                  <h3 className="text-xl font-light mb-4 text-center">Besök och kunder / insats</h3>
                   
                   {chartData.length === 0 ? (
                     <div className="w-full h-96 flex flex-col items-center justify-center text-center">
                       <div className="text-gray-400 text-lg mb-4">
-                        Ingen data hittades med de valda filtren
+                        Ingen data hittades med de valda filtrena.
                       </div>
                       <div className="text-gray-500 text-sm mb-6 max-w-md">
-                        Prova att ändra eller ta bort några filter. De valda filtren kan vara för strikta.
+                        Prova att ändra eller ta bort några filter. De valda filtrena verkar vara tomma.
                       </div>
-                      <div className="flex gap-4">
+                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
                         <Button 
                           variant="outline" 
                           onClick={() => {
@@ -919,7 +913,7 @@ export const MainContent = (): JSX.Element => {
                     </div>
                   ) : (
                     <>
-                      <div className="w-full h-96 flex items-center justify-center">
+                      <div className="w-full h-80 sm:h-96 flex items-center justify-center">
                         <ResponsiveContainer width="100%" height="100%">
                           <RePieChart>
                             <Pie
@@ -946,9 +940,9 @@ export const MainContent = (): JSX.Element => {
                           </RePieChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="flex gap-6 mt-8">
-                        <Button variant="outline" onClick={handleExportPDF}>Exportera som PDF</Button>
-                        <Button variant="outline" onClick={handleExportExcel}>Ladda ner som Excel</Button>
+                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 mt-8 w-full sm:w-auto">
+                        <Button variant="outline" onClick={handleExportPDF} className="w-full sm:w-auto">Exportera som PDF</Button>
+                        <Button variant="outline" onClick={handleExportExcel} className="w-full sm:w-auto">Ladda ner som Excel</Button>
                       </div>
                     </>
                   )}

@@ -111,7 +111,7 @@ export const InviteAcceptPage = () => {
               <input
                 id="email"
                 type="email"
-                placeholder="din.email@vallentuna.se"
+                placeholder="exempel@vallentuna.se"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -126,7 +126,7 @@ export const InviteAcceptPage = () => {
               <input
                 id="verificationCode"
                 type="text"
-                placeholder="ABCD1234"
+                placeholder="dinverifieringskod"
                 value={verificationCode}
                 onChange={e => setVerificationCode(e.target.value.toUpperCase())}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-center text-lg tracking-widest"

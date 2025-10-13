@@ -134,12 +134,12 @@ export const ResetPasswordPage: React.FC = () => {
               Ogiltig länk
             </CardTitle>
             <CardDescription className="text-gray-600">
-              Återställningslänken är ogiltig eller har gått ut
+              Återställningslänken är ogiltig eller har utgått
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center text-sm text-gray-500">
-              <p>Länken du använde är inte giltig eller har gått ut.</p>
+              <p>Länken du använde är inte giltig eller har utgått.</p>
               <p className="mt-2">Kontakta din administratör för en ny länk.</p>
             </div>
             <Button
@@ -164,7 +164,7 @@ export const ResetPasswordPage: React.FC = () => {
             <Lock className="w-8 h-8 text-blue-600" />
           </div>
           <CardTitle className="text-2xl text-gray-900">
-            Sätt nytt lösenord
+            Skapa ett nytt lösenord
           </CardTitle>
           <CardDescription className="text-gray-600">
             Ange ditt nya lösenord nedan

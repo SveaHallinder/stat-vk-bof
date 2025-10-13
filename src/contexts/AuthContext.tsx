@@ -29,14 +29,24 @@ export const useAuth = () => {
   return context;
 };
 
+const getStoredAccessToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+};
+
+const getStoredRefreshToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return sessionStorage.getItem('refreshToken') || localStorage.getItem('refreshToken');
+};
+
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('accessToken'));
-  const [refreshToken, setRefreshToken] = useState<string | null>(localStorage.getItem('refreshToken'));
+  const [accessToken, setAccessToken] = useState<string | null>(() => getStoredAccessToken());
+  const [refreshToken, setRefreshToken] = useState<string | null>(() => getStoredRefreshToken());
   const [loading, setLoading] = useState(true);
 
   // Clean localStorage handling

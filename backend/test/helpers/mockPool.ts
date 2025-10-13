@@ -130,7 +130,7 @@ export class MockPool {
 
     // EFFORTS list
     if (s.startsWith('select * from efforts')) {
-      return { rows: [{ id: 1, name: 'Insats', available_for: 'Biståndsbedömda', active: true }] };
+      return { rows: [{ id: 1, name: 'Insats', available_for: 'Behovsprövad', active: true }] };
     }
 
     // EFFORTS create

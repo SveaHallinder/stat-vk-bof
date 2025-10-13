@@ -179,8 +179,8 @@ const AuditLog: React.FC = () => {
         </CardHeader>
         <CardContent>
           {/* Filter Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 tablet:gap-6 mb-6">
+            <div className="space-y-3">
               <label className="text-sm font-medium">Sök</label>
               <Input
                 placeholder="Sök i alla fält..."
@@ -190,7 +190,7 @@ const AuditLog: React.FC = () => {
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-3">
               <label className="text-sm font-medium">Åtgärd</label>
               <Select value={selectedAction} onValueChange={setSelectedAction}>
                 <SelectTrigger>
@@ -205,7 +205,7 @@ const AuditLog: React.FC = () => {
               </Select>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-3">
               <label className="text-sm font-medium">Entitetstyp</label>
               <Select value={selectedEntityType} onValueChange={setSelectedEntityType}>
                 <SelectTrigger>
@@ -220,7 +220,7 @@ const AuditLog: React.FC = () => {
               </Select>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-3">
               <label className="text-sm font-medium">Användare</label>
               <Input
                 placeholder="Användarnamn..."
