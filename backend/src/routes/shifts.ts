@@ -3,10 +3,31 @@ import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
 import { generateAlias } from "../utils/alias";
 import { validateShiftData, sanitizeTextInputs } from "../middleware/validation";
+import { resolvePagination } from "../utils/pagination";
+import { getAuditLogger } from "../utils/auditLogger";
 
 export default function shifts(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
+  const auditLogger = getAuditLogger(pool);
+
+  const logSafe = async (cb: () => Promise<void>) => {
+    try {
+      await cb();
+    } catch (err) {
+      console.warn('Audit log failed (shifts):', err);
+    }
+  };
+
+  const getShiftRow = async (id: number) => {
+    const result = await pool.query('SELECT * FROM shifts WHERE id = $1', [id]);
+    return result.rows[0] || null;
+  };
+
+  const toShiftName = (row: { id: number; case_id?: number | null; date?: string | Date }) => {
+    const datePart = row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date;
+    return `shift:${row.id} (case:${row.case_id ?? '?'}, ${datePart ?? 'date:?'} )`;
+  };
 
   // Hämta alla shifts med relaterad information och filter
   router.get("/", async (req, res) => {
@@ -47,10 +68,21 @@ export default function shifts(pool: Pool) {
         paramIndex++;
       }
       
+      const pagination = resolvePagination(req.query);
+      const applyPagination = (sql: string, baseParams: any[]) => {
+        if (!pagination) return { sql, params: baseParams };
+        const limitPosition = baseParams.length + 1;
+        const offsetPosition = baseParams.length + 2;
+        return {
+          sql: `${sql} LIMIT $${limitPosition} OFFSET $${offsetPosition}`,
+          params: [...baseParams, pagination.limit, pagination.offset],
+        };
+      };
+
       let result;
       try {
-        result = await pool.query(
-        `SELECT shifts.id, shifts.date, shifts.hours, shifts.status,
+        const baseSql = `
+        SELECT shifts.id, shifts.date, shifts.hours, shifts.status,
                 cases.id AS case_id,
                 cases.handler1_id, cases.handler2_id,
                 customers.id AS customer_id,
@@ -67,14 +99,14 @@ export default function shifts(pool: Pool) {
          LEFT JOIN handlers h1 ON cases.handler1_id = h1.id
          LEFT JOIN handlers h2 ON cases.handler2_id = h2.id
          ${whereClause}
-         ORDER BY shifts.date DESC, shifts.id DESC`,
-        params
-      );
+         ORDER BY shifts.date DESC, shifts.id DESC`;
+        const { sql, params: finalParams } = applyPagination(baseSql, params);
+        result = await pool.query(sql, finalParams);
       } catch (err: any) {
         if (err?.code === '42703') {
           // Fallback utan is_protected
-          result = await pool.query(
-            `SELECT shifts.id, shifts.date, shifts.hours, shifts.status,
+          const fallbackSql = `
+            SELECT shifts.id, shifts.date, shifts.hours, shifts.status,
                 cases.id AS case_id,
                 cases.handler1_id, cases.handler2_id,
                 customers.id AS customer_id,
@@ -90,9 +122,9 @@ export default function shifts(pool: Pool) {
            LEFT JOIN handlers h1 ON cases.handler1_id = h1.id
            LEFT JOIN handlers h2 ON cases.handler2_id = h2.id
            ${whereClause}
-           ORDER BY shifts.date DESC, shifts.id DESC`,
-            params
-          );
+           ORDER BY shifts.date DESC, shifts.id DESC`;
+          const { sql: fallbackBuilt, params: fallbackParams } = applyPagination(fallbackSql, params);
+          result = await pool.query(fallbackBuilt, fallbackParams);
           // tillför pseudo-kolumn
           result.rows = result.rows.map((r: any) => ({ ...r, is_protected: false }));
         } else {
@@ -190,7 +222,19 @@ export default function shifts(pool: Pool) {
          RETURNING *`,
         [caseId, date, hours, status || 'Utförd']
       );
-      res.status(201).json(result.rows[0]);
+      const createdShift = result.rows[0];
+      res.status(201).json(createdShift);
+
+      if (req.user) {
+        await logSafe(() => auditLogger.logCreate(
+          req.user!.id,
+          req.user!.name,
+          'shift',
+          createdShift.id,
+          toShiftName(createdShift),
+          createdShift
+        ));
+      }
     } catch (e) {
       console.error("Error creating shift:", e);
       res.status(500).json({ error: "Kunde inte skapa shift" });
@@ -211,20 +255,38 @@ export default function shifts(pool: Pool) {
       return res.status(400).json({ error: "Ogiltig status. Tillåtna: Utförd, Avbokad" });
     }
     
+    const shiftId = Number(id);
+    const existingShift = await getShiftRow(shiftId);
+    if (!existingShift || existingShift.active === false) {
+      return res.status(404).json({ error: "Shift hittades inte" });
+    }
+
     try {
       const result = await pool.query(
         `UPDATE shifts 
          SET date = $1, hours = $2, status = $3 
          WHERE id = $4 AND active = TRUE 
          RETURNING *`,
-        [date, hours, status, id]
+        [date, hours, status, shiftId]
       );
       
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Shift hittades inte" });
       }
-      
-      res.json(result.rows[0]);
+      const updatedShift = result.rows[0];
+      res.json(updatedShift);
+
+      if (req.user) {
+        await logSafe(() => auditLogger.logUpdate(
+          req.user!.id,
+          req.user!.name,
+          'shift',
+          shiftId,
+          toShiftName(updatedShift),
+          existingShift,
+          updatedShift
+        ));
+      }
     } catch (e) {
       console.error("Error updating shift:", e);
       res.status(500).json({ error: "Kunde inte uppdatera shift" });

@@ -13,9 +13,10 @@ interface MultiSelectComboboxProps {
   value: string[];
   onChange: (val: string[]) => void;
   placeholder?: string;
+  disabled?: boolean;
 }
 
-export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ options, value, onChange, placeholder }) => {
+export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ options, value, onChange, placeholder, disabled = false }) => {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [internalValue, setInternalValue] = React.useState<string[]>(value);
@@ -24,6 +25,12 @@ export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ option
   React.useEffect(() => {
     if (!open) setInternalValue(value);
   }, [open, value]);
+
+  React.useEffect(() => {
+    if (disabled && open) {
+      setOpen(false);
+    }
+  }, [disabled, open]);
 
   const filtered = options.filter(opt =>
     opt.label.toLowerCase().includes(search.toLowerCase())
@@ -49,6 +56,7 @@ export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ option
   }
 
   function handleOpenChange(nextOpen: boolean) {
+    if (disabled) return;
     setOpen(nextOpen);
     if (!nextOpen) {
       onChange(internalValue);
@@ -61,19 +69,21 @@ export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ option
   }
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={!disabled && open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="w-full justify-between font-normal overflow-hidden"
+          className={`w-full justify-between font-normal overflow-hidden ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listboxId}
+          disabled={disabled}
         >
           {displayText()}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-2 w-[260px]" role="listbox" aria-multiselectable="true" id={listboxId}>
+      {!disabled && (
+        <PopoverContent className="p-2 w-[260px]" role="listbox" aria-multiselectable="true" id={listboxId}>
         <button
           type="button"
           className="flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 mb-2 ml-1 text-gray-700 transition-colors"
@@ -116,6 +126,7 @@ export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({ option
           ))}
         </div>
       </PopoverContent>
+      )}
     </Popover>
   );
 };

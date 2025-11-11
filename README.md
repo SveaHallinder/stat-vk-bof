@@ -103,7 +103,8 @@ cd backend && npm run dev
 - [Admin-manual](./docs/ADMIN_MANUAL.md)
 - [Deployment](./docs/DEPLOYMENT.md)
 - [Onboarding](./docs/ONBOARDING_GUIDE.md)
- - [Retention/Gallring](./docs/RETENTION_POLICY.md)
+- [Retention/Gallring](./docs/RETENTION_POLICY.md)
+- [Release Notes](./docs/CHANGELOG.md)
 
 ## Snabbguide: Migration i produktion
 

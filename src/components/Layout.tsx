@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { User, Menu, HelpCircle } from "lucide-react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import { ApiHealthBanner } from "@/components/ApiHealthBanner";
+import { getRoleLabel } from "@/lib/roleLabels";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -117,7 +118,7 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
                     {user?.name}
                   </div>
                   <div className="text-xs capitalize text-gray-500">
-                    {user?.role === 'handler' ? 'Behandlare' : user?.role === 'admin' ? 'Administratör' : user?.role}
+                    {getRoleLabel(user?.role) || (user?.role ?? '')}
                   </div>
                 </div>
               </button>

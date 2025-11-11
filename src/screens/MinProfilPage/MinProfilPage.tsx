@@ -5,6 +5,7 @@ import { Layout } from '../../components/Layout';
 import { LogOut } from 'lucide-react';
 import { Customer, CaseWithNames } from '../../types/types';
 import { useRefresh } from '../../contexts/RefreshContext';
+import { getRoleLabel } from "@/lib/roleLabels";
 
 // Optimized customer row component with React.memo
 const CustomerRow = React.memo<{
@@ -59,7 +60,7 @@ const ProfileInfo = React.memo<{
       <div>
         <label className="block text-sm font-medium text-gray-700">Roll</label>
         <p className="mt-1 text-sm text-gray-900 capitalize">
-          {user?.role === 'handler' ? 'Behandlare' : user?.role === 'admin' ? 'Administratör' : user?.role}
+          {getRoleLabel(user?.role) || (user?.role ?? '')}
         </p>
       </div>
       <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">

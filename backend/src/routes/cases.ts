@@ -3,10 +3,32 @@ import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
 import { generateAlias } from "../utils/alias";
 import { validateCaseData, sanitizeTextInputs } from "../middleware/validation";
+import { resolvePagination } from "../utils/pagination";
+import { getAuditLogger } from "../utils/auditLogger";
 
 export default function cases(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
+  const auditLogger = getAuditLogger(pool);
+
+  const logSafe = async (cb: () => Promise<void>) => {
+    try {
+      await cb();
+    } catch (err) {
+      console.warn('Audit log failed (cases):', err);
+    }
+  };
+
+  const toCaseName = (row: { id: number; customer_id?: number | null; effort_id?: number | null }) => {
+    const customerPart = row.customer_id ? `customer:${row.customer_id}` : 'customer:?';
+    const effortPart = row.effort_id ? `effort:${row.effort_id}` : 'effort:?';
+    return `case:${row.id} (${customerPart}, ${effortPart})`;
+  };
+
+  const getCaseRow = async (id: number) => {
+    const result = await pool.query('SELECT * FROM cases WHERE id = $1', [id]);
+    return result.rows[0] || null;
+  };
 
   // Skapa nytt insats
   router.post("/", sanitizeTextInputs, validateCaseData, async (req, res) => {
@@ -91,7 +113,19 @@ export default function cases(pool: Pool) {
          RETURNING *`,
         [Number(customer_id), Number(handler1_id), handler2_id === "" || handler2_id === "0" || !handler2_id ? null : Number(handler2_id), Number(effort_id), active !== false]
       );
-      res.status(201).json(r.rows[0]);
+      const createdCase = r.rows[0];
+      res.status(201).json(createdCase);
+
+      if (req.user) {
+        await logSafe(() => auditLogger.logCreate(
+          req.user!.id,
+          req.user!.name,
+          'case',
+          createdCase.id,
+          toCaseName(createdCase),
+          createdCase
+        ));
+      }
     } catch (e) {
       console.error("Error creating case:", e);
       res.status(500).json({ error: "Kunde inte skapa insats" });
@@ -129,7 +163,7 @@ export default function cases(pool: Pool) {
 
       const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
-      const sql = `
+      const baseSql = `
         SELECT
           cases.id,
           cases.customer_id,
@@ -152,9 +186,23 @@ export default function cases(pool: Pool) {
         ${whereSql}
         ORDER BY cases.id DESC`;
 
+      const pagination = resolvePagination(req.query);
+      const buildQuery = (sql: string, initialParams: any[]) => {
+        if (!pagination) {
+          return { sql, params: initialParams };
+        }
+        const limitPosition = initialParams.length + 1;
+        const offsetPosition = initialParams.length + 2;
+        return {
+          sql: `${sql} LIMIT $${limitPosition} OFFSET $${offsetPosition}`,
+          params: [...initialParams, pagination.limit, pagination.offset],
+        };
+      };
+
       let r;
       try {
-        r = await pool.query(sql, params);
+        const { sql, params: finalParams } = buildQuery(baseSql, params);
+        r = await pool.query(sql, finalParams);
       } catch (err: any) {
         if (err?.code === '42703') {
           // Fallback: kolumnen is_protected saknas
@@ -179,7 +227,8 @@ export default function cases(pool: Pool) {
         LEFT JOIN handlers h2 ON cases.handler2_id  = h2.id
         ${whereSql}
         ORDER BY cases.id DESC`;
-          r = await pool.query(sqlFallback, params);
+          const { sql: builtFallback, params: fallbackParams } = buildQuery(sqlFallback, params);
+          r = await pool.query(builtFallback, fallbackParams);
           // Markera alla som oskyddade i bearbetning nedan
           r.rows = r.rows.map((row: any) => ({ ...row, is_protected: false }));
         } else {
@@ -223,9 +272,24 @@ export default function cases(pool: Pool) {
   // Av/på-aktivera
   router.put("/:id/deactivate", sanitizeTextInputs, async (req, res) => {
     try {
-      const r = await pool.query("UPDATE cases SET active = FALSE WHERE id = $1 RETURNING *", [req.params.id]);
-      if (r.rows.length === 0) return res.status(404).json({ error: "Insats hittades inte" });
-      res.json(r.rows[0]);
+      const caseId = Number(req.params.id);
+      const existingRow = await getCaseRow(caseId);
+      if (!existingRow) return res.status(404).json({ error: "Insats hittades inte" });
+      const r = await pool.query("UPDATE cases SET active = FALSE WHERE id = $1 RETURNING *", [caseId]);
+      const updatedCase = r.rows[0];
+      res.json(updatedCase);
+
+      if (req.user) {
+        await logSafe(() => auditLogger.logUpdate(
+          req.user!.id,
+          req.user!.name,
+          'case',
+          caseId,
+          toCaseName(updatedCase),
+          existingRow,
+          updatedCase
+        ));
+      }
     } catch (e) {
       console.error("Error deactivating case:", e);
       res.status(500).json({ error: "Kunde inte avaktivera insats" });
@@ -234,9 +298,24 @@ export default function cases(pool: Pool) {
 
   router.put("/:id/activate", sanitizeTextInputs, async (req, res) => {
     try {
-      const r = await pool.query("UPDATE cases SET active = TRUE WHERE id = $1 RETURNING *", [req.params.id]);
-      if (r.rows.length === 0) return res.status(404).json({ error: "Insats hittades inte" });
-      res.json(r.rows[0]);
+      const caseId = Number(req.params.id);
+      const existingRow = await getCaseRow(caseId);
+      if (!existingRow) return res.status(404).json({ error: "Insats hittades inte" });
+      const r = await pool.query("UPDATE cases SET active = TRUE WHERE id = $1 RETURNING *", [caseId]);
+      const updatedCase = r.rows[0];
+      res.json(updatedCase);
+
+      if (req.user) {
+        await logSafe(() => auditLogger.logUpdate(
+          req.user!.id,
+          req.user!.name,
+          'case',
+          caseId,
+          toCaseName(updatedCase),
+          existingRow,
+          updatedCase
+        ));
+      }
     } catch (e) {
       console.error("Error activating case:", e);
       res.status(500).json({ error: "Kunde inte återaktivera insats" });
@@ -280,6 +359,12 @@ export default function cases(pool: Pool) {
     } catch (checkError) {
       console.error("Error checking for duplicate case:", checkError);
       // Fortsätt med att uppdatera insats om kontrollen misslyckas
+    }
+
+    const caseId = Number(req.params.id);
+    const existingRow = await getCaseRow(caseId);
+    if (!existingRow) {
+      return res.status(404).json({ error: "Insats hittades inte" });
     }
 
     try {
@@ -330,11 +415,24 @@ export default function cases(pool: Pool) {
           handler2_id === "" || handler2_id === "0" || !handler2_id ? null : Number(handler2_id), 
           Number(effort_id), 
           active !== false,
-          req.params.id
+          caseId
         ]
       );
       if (r.rows.length === 0) return res.status(404).json({ error: "Insats hittades inte" });
-      res.json(r.rows[0]);
+      const updatedCase = r.rows[0];
+      res.json(updatedCase);
+
+      if (req.user) {
+        await logSafe(() => auditLogger.logUpdate(
+          req.user!.id,
+          req.user!.name,
+          'case',
+          caseId,
+          toCaseName(updatedCase),
+          existingRow,
+          updatedCase
+        ));
+      }
     } catch (e) {
       console.error("Error updating case:", e);
       res.status(500).json({ error: "Kunde inte uppdatera insats" });

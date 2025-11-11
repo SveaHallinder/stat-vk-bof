@@ -63,7 +63,7 @@ export const CustomerProfile = () => {
     if (id) {
       getCustomer(id).then(setCustomer).catch(() => setCustomer(null));
       setLoadingCases(true);
-      getCustomerEfforts(Number(id))
+      getCustomerEfforts(Number(id), { includeInactive: true })
         .then((data: CaseWithNames[]) => {
           setCases(data);
         })

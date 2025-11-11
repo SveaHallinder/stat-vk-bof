@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { Layout } from "@/components/Layout";
@@ -69,6 +69,7 @@ export const RegisteraTidPage = (): JSX.Element => {
   // State för att redigera befintlig tidsregistrering
   const [editingShift, setEditingShift] = useState<ShiftEntry | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
   
   // Keyboard navigation
   const { focusFirst: _focusFirst } = useKeyboardNavigation();
@@ -109,29 +110,34 @@ export const RegisteraTidPage = (): JSX.Element => {
   }, [user?.role]);
 
   // Ladda data vid mount
-  useEffect(() => {
-    async function loadData() {
-      setIsLoadingData(true);
-      try {
-        const [activeCasesData, effortsData, handlersData, shiftsData] = await Promise.all([
-          getCases(false), // false = endast aktiva insatsen
-          getEfforts(),
-          user?.role === 'admin' ? getHandlers(true) : getPublicHandlers(),
-          getShifts()
-        ]);
-        setActiveCases(activeCasesData);
-        setEfforts(effortsData);
-        setHandlers(handlersData);
-        setShifts(shiftsData);
-              } catch (error) {
-          console.error("Error loading data:", error);
-          enhancedToast.error("Kunde inte ladda data. Kontrollera din internetanslutning och försök igen.");
-        } finally {
-        setIsLoadingData(false);
-        }
+  const loadInitialData = useCallback(async () => {
+    setIsLoadingData(true);
+    setDataError(null);
+    try {
+      const [activeCasesData, effortsData, handlersData, shiftsData] = await Promise.all([
+        getCases(false),
+        getEfforts(),
+        user?.role === 'admin' ? getHandlers(true) : getPublicHandlers(),
+        getShifts()
+      ]);
+      setActiveCases(activeCasesData);
+      setEfforts(effortsData);
+      setHandlers(handlersData);
+      setShifts(shiftsData);
+    } catch (error) {
+      if ((error as any)?.name !== 'AbortError') {
+        console.error("Error loading data:", error);
+        setDataError('Kunde inte ladda data. Kontrollera anslutning och försök igen.');
+        enhancedToast.error("Kunde inte ladda data.");
       }
-    loadData();
-  }, [user, refreshKey]);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [user?.role]);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData, refreshKey]);
 
   const filteredCases = useMemo(() => {
     if (!user) return activeCases;
@@ -255,39 +261,52 @@ export const RegisteraTidPage = (): JSX.Element => {
 
     setIsSaving(true);
     try {
-      for (const entry of validEntries) {
-        await addShift({
+      const operations = validEntries.map(entry =>
+        addShift({
           case_id: entry.caseId!,
           date: entry.date,
           hours: entry.hours,
           status: entry.status
+        })
+      );
+
+      const outcomes = await Promise.allSettled(operations);
+      const succeeded = outcomes.filter(result => result.status === 'fulfilled').length;
+      const failed = outcomes
+        .map((result, idx) => result.status === 'rejected' ? { entry: validEntries[idx], reason: result.reason } : null)
+        .filter((item): item is { entry: TimeEntry; reason: unknown } => Boolean(item));
+
+      if (succeeded > 0) {
+        enhancedToast.success(`${succeeded} tidsregistrering${succeeded > 1 ? 'ar' : ''} sparades!`, {
+          icon: '✅',
+          duration: 4000
         });
+
+        try {
+          const updatedShifts = await getShifts();
+          setShifts(updatedShifts);
+        } catch (error) {
+          console.error("Kunde inte ladda om tidsregistreringar:", error);
+          enhancedToast.error("Tidsregistreringar sparades men kunde inte ladda om listan");
+        }
+
+        setTimeEntries([{
+          id: "1",
+          caseId: null,
+          date: today(),
+          hours: 1,
+          status: "Utförd"
+        }]);
+        setHasUnsavedChanges(false);
+        triggerRefresh();
       }
 
-      enhancedToast.success(`${validEntries.length} tidsregistreringar sparade framgångsrikt!`, {
-        icon: '✅',
-        duration: 4000
-      });
-      
-      // Ladda om shifts
-      try {
-        const updatedShifts = await getShifts();
-        setShifts(updatedShifts);
-      } catch (error) {
-        console.error("Kunde inte ladda om tidsregistreringar:", error);
-        enhancedToast.error("Tidsregistreringar sparades men kunde inte ladda om listan");
+      if (failed.length > 0) {
+        const firstError = failed[0].reason instanceof Error
+          ? failed[0].reason.message
+          : 'Okänt fel vid sparande';
+        enhancedToast.error(`Det gick inte att spara ${failed.length} rad(er): ${firstError}`);
       }
-      
-      // Återställ formuläret
-      setTimeEntries([{
-        id: "1",
-        caseId: null,
-        date: today(),
-        hours: 1,
-        status: "Utförd"
-      }]);
-      setHasUnsavedChanges(false);
-      triggerRefresh();
     } catch (error) {
       console.error("Error saving shifts:", error);
       enhancedToast.error("Kunde inte spara tidsregistreringarna. Kontrollera din internetanslutning och försök igen.", {
@@ -335,6 +354,14 @@ export const RegisteraTidPage = (): JSX.Element => {
   return (
     <Layout title="Registrera tid">
       <div className="w-full flex flex-col gap-6 lg:gap-8 py-4 min-w-0">
+      {dataError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span>{dataError}</span>
+          <Button variant="outline" size="sm" onClick={loadInitialData} disabled={isLoadingData}>
+            {isLoadingData ? 'Laddar...' : 'Försök igen'}
+          </Button>
+        </div>
+      )}
       {/* Tidsregistreringar - nu först eftersom det är huvudsyftet */}
       <Card className="flex-1 bg-white rounded-xl" data-tour="time-section">
         <CardHeader>

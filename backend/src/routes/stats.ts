@@ -3,13 +3,23 @@ import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
 import { validateSearchParams, sanitizeTextInputs } from "../middleware/validation";
 import { getSafeNameForCaseContext } from "../utils/alias";
+import { statsCache } from "../utils/cache";
 
 export default function stats(pool: Pool) {
   const router = Router();
   router.use(authenticateToken);
 
+  const buildCacheKey = (prefix: string, req: any) => {
+    return `${prefix}:${JSON.stringify(req.query || {})}:${req.user?.id ?? 'anon'}`;
+  };
+
   // Statistik: summeringar
   router.get("/summary", sanitizeTextInputs, validateSearchParams, async (req, res) => {
+    const cacheKey = `summary:${JSON.stringify(req.query || {})}:${req.user?.id ?? 'anon'}`;
+    const cached = statsCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
     const { from, to, insats, effortCategory, gender, birthYear, customer, handler, includeInactive, shiftStatus } = req.query as any;
     let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
@@ -85,24 +95,28 @@ export default function stats(pool: Pool) {
         ${where}
       `;
 
-      // Antal besök i valt filter
-      const besokRes = await pool.query(`SELECT COUNT(*) ${baseQuery}`, params);
-
-      // Antal kunder med aktiva insatsen inom vald kategori (med filter)
-      const kunderRes = await pool.query(`SELECT COUNT(DISTINCT cases.customer_id) ${baseQuery}`, params);
-
-      // Totala timmar (endast utförda besök)
-      const tidRes = await pool.query(
-        `SELECT COALESCE(SUM(CASE WHEN shifts.status = 'Utförd' THEN shifts.hours ELSE 0 END), 0) AS total_hours ${baseQuery}`,
-        params
-      );
-
-      // Avbokningsgrad
-      const avbokRes = await pool.query(
-        `SELECT COUNT(*) FILTER (WHERE shifts.status = 'Avbokad') AS avbok,
-                COUNT(*) AS total ${baseQuery}`,
-        params
-      );
+      const [
+        besokRes,
+        kunderRes,
+        tidRes,
+        avbokRes,
+        aktivaKunderRes,
+        aktivaInsatserRes,
+      ] = await Promise.all([
+        pool.query(`SELECT COUNT(*) ${baseQuery}`, params),
+        pool.query(`SELECT COUNT(DISTINCT cases.customer_id) ${baseQuery}`, params),
+        pool.query(
+          `SELECT COALESCE(SUM(CASE WHEN shifts.status = 'Utförd' THEN shifts.hours ELSE 0 END), 0) AS total_hours ${baseQuery}`,
+          params
+        ),
+        pool.query(
+          `SELECT COUNT(*) FILTER (WHERE shifts.status = 'Avbokad') AS avbok,
+                  COUNT(*) AS total ${baseQuery}`,
+          params
+        ),
+        pool.query(`SELECT COUNT(*) AS aktiva_kunder_total FROM customers WHERE active = TRUE`),
+        pool.query(`SELECT COUNT(*) AS aktiva_insatser_total FROM cases WHERE active = TRUE`),
+      ]);
 
       const antal_besok = Number(besokRes.rows[0].count) || 0;
       const antal_kunder = Number(kunderRes.rows[0].count) || 0;
@@ -110,13 +124,19 @@ export default function stats(pool: Pool) {
       const avbokningar = Number(avbokRes.rows[0].avbok) || 0;
       const total = Number(avbokRes.rows[0].total) || 1;
       const avbokningsgrad = Math.round((avbokningar / total) * 100);
+      const aktiva_kunder_total = Number(aktivaKunderRes.rows[0]?.aktiva_kunder_total) || 0;
+      const aktiva_insatser_total = Number(aktivaInsatserRes.rows[0]?.aktiva_insatser_total) || 0;
 
-      res.json({
+      const payload = {
         antal_besok,
         antal_kunder,
         totala_timmar,
         avbokningsgrad,
-      });
+        aktiva_kunder_total,
+        aktiva_insatser_total,
+      };
+      statsCache.set(cacheKey, payload);
+      res.json(payload);
     } catch (err) {
       console.error("Fel i /stats/summary:", err);
       res.status(500).json({ error: "Kunde inte hämta statistik" });
@@ -276,6 +296,9 @@ export default function stats(pool: Pool) {
 
   // Statistik: per insats
   router.get("/by-effort", async (req, res) => {
+    const cacheKey = buildCacheKey('by-effort', req);
+    const cached = statsCache.get(cacheKey);
+    if (cached) return res.json(cached);
     const { from, to, insats, effortCategory, gender, birthYear, customer, handler, includeInactive, shiftStatus } = req.query as any;
     let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
@@ -355,6 +378,7 @@ export default function stats(pool: Pool) {
         ORDER BY efforts.name ASC`,
         params
       );
+      statsCache.set(cacheKey, result.rows);
       res.json(result.rows);
     } catch (err) {
       console.error("Error fetching by-effort stats:", err);
@@ -363,6 +387,9 @@ export default function stats(pool: Pool) {
   });
 
   router.get("/by-gender", async (req, res) => {
+    const cacheKey = buildCacheKey('by-gender', req);
+    const cached = statsCache.get(cacheKey);
+    if (cached) return res.json(cached);
     const { from, to, insats, effortCategory, gender, birthYear, customer, handler, includeInactive, shiftStatus } = req.query as any;
     let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
@@ -446,6 +473,7 @@ export default function stats(pool: Pool) {
         snitt_timmar: row.snitt_timmar ? Number(row.snitt_timmar) : 0,
       }));
 
+      statsCache.set(cacheKey, rows);
       res.json(rows);
     } catch (err) {
       console.error('Error fetching gender stats:', err);
@@ -454,6 +482,9 @@ export default function stats(pool: Pool) {
   });
 
   router.get("/by-birthyear", async (req, res) => {
+    const cacheKey = buildCacheKey('by-birthyear', req);
+    const cached = statsCache.get(cacheKey);
+    if (cached) return res.json(cached);
     const { from, to, insats, effortCategory, gender, birthYear, customer, handler, includeInactive, shiftStatus } = req.query as any;
     let where = "WHERE shifts.active = TRUE";
     const params: any[] = [];
@@ -540,6 +571,7 @@ export default function stats(pool: Pool) {
         snitt_timmar: row.snitt_timmar ? Number(row.snitt_timmar) : 0,
       }));
 
+      statsCache.set(cacheKey, rows);
       res.json(rows);
     } catch (err) {
       console.error('Error fetching birth year stats:', err);
@@ -776,52 +808,74 @@ export default function stats(pool: Pool) {
 
   // Statistik: per behandlare
   router.get("/by-handler", async (req, res) => {
+    const cacheKey = buildCacheKey('by-handler', req);
+    const cached = statsCache.get(cacheKey);
+    if (cached) return res.json(cached);
     const { from, to, insats, includeInactive, shiftStatus } = req.query as any;
-    let where = "WHERE 1=1";
     const params: any[] = [];
+
+    const filters: string[] = ["shifts.active = TRUE"];
     const includeInactiveBool = String(includeInactive) === 'true';
     if (!includeInactiveBool) {
-      where += " AND cases.active = TRUE";
+      filters.push("(cases.active = TRUE AND efforts.active = TRUE AND customers.active = TRUE)");
     }
     if (from) {
-      params.push(from);
-      where += ` AND cases.created_at >= $${params.length}::date`;
+      params.push(String(from));
+      filters.push(`shifts.date >= $${params.length}::date`);
     }
     if (to) {
-      params.push(to);
-      where += ` AND cases.created_at <= $${params.length}::date`;
+      params.push(String(to));
+      filters.push(`shifts.date <= $${params.length}::date`);
     }
     if (insats && insats !== "alla") {
       const parts = String(insats).split(",").map(s => s.trim()).filter(Boolean);
       if (parts.length > 1) {
         const ids = parts.map(Number).filter(n => !isNaN(n));
-        where += ` AND cases.effort_id = ANY($${params.length + 1})`;
         params.push(ids);
+        filters.push(`cases.effort_id = ANY($${params.length})`);
       } else {
         const id = Number(parts[0]);
         params.push(id);
-        where += ` AND cases.effort_id = $${params.length}`;
+        filters.push(`cases.effort_id = $${params.length}`);
       }
     }
-    try {
-      let join = "LEFT JOIN shifts ON cases.id = shifts.case_id AND shifts.active = TRUE";
-      if (shiftStatus && shiftStatus !== 'Alla' && shiftStatus !== 'alla') {
-        params.push(String(shiftStatus));
-        join += ` AND shifts.status = $${params.length}`;
-      }
+    if (shiftStatus && shiftStatus !== 'Alla' && shiftStatus !== 'alla') {
+      params.push(String(shiftStatus));
+      filters.push(`shifts.status = $${params.length}`);
+    }
 
+    const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+
+    try {
       const result = await pool.query(
-        `SELECT h.id AS handler_id, h.name AS handler_name,
-          COUNT(shifts.id) AS antal_besok,
-          COALESCE(SUM(CASE WHEN shifts.status = 'Utförd' THEN shifts.hours ELSE 0 END), 0) AS totala_timmar
-        FROM cases
-        LEFT JOIN handlers h ON cases.handler1_id = h.id
-        ${join}
-        ${where}
+        `WITH handler_shifts AS (
+          SELECT
+            shifts.id,
+            shifts.date,
+            shifts.hours,
+            shifts.status,
+            cases.handler1_id,
+            cases.handler2_id
+          FROM shifts
+          LEFT JOIN cases ON shifts.case_id = cases.id
+          LEFT JOIN efforts ON cases.effort_id = efforts.id
+          LEFT JOIN customers ON cases.customer_id = customers.id
+          ${whereClause}
+        )
+        SELECT
+          h.id AS handler_id,
+          h.name AS handler_name,
+          COUNT(handler_shifts.id) AS antal_besok,
+          COALESCE(SUM(CASE WHEN handler_shifts.status = 'Utförd' THEN handler_shifts.hours ELSE 0 END), 0) AS totala_timmar
+        FROM handler_shifts
+        CROSS JOIN LATERAL (VALUES (handler_shifts.handler1_id), (handler_shifts.handler2_id)) handler_ids(handler_id)
+        JOIN handlers h ON h.id = handler_ids.handler_id
+        WHERE handler_ids.handler_id IS NOT NULL
         GROUP BY h.id, h.name
         ORDER BY h.name ASC`,
         params
       );
+      statsCache.set(cacheKey, result.rows);
       res.json(result.rows);
     } catch (err) {
       console.error("Error fetching by-handler stats:", err);

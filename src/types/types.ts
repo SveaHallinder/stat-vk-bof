@@ -87,4 +87,22 @@ export interface ShiftEntry {
 
 // Vallentuna kommun specifika status-värden
 export type ShiftStatus = "Utförd" | "Avbokad";
+
+export interface GlobalSearchResult {
+  id: number;
+  type: 'customer' | 'handler' | 'effort' | 'case' | 'shift';
+  title: string;
+  subtitle?: string;
+  icon: string;
+  data: Record<string, unknown>;
+}
+
+export interface StatsSummary {
+  antal_besok: number;
+  antal_kunder: number;
+  totala_timmar: number;
+  avbokningsgrad: number;
+  aktiva_kunder_total?: number;
+  aktiva_insatser_total?: number;
+}
   

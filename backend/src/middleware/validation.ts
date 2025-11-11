@@ -121,14 +121,28 @@ export function validateCustomerData(req: Request, res: Response, next: NextFunc
 
 // Middleware för att validera tidsregistrering
 export function validateShiftData(req: Request, res: Response, next: NextFunction) {
-  const { case_id, date, hours, status } = req.body;
+  const { case_id, customer_id, effort_id, handler1_id, handler2_id, date, hours, status } = req.body;
 
-  if (!case_id || !date || !hours || !status) {
-    return res.status(400).json({ error: 'Insats-ID, datum, timmar och status krävs' });
+  if (!date || typeof hours === 'undefined' || !status) {
+    return res.status(400).json({ error: 'Datum, timmar och status krävs' });
   }
 
-  if (!validateId(case_id)) {
-    return res.status(400).json({ error: 'Ogiltigt insats-ID' });
+  const hasCaseId = typeof case_id !== 'undefined' && case_id !== null && case_id !== '';
+
+  if (hasCaseId) {
+    if (!validateId(case_id)) {
+      return res.status(400).json({ error: 'Ogiltigt insats-ID' });
+    }
+  } else {
+    if (!customer_id || !effort_id || !handler1_id) {
+      return res.status(400).json({ error: 'Kund, insats och behandlare krävs när insats-ID saknas' });
+    }
+    if (!validateId(customer_id) || !validateId(effort_id) || !validateId(handler1_id)) {
+      return res.status(400).json({ error: 'Ogiltiga ID:n för kund/insats/behandlare' });
+    }
+    if (handler2_id && handler2_id !== '' && !validateId(handler2_id)) {
+      return res.status(400).json({ error: 'Ogiltigt behandlare 2 ID' });
+    }
   }
 
   if (!validateDate(date)) {

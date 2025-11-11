@@ -27,7 +27,7 @@ export const ApiHealthBanner = (): JSX.Element | null => {
       try {
         const res = await fetch(healthUrl, {
           method: "GET",
-          credentials: "include",
+          // No credentials needed; Authorization uses headers, so avoid triggering CORS errors
         });
         if (!cancelled) {
           if (res.ok) {

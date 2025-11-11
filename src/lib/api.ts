@@ -6,8 +6,22 @@ const fallbackApiUrl = (() => {
 })();
 
 export const API_URL = import.meta.env.VITE_API_URL || fallbackApiUrl;
-import { Customer, Handler, Effort, CaseWithNames, ShiftEntry } from "@/types/types";
+import { Customer, Handler, Effort, CaseWithNames, ShiftEntry, GlobalSearchResult, StatsSummary } from "@/types/types";
 import { api } from "./apiClient";
+
+type QueryValue = string | number | boolean | null | undefined;
+
+const appendQueryParams = (params: URLSearchParams, values?: Record<string, QueryValue>) => {
+  if (!values) return;
+  for (const [key, value] of Object.entries(values)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "boolean") {
+      params.append(key, value ? "true" : "false");
+    } else {
+      params.append(key, String(value));
+    }
+  }
+};
 
 export async function getCustomers(all = false): Promise<Customer[]> {
   const res = await api(`/customers${all ? '?all=true' : ''}`);
@@ -131,8 +145,12 @@ export async function getEfforts(): Promise<Effort[]> {
   return res.json();
 }
 
-export async function getCustomerEfforts(customerId: number) {
-  const res = await api(`/cases?customer_id=${customerId}`);
+export async function getCustomerEfforts(customerId: number, options?: { includeInactive?: boolean }) {
+  const params = new URLSearchParams({ customer_id: String(customerId) });
+  if (options?.includeInactive) {
+    params.append('all', 'true');
+  }
+  const res = await api(`/cases?${params.toString()}`);
   if (!res.ok) {
     throw new Error(`Kunde inte hämta insatser för kund ${customerId}`);
   }
@@ -154,8 +172,20 @@ export async function getCasesForCustomerEffort(customerId: string, effortId: st
   return res.json();
 }
 
-export async function getCases(all = false, options?: RequestInit): Promise<CaseWithNames[]> {
-  const res = await api(`/cases${all ? '?all=true' : ''}`, options);
+type GetCasesOptions = {
+  params?: Record<string, QueryValue>;
+  request?: RequestInit;
+};
+
+export async function getCases(all = false, options?: GetCasesOptions): Promise<CaseWithNames[]> {
+  const searchParams = new URLSearchParams();
+  if (all) {
+    searchParams.append('all', 'true');
+  }
+  appendQueryParams(searchParams, options?.params);
+  const query = searchParams.toString();
+  const path = query ? `/cases?${query}` : `/cases`;
+  const res = await api(path, options?.request);
   if (!res.ok) throw new Error("Kunde inte hämta insatsen");
   const data = await res.json();
   return data;
@@ -264,7 +294,7 @@ export async function deactivateShiftsForCase(caseId: string): Promise<{ message
 export async function getStatsSummary(
   params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
   options?: RequestInit
-): Promise<any> {
+): Promise<StatsSummary> {
   let url = `/stats/summary`;
   if (params) {
     const search = new URLSearchParams();
@@ -282,7 +312,7 @@ export async function getStatsSummary(
   }
   const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik");
-  return res.json();
+  return res.json() as Promise<StatsSummary>;
 }
 
 export async function getStatsByEffort(
@@ -330,6 +360,21 @@ export async function getStatsByHandler(
   }
   const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per behandlare");
+  return res.json();
+}
+
+export async function searchAll(query: string, perType?: number): Promise<GlobalSearchResult[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const params = new URLSearchParams({ q: trimmed });
+  if (perType) params.append('perType', String(perType));
+
+  const res = await api(`/search?${params.toString()}`);
+  if (!res.ok) {
+    const message = await res.text().catch(() => null);
+    throw new Error(message || "Kunde inte söka");
+  }
   return res.json();
 }
 

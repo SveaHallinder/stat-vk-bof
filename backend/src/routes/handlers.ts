@@ -25,12 +25,14 @@ export default function handlers(pool: Pool) {
   // Hämta alla behandlare (med stöd för all=true)
   router.get("/", async (req, res) => {
     try {
-      let result;
-      if (req.query.all === "true") {
-        result = await pool.query("SELECT * FROM handlers ORDER BY id ASC");
-      } else {
-        result = await pool.query("SELECT * FROM handlers WHERE active = TRUE ORDER BY id ASC");
-      }
+      const baseSelect = `
+        SELECT id, name, email, role, active
+        FROM handlers
+      `;
+      const sql = req.query.all === "true"
+        ? `${baseSelect} ORDER BY name ASC`
+        : `${baseSelect} WHERE active = TRUE ORDER BY name ASC`;
+      const result = await pool.query(sql);
       res.json(result.rows);
     } catch {
       res.status(500).json({ error: "Kunde inte hämta behandlare" });

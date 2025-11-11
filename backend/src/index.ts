@@ -23,6 +23,7 @@ import users from "./routes/users";
 import invites from "./routes/invites";
 import audit from "./routes/audit";
 import auth from "./routes/auth";
+import search from "./routes/search";
 import { initAuditLogger } from "./utils/auditLogger";
 import { config } from "./config";
 import { normalizeAvailableFor } from "./utils/efforts";
@@ -157,6 +158,7 @@ app.use("/api/users", users(pool));
 app.use("/api/invites", invites(pool));
 app.use("/api/audit", audit(pool));
 app.use("/api/auth", auth(pool));
+app.use("/api/search", search(pool));
 
 // Central error handler (keep last)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

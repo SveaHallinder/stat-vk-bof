@@ -15,24 +15,40 @@ import toast from 'react-hot-toast';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRefresh } from "@/contexts/RefreshContext";
+import { StatsSummary } from "@/types/types";
 
 export const MainContent = (): JSX.Element => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { refreshKey, triggerRefresh } = useRefresh();
   // Dynamisk statistik
-  const [stats, setStats] = useState<{ antal_besok: number; antal_kunder: number; totala_timmar: number; avbokningsgrad: number } | null>(null);
+  const [stats, setStats] = useState<StatsSummary | null>(null);
   const [effortData, setEffortData] = useState<any[] | null>(null);
   const [handlers, setHandlers] = useState<any[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const formatLocalDate = useCallback((date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
   // Memoized date calculations
   const dateRange = useMemo(() => {
     const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
-    return { from, to };
-  }, []);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return {
+      from: formatLocalDate(monthStart),
+      to: formatLocalDate(monthEnd),
+    };
+  }, [formatLocalDate]);
+
+  const monthLabel = useMemo(() => {
+    const baseDate = new Date(`${dateRange.from}T00:00:00`);
+    return baseDate.toLocaleString('sv-SE', { month: 'long', year: 'numeric' });
+  }, [dateRange]);
 
   // Memoized data loading function
   const loadDashboardData = useCallback(async () => {
@@ -74,28 +90,33 @@ export const MainContent = (): JSX.Element => {
   }, [user, loadDashboardData, refreshKey]);
 
   // Memoized stats cards
-  const statsCards = useMemo(() => [
-    {
-      title: "Aktiva kunder",
-      value: stats ? stats.antal_kunder : "-",
-      note: "Totalt för hela enheten",
-    },
-    {
-      title: "Aktiva insatser",
-      value: effortData ? effortData.length : "-",
-      note: "Totalt för hela enheten",
-    },
-    {
-      title: "Antal besök",
-      value: stats ? stats.antal_besok : "-",
-      note: "Totala besök för månaden",
-    },
-    {
-      title: "Utförda besökstimmar",
-      value: stats ? `${stats.totala_timmar.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} ` : "-",
-      note: "Totala besökstimmar för månaden",
-    },
-  ], [stats, effortData]);
+  const statsCards = useMemo(() => {
+    const aktivaKunder = stats?.aktiva_kunder_total ?? stats?.antal_kunder;
+    const aktivaInsatser = stats?.aktiva_insatser_total ?? (effortData ? effortData.length : undefined);
+
+    return [
+      {
+        title: "Aktiva kunder",
+        value: aktivaKunder ?? "-",
+        note: "Totalt för hela enheten",
+      },
+      {
+        title: "Aktiva insatser",
+        value: aktivaInsatser ?? "-",
+        note: "Totalt för hela enheten",
+      },
+      {
+        title: "Antal besök",
+        value: stats ? stats.antal_besok : "-",
+        note: "Totala besök för månaden",
+      },
+      {
+        title: "Utförda besökstimmar",
+        value: stats ? `${stats.totala_timmar.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} ` : "-",
+        note: "Totala besökstimmar för månaden",
+      },
+    ];
+  }, [stats, effortData]);
 
   // Memoized chart data
   const chartData = useMemo(() => 
@@ -460,6 +481,13 @@ export const MainContent = (): JSX.Element => {
       {/* Main Content Grid */}
       <div className="flex flex-col w-full max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 gap-4 sm:gap-6 lg:gap-8 py-2 sm:py-4">
         {/* Sammanfattning */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg sm:text-xl font-light text-[#222]">Månadens överblick</h2>
+            <p className="text-sm text-gray-500">Period: {monthLabel}</p>
+          </div>
+          <p className="text-xs text-gray-400">Aktuella siffror uppdateras automatiskt</p>
+        </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-w-0 w-full" data-tour="stats-cards">
           {isLoading ? (
             // Loading state
@@ -474,11 +502,13 @@ export const MainContent = (): JSX.Element => {
               </div>
             ))
           ) : (
-            statsCards.map((card, index) => (
+            statsCards.map((card, index) => {
+              const destinations = ['customers', 'cases', 'visits', 'visits'];
+              return (
               <div
                 key={index}
                 className="bg-white rounded-lg sm:rounded-2xl shadow-sm p-3 sm:p-4 lg:p-6 flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleCardClick(['customers', 'cases', 'visits'][index])}
+                onClick={() => handleCardClick(destinations[index] ?? 'visits')}
               >
                 <div className="text-gray-500 text-xs sm:text-sm font-semibold tracking-wide uppercase">
                   {card.title}
@@ -492,7 +522,7 @@ export const MainContent = (): JSX.Element => {
                   </div>
                 )}
               </div>
-            ))
+            )})
           )}
         </div>
         

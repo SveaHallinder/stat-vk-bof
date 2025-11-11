@@ -1,182 +1,51 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, X, User, Clock, FileText, Users, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getCustomers, getPublicHandlers, getEfforts, getCases, getShifts } from "@/lib/api";
-import { formatAvailableFor } from "@/lib/effortLabels";
+import { searchAll } from "@/lib/api";
 import toast from "react-hot-toast";
-
-interface SearchResult {
-  id: number;
-  type: 'customer' | 'handler' | 'effort' | 'case' | 'shift';
-  title: string;
-  subtitle: string;
-  icon: string;
-  data: any;
-}
+import { GlobalSearchResult } from "@/types/types";
 
 interface GlobalSearchProps {
-  onResultSelect?: (result: SearchResult) => void;
+  onResultSelect?: (result: GlobalSearchResult) => void;
 }
 
 export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<GlobalSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const latestSearchId = useRef(0);
+  const [hint, setHint] = useState<string | null>(null);
 
-  const performSearch = async (query: string) => {
-    if (!query.trim()) {
+  const executeSearch = useCallback(async (query: string) => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
       setResults([]);
+      setHint(trimmed.length === 0 ? null : 'Minst två tecken krävs för sökning');
       return;
     }
-
+    setHint(null);
     setIsLoading(true);
     const searchId = ++latestSearchId.current;
-    
     try {
-      const searchResults: SearchResult[] = [];
-      const lowerQuery = query.toLowerCase();
-
-      // Sök parallellt i alla datatyper
-      const [customers, handlers, efforts, cases, shifts] = await Promise.all([
-        // Endast aktiva kunder i global sök
-        getCustomers().catch(() => []),
-        // Endast aktiva behandlare (publik lista, ej admin-krav)
-        getPublicHandlers().catch(() => []),
-        getEfforts().catch(() => []),
-        // Endast aktiva insatsen
-        getCases().catch(() => []),
-        getShifts().catch(() => [])
-      ]);
-
-      // Sök i kunder
-      customers.forEach(customer => {
-        // Visa bara aktiva kunder i global sök
-        if (!customer.active) return;
-        // Dölj skyddade kunder för icke-behöriga
-        if ((customer as any).is_protected && (customer as any).can_view === false) return;
-        if (customer.initials.toLowerCase().includes(lowerQuery)) {
-          const isGroup = (customer as any).is_group || (customer as any).isGroup;
-          const genderLabel = isGroup ? 'Grupp' : ((customer as any).gender ?? '');
-          const birthLabel = isGroup ? '' : (customer.birth_year ? `, född ${customer.birth_year}` : '');
-          const subtitle = [genderLabel, birthLabel].filter(Boolean).join('').trim() || 'Kund';
-          searchResults.push({
-            id: customer.id,
-            type: 'customer',
-            title: `Kund: ${customer.initials}`,
-            subtitle,
-            icon: 'User',
-            data: customer,
-          });
-        }
-      });
-
-      // Sök i behandlare (visa endast aktiva)
-      handlers.forEach(handler => {
-        // Public endpoint returnerar endast aktiva behandlare (id, name)
-        if (handler.name.toLowerCase().includes(lowerQuery)) {
-          searchResults.push({
-            id: Number((handler as any).id),
-            type: 'handler',
-            title: `Behandlare: ${handler.name}`,
-            subtitle: '',
-            icon: 'Users',
-            data: handler,
-          });
-        }
-      });
-
-      // Sök i insatser
-      efforts.forEach(effort => {
-        if (effort.name.toLowerCase().includes(lowerQuery)) {
-          searchResults.push({
-            id: effort.id,
-            type: 'effort',
-            title: `Insats: ${effort.name}`,
-            subtitle: `Tillgänglig för: ${formatAvailableFor(effort.name, effort.available_for)}`,
-            icon: 'FileText',
-            data: effort,
-          });
-        }
-      });
-
-      // Sök i insatsen
-      cases.forEach(caseItem => {
-        if (caseItem.customer_name?.toLowerCase().includes(lowerQuery) ||
-            caseItem.effort_name?.toLowerCase().includes(lowerQuery) ||
-            caseItem.handler1_name?.toLowerCase().includes(lowerQuery)) {
-          searchResults.push({
-            id: caseItem.id,
-            type: 'case',
-            title: `Insats: ${caseItem.customer_name || 'Okänd'} - ${caseItem.effort_name || 'Okänd'}`,
-            subtitle: `Behandlare: ${caseItem.handler1_name || 'Okänd'}`,
-            icon: 'FileText',
-            data: caseItem,
-          });
-        }
-      });
-
-      // Sök i tider
-      shifts.forEach(shift => {
-        if (shift.customer_name?.toLowerCase().includes(lowerQuery) ||
-            shift.effort_name?.toLowerCase().includes(lowerQuery) ||
-            shift.date.includes(query)) {
-          searchResults.push({
-            id: shift.id,
-            type: 'shift',
-            title: `Tid: ${shift.customer_name || 'Okänd'} - ${shift.effort_name || 'Okänd'}`,
-            subtitle: `${shift.date}, ${shift.hours}h, ${shift.status}`,
-            icon: 'Clock',
-            data: shift,
-          });
-        }
-      });
-
-      // Sortera efter relevans (enkel implementation)
-      searchResults.sort((a, b) => {
-        const aRelevance = calculateRelevance(a, query);
-        const bRelevance = calculateRelevance(b, query);
-        return bRelevance - aRelevance;
-      });
-
+      const searchResults = await searchAll(trimmed);
       if (searchId === latestSearchId.current) {
         setResults(searchResults);
       }
     } catch (error) {
-      console.error('Sökfel:', error);
       if (searchId === latestSearchId.current) {
         setResults([]);
+        toast.error(error instanceof Error ? error.message : "Kunde inte söka just nu");
       }
     } finally {
       if (searchId === latestSearchId.current) {
         setIsLoading(false);
       }
     }
-  };
-
-  // Enkel relevansberäkning
-  const calculateRelevance = (result: SearchResult, query: string): number => {
-    const lowerQuery = query.toLowerCase();
-    let relevance = 0;
-    
-    if (result.title.toLowerCase().includes(lowerQuery)) {
-      relevance += 10;
-    }
-    
-    if (result.subtitle.toLowerCase().includes(lowerQuery)) {
-      relevance += 5;
-    }
-    
-    if (result.title.toLowerCase().startsWith(lowerQuery)) {
-      relevance += 3;
-    }
-    
-    return relevance;
-  };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -190,14 +59,14 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
   }, []);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      performSearch(searchQuery);
+    if (!isOpen) return;
+    const timeoutId = window.setTimeout(() => {
+      void executeSearch(searchQuery);
     }, 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery, executeSearch, isOpen]);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
-  const handleResultClick = (result: SearchResult) => {
+  const handleResultClick = (result: GlobalSearchResult) => {
     // Blockera åtkomst till skyddad kund för icke-behöriga
     if (result.type === 'customer') {
       const c: any = result.data;
@@ -273,9 +142,11 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
       </div>
 
       {/* Sökresultat dropdown */}
-      {isOpen && (searchQuery || results.length > 0) && (
+      {isOpen && (searchQuery || results.length > 0 || hint) && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-          {isLoading ? (
+          {hint && !isLoading ? (
+            <div className="p-4 text-center text-gray-500">{hint}</div>
+          ) : isLoading ? (
             <div className="p-4 text-center text-gray-500">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#17694c] mx-auto mb-2"></div>
               Söker...

@@ -76,6 +76,7 @@ export const LoginPage = () => {
                 className="w-full"
                 required
                 disabled={isLoading}
+                autoComplete="username"
               />
             </div>
             
@@ -93,6 +94,7 @@ export const LoginPage = () => {
                   className="w-full pr-10"
                   required
                   disabled={isLoading}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,11 @@ import { CaseWithNames } from "@/types/types";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { useRefresh } from "@/contexts/RefreshContext";
+import { Button } from "@/components/ui/button";
 
 export const ArendelistaPage = (): JSX.Element => {
   const navigate = useNavigate();
+  const PAGE_SIZE = 200;
   const [cases, setCases] = useState<CaseWithNames[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -20,26 +22,51 @@ export const ArendelistaPage = (): JSX.Element => {
   const [sortAsc, setSortAsc] = useState(false);
   const [includeInactive, setIncludeInactive] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  // loading state not used in UI; remove to satisfy typecheck
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadError, setLoadError] = useState<null | { mode: 'initial' | 'append'; message: string }>(null);
   const { refreshKey } = useRefresh();
+  const offsetRef = useRef(0);
 
   useEffect(() => {
-    async function load() {
-      // start load
-      if (abortRef.current) abortRef.current.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-      try {
-        const data = await getCases(includeInactive, { signal: controller.signal }); // styr via checkbox
-        setCases(data);
-      } catch (err: any) {
-        if (err?.name !== 'AbortError') toast.error("Kunde inte hämta insatsen");
-      } finally {
-        // finished
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
       }
+    };
+  }, []);
+
+  const fetchPage = useCallback(async (offset: number, append: boolean) => {
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    append ? setIsLoadingMore(true) : setIsLoading(true);
+    setLoadError(null);
+    try {
+      const data = await getCases(includeInactive, {
+        request: { signal: controller.signal },
+        params: { limit: PAGE_SIZE, offset },
+      });
+      setCases(prev => (append ? [...prev, ...data] : data));
+      offsetRef.current = offset + data.length;
+      setHasMore(data.length === PAGE_SIZE);
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        toast.error("Kunde inte hämta insatsen");
+        setLoadError({ mode: append ? 'append' : 'initial', message: 'Kunde inte hämta insatsen. Försök igen.' });
+      }
+    } finally {
+      append ? setIsLoadingMore(false) : setIsLoading(false);
     }
-    load();
-  }, [includeInactive, refreshKey]);
+  }, [includeInactive]);
+
+  useEffect(() => {
+    setCases([]);
+    setHasMore(true);
+    offsetRef.current = 0;
+    void fetchPage(0, false);
+  }, [fetchPage, refreshKey]);
 
   const statusOptions = ["Aktivt", "inaktiv"];
 
@@ -165,6 +192,32 @@ export const ArendelistaPage = (): JSX.Element => {
                 ))}
               </tbody>
             </table>
+            {hasMore && (
+              <div className="flex justify-center py-4">
+                <Button
+                  variant="outline"
+                  onClick={() => fetchPage(offsetRef.current, true)}
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore ? "Laddar..." : "Ladda fler"}
+                </Button>
+              </div>
+            )}
+            {loadError && (
+              <div className="flex flex-col items-center gap-2 py-4 text-sm text-red-600">
+                <span>{loadError.message}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => fetchPage(loadError.mode === 'append' ? offsetRef.current : 0, loadError.mode === 'append')}
+                >
+                  Försök igen
+                </Button>
+              </div>
+            )}
+            {isLoading && cases.length === 0 && (
+              <div className="py-6 text-center text-sm text-gray-500">Laddar insatser...</div>
+            )}
           </div>
         </CardContent>
       </Card>

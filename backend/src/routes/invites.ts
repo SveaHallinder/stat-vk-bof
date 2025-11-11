@@ -92,17 +92,18 @@ export default function invites(pool: Pool) {
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
       const verificationCode = crypto.randomBytes(4).toString('hex').toUpperCase();
       
-      // Sätt utgångstid (7 dagar)
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 timmar
+      // Sätt utgångstid (7 dagar) för både länk och verifieringskod
+      const expiresInMs = 7 * 24 * 60 * 60 * 1000;
+      const expiresAt = new Date(Date.now() + expiresInMs);
+      const verificationExpiresAt = new Date(expiresAt);
 
       // Skapa invite
       const result = await pool.query(
         `INSERT INTO invites (
           email, role, token, token_hash, expires_at, created_by, 
           verification_code, verification_expires_at, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-        [email, role, token, tokenHash, expiresAt, adminId, verificationCode, verificationExpiresAt, 'pending']
+        ) VALUES ($1, $2, NULL, $3, $4, $5, $6, $7, $8) RETURNING id`,
+        [email, role, tokenHash, expiresAt, adminId, verificationCode, verificationExpiresAt, 'pending']
       );
 
       const inviteId = result.rows[0].id;
@@ -302,8 +303,6 @@ export default function invites(pool: Pool) {
          ORDER BY i.created_at DESC`
       );
 
-      const frontendBase = config.frontend.url.replace(/\/$/, '');
-
       const invites = result.rows.map(row => {
         const expiresAt = row.expires_at ? new Date(row.expires_at) : null;
         let statusDisplay = 'Okänd';
@@ -320,8 +319,6 @@ export default function invites(pool: Pool) {
           statusDisplay = 'Avbruten';
         }
 
-        const inviteUrl = row.token ? `${frontendBase}/invite/${row.token}` : null;
-
         return {
           id: row.id,
           email: row.email,
@@ -332,11 +329,11 @@ export default function invites(pool: Pool) {
           expires_at: row.expires_at,
           created_by: row.created_by,
           created_by_name: row.created_by_name,
-          token: row.token,
-          verification_code: row.verification_code,
+          token: null,
+          verification_code: null,
           verification_expires_at: row.verification_expires_at,
           email_verified: row.email_verified,
-          invite_url: inviteUrl,
+          invite_url: null,
         };
       });
 
@@ -347,30 +344,31 @@ export default function invites(pool: Pool) {
     }
   });
 
-router.post('/:id/regenerate', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
+  router.post('/:id/regenerate', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const adminId = (req.user as any).id;
 
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const verificationCode = crypto.randomBytes(4).toString('hex').toUpperCase();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const expiresInMs = 7 * 24 * 60 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + expiresInMs);
+    const verificationExpiresAt = new Date(expiresAt);
 
     try {
       const result = await pool.query(
         `UPDATE invites
-         SET token = $1,
-             token_hash = $2,
-             verification_code = $3,
-             verification_expires_at = $4,
-             expires_at = $5,
+         SET token = NULL,
+             token_hash = $1,
+             verification_code = $2,
+             verification_expires_at = $3,
+             expires_at = $4,
              status = 'pending',
              email_verified = false,
              used_at = NULL
-         WHERE id = $6 AND status IN ('pending', 'expired')
+         WHERE id = $5 AND status IN ('pending', 'expired')
          RETURNING id, email, role, created_by`,
-        [token, tokenHash, verificationCode, verificationExpiresAt, expiresAt, id]
+        [tokenHash, verificationCode, verificationExpiresAt, expiresAt, id]
       );
 
       if (result.rowCount === 0) {
@@ -401,6 +399,44 @@ router.post('/:id/regenerate', authenticateToken, requireRole('admin'), async (r
     }
   });
 
+  // Avbryt (soft delete) invite
+  router.post("/:id/cancel", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const adminId = (req.user as any).id;
+
+    try {
+      const result = await pool.query(
+        `UPDATE invites
+         SET status = 'cancelled',
+             token = NULL,
+             token_hash = NULL,
+             verification_code = NULL,
+             verification_expires_at = NULL,
+             expires_at = COALESCE(expires_at, NOW())
+         WHERE id = $1 AND status = 'pending'
+         RETURNING id`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Inbjudan hittades inte eller kan inte avbrytas" });
+      }
+
+      // Logga avbrott
+      await logInviteEvent(Number(id), 'cancelled', {
+        performedBy: adminId,
+        details: { cancelled_at: new Date() },
+      });
+
+      res.json({ message: 'Inbjudan avbruten' });
+
+    } catch (error) {
+      console.error('Error cancelling invite:', error);
+      res.status(500).json({ error: "Kunde inte avbryta inbjudan" });
+    }
+  });
+
+  // Ta bort invite permanent (endast admin)
   router.delete('/:id', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const adminId = (req.user as any).id;
@@ -408,13 +444,13 @@ router.post('/:id/regenerate', authenticateToken, requireRole('admin'), async (r
     try {
       const result = await pool.query(
         `DELETE FROM invites
-         WHERE id = $1 AND status IN ('pending', 'expired')
-         RETURNING id, email, status`,
+         WHERE id = $1 AND status IN ('cancelled', 'expired')
+         RETURNING id, status`,
         [id]
       );
 
       if (result.rowCount === 0) {
-        return res.status(404).json({ error: 'Inbjudan hittades inte eller kan inte tas bort' });
+        return res.status(404).json({ error: 'Inbjudan hittades inte eller kan inte tas bort (avbryt först)' });
       }
 
       await logInviteEvent(Number(id), 'deleted', {
@@ -441,35 +477,6 @@ router.post('/:id/regenerate', authenticateToken, requireRole('admin'), async (r
     } catch (error) {
       console.error('Error cleaning up invites:', error);
       res.status(500).json({ error: 'Kunde inte rensa inbjudningar' });
-    }
-  });
-
-  // Avbryt invite (endast admin)
-  router.delete("/:id", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const adminId = (req.user as any).id;
-
-    try {
-      const result = await pool.query(
-        'UPDATE invites SET status = $1 WHERE id = $2 AND status = $3 RETURNING id',
-        ['cancelled', id, 'pending']
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Inbjudan hittades inte eller kan inte avbrytas" });
-      }
-
-      // Logga avbrott
-      await logInviteEvent(Number(id), 'cancelled', {
-        performedBy: adminId,
-        details: { cancelled_at: new Date() },
-      });
-
-      res.json({ message: 'Inbjudan avbruten' });
-
-    } catch (error) {
-      console.error('Error cancelling invite:', error);
-      res.status(500).json({ error: "Kunde inte avbryta inbjudan" });
     }
   });
 
