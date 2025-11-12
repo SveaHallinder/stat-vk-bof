@@ -105,5 +105,6 @@ export interface StatsSummary {
   aktiva_kunder_total?: number;
   aktiva_insatser_total?: number;
   ny_antal_kunder?: number;
+  ny_antal_insatser?: number;
 }
   

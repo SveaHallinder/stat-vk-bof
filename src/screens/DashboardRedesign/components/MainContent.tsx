@@ -120,7 +120,7 @@ export const MainContent = (): JSX.Element => {
   // Memoized stats cards
   const statsCards = useMemo(() => {
     const nyaKunder = stats?.ny_antal_kunder ?? periodSummary?.customers ?? stats?.antal_kunder ?? stats?.aktiva_kunder_total ?? 0;
-    const nyaInsatser = stats?.aktiva_insatser_total ?? periodSummary?.cases ?? 0;
+    const nyaInsatser = stats?.ny_antal_insatser ?? periodSummary?.cases ?? stats?.aktiva_insatser_total ?? 0;
     const totalBesok = periodSummary?.visits ?? stats?.antal_besok ?? 0;
     const totalHours = periodSummary?.hours ?? stats?.totala_timmar ?? 0;
 

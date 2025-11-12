@@ -144,6 +144,23 @@ export default function stats(pool: Pool) {
       );
       const newCustomers = Number(customerCountRes.rows[0]?.new_customers) || 0;
 
+      const caseFilters: string[] = [];
+      const caseParams: any[] = [];
+      if (from) {
+        caseFilters.push(`created_at >= $${caseParams.length + 1}::date`);
+        caseParams.push(String(from));
+      }
+      if (to) {
+        caseFilters.push(`created_at <= $${caseParams.length + 1}::date`);
+        caseParams.push(String(to));
+      }
+      if (!includeInactiveBool) {
+        caseFilters.push("active = TRUE");
+      }
+      const caseWhere = caseFilters.length ? `WHERE ${caseFilters.join(" AND ")}` : "";
+      const caseCountRes = await pool.query(`SELECT COUNT(*) AS new_cases FROM cases ${caseWhere}`, caseParams);
+      const newCases = Number(caseCountRes.rows[0]?.new_cases) || 0;
+
       const payload = {
         antal_besok,
         antal_kunder,
@@ -152,6 +169,7 @@ export default function stats(pool: Pool) {
         aktiva_kunder_total,
         aktiva_insatser_total,
         ny_antal_kunder: newCustomers,
+        ny_antal_insatser: newCases,
       };
       statsCache.set(cacheKey, payload);
       res.json(payload);
