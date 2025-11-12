@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import { authenticateToken } from "../middleware/auth";
 import { getAuditLogger } from "../utils/auditLogger";
 import { getSafeInitials } from "../utils/alias";
+import { invalidateStatsCache } from "../utils/cache";
 import { requireRole } from "../middleware/requireRole";
 import { validateCustomerData, sanitizeTextInputs} from "../middleware/validation";
 
@@ -44,6 +45,7 @@ export default function customers(pool: Pool) {
         );
       }
       
+      invalidateStatsCache();
       res.status(201).json(result.rows[0]);
     } catch (err) {
       res.status(500).json({ error: "Kunde inte skapa kund" });
