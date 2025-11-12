@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 interface Handler {
   id: number;
@@ -16,6 +17,7 @@ interface BehandlareComboboxProps {
 
 export const BehandlareCombobox: React.FC<BehandlareComboboxProps> = ({ value, onChange, label }) => {
   const { user } = useAuth();
+  const { refreshKey } = useRefresh();
   const [handlers, setHandlers] = useState<Handler[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -43,7 +45,7 @@ export const BehandlareCombobox: React.FC<BehandlareComboboxProps> = ({ value, o
       }
     }
     load();
-  }, [user?.role]);
+  }, [user?.role, refreshKey]);
 
   useEffect(() => {
     const match = handlers.find(h => h.id.toString() === value);

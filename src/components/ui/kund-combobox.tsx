@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { getCustomers } from "@/lib/api";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 interface Customer {
   id: string;
@@ -17,6 +18,7 @@ export const KundCombobox = ({ value, onChange, placeholder }: KundComboboxProps
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { refreshKey } = useRefresh();
 
   useEffect(() => {
     async function fetchCustomers() {
@@ -39,7 +41,7 @@ export const KundCombobox = ({ value, onChange, placeholder }: KundComboboxProps
       }
     }
     fetchCustomers();
-  }, []);
+  }, [refreshKey]);
 
   // Hantera klick utanför
   useEffect(() => {

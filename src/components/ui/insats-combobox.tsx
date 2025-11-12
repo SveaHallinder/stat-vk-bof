@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { getEfforts } from "@/lib/api";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 interface Effort {
   id: string;
@@ -17,6 +18,7 @@ export const InsatsCombobox = ({ value, onChange, placeholder }: InsatsComboboxP
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { refreshKey } = useRefresh();
 
   useEffect(() => {
     async function fetchEfforts() {
@@ -28,7 +30,7 @@ export const InsatsCombobox = ({ value, onChange, placeholder }: InsatsComboboxP
       }
     }
     fetchEfforts();
-  }, []);
+  }, [refreshKey]);
 
   // Hantera klick utanför
   useEffect(() => {
