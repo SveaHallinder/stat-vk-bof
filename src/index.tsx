@@ -1,11 +1,11 @@
-import { StrictMode, Suspense } from "react";
+import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./globals.css";
 import { validateEnv } from "./config/env";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ErrorBoundary } from "./lib/ErrorBoundary";
 // AdminRoute ersatt av ProtectedRoute med requiredRole
 import { DashboardRedesign } from "./screens/DashboardRedesign";
 import { KunderPage } from "./screens/KunderPage";
@@ -61,6 +61,15 @@ VITE_APP_NAME=Vallentuna Kommun
   throw error;
 }
 
+const shouldLazyLoadStatistik = import.meta.env.VITE_ENABLE_LAZY === "1";
+const StatistikPageLazy = lazy(() => import("./screens/StatistikPage"));
+
+const statistikRouteElement = (
+  <ProtectedRoute>
+    {shouldLazyLoadStatistik ? <StatistikPageLazy /> : <StatistikPage />}
+  </ProtectedRoute>
+);
+
 createRoot(document.getElementById("app") as HTMLElement).render(
   <StrictMode>
     <ErrorBoundary>
@@ -81,7 +90,7 @@ createRoot(document.getElementById("app") as HTMLElement).render(
                   <Route path="/kunder/:id" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
                   <Route path="/registrera-tid" element={<ProtectedRoute><RegisteraTidPage /></ProtectedRoute>} />
                   <Route path="/arendelista" element={<ProtectedRoute><ArendelistaPage /></ProtectedRoute>} />
-                  <Route path="/statistik" element={<ProtectedRoute><StatistikPage /></ProtectedRoute>} />
+                  <Route path="/statistik" element={statistikRouteElement} />
                   <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
                   <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
                 </Routes>
