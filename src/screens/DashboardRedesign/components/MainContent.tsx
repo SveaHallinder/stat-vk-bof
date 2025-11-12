@@ -96,7 +96,7 @@ export const MainContent = (): JSX.Element => {
   }, [user, loadDashboardData, refreshKey]);
 
   const periodSummary = useMemo(() => {
-    if (!caseStats) return null;
+    if (!caseStats || caseStats.length === 0) return null;
     const customers = new Set<number>();
     let visits = 0;
     let hours = 0;
