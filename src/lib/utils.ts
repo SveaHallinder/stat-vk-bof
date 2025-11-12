@@ -1,3 +1,5 @@
+import clsx, { type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { logger } from "./logger";
 
 const encodeMap: Record<string, string> = {
@@ -10,7 +12,9 @@ const encodeMap: Record<string, string> = {
 
 const encodeChar = (char: string) => encodeMap[char] || char;
 
-export const sanitizeTableText = (value: string | number | null | undefined): string => {
+export const sanitizeTableText = (
+  value: string | number | null | undefined
+): string => {
   if (value === null || value === undefined) return "";
   const input = String(value);
   return input.replace(/[&<>"']/g, encodeChar);
@@ -26,3 +30,5 @@ export const appHealth = () => {
   logger.debug("appHealth", health);
   return health;
 };
+
+export const cn = (...args: ClassValue[]) => twMerge(clsx(...args));
