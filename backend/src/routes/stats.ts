@@ -127,6 +127,23 @@ export default function stats(pool: Pool) {
       const aktiva_kunder_total = Number(aktivaKunderRes.rows[0]?.aktiva_kunder_total) || 0;
       const aktiva_insatser_total = Number(aktivaInsatserRes.rows[0]?.aktiva_insatser_total) || 0;
 
+      const customerFilters: string[] = ["active = TRUE"];
+      const customerParams: any[] = [];
+      if (from) {
+        customerFilters.push(`created_at >= $${customerParams.length + 1}::date`);
+        customerParams.push(String(from));
+      }
+      if (to) {
+        customerFilters.push(`created_at <= $${customerParams.length + 1}::date`);
+        customerParams.push(String(to));
+      }
+      const customerWhere = customerFilters.length ? `WHERE ${customerFilters.join(' AND ')}` : '';
+      const customerCountRes = await pool.query(
+        `SELECT COUNT(*) AS new_customers FROM customers ${customerWhere}`,
+        customerParams
+      );
+      const newCustomers = Number(customerCountRes.rows[0]?.new_customers) || 0;
+
       const payload = {
         antal_besok,
         antal_kunder,
@@ -134,6 +151,7 @@ export default function stats(pool: Pool) {
         avbokningsgrad,
         aktiva_kunder_total,
         aktiva_insatser_total,
+        ny_antal_kunder: newCustomers,
       };
       statsCache.set(cacheKey, payload);
       res.json(payload);
