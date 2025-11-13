@@ -247,25 +247,28 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (step.route && location.pathname !== step.route) {
       navigate(step.route);
     }
-  }, [active, stepIndex, steps, location.pathname]);
+  }, [active, stepIndex, steps, location.pathname, navigate]);
 
   // Load persisted progress when user changes
   useEffect(() => {
     if (!user) return;
-    const keys = storageKeys(user.id);
-    const completed = localStorage.getItem(keys.completed) === 'true';
-    const savedIndex = Number(localStorage.getItem(keys.step) ?? '0');
-    const snoozeRaw = localStorage.getItem(keys.snoozeUntil);
-    const snoozedUntil = snoozeRaw ? Number(snoozeRaw) : 0;
-    const now = Date.now();
+    const frame = requestAnimationFrame(() => {
+      const keys = storageKeys(user.id);
+      const completed = localStorage.getItem(keys.completed) === 'true';
+      const savedIndex = Number(localStorage.getItem(keys.step) ?? '0');
+      const snoozeRaw = localStorage.getItem(keys.snoozeUntil);
+      const snoozedUntil = snoozeRaw ? Number(snoozeRaw) : 0;
+      const now = Date.now();
 
-    // Only auto-start for handlers and only if not completed
-    if (!completed && user.role === 'handler' && now > snoozedUntil) {
-      setStepIndex(Number.isNaN(savedIndex) ? 0 : Math.max(0, Math.min(savedIndex, steps.length - 1)));
-      setActive(true);
-    } else {
-      setActive(false);
-    }
+      // Only auto-start for handlers and only if not completed
+      if (!completed && user.role === 'handler' && now > snoozedUntil) {
+        setStepIndex(Number.isNaN(savedIndex) ? 0 : Math.max(0, Math.min(savedIndex, steps.length - 1)));
+        setActive(true);
+      } else {
+        setActive(false);
+      }
+    });
+    return () => cancelAnimationFrame(frame);
   }, [user, steps.length]);
 
   // Persist progress per user

@@ -20,12 +20,22 @@ type NewCustomer = {
   is_group: boolean;
 };
 
+const customerSortFields = [
+  { label: "Kund-ID", field: "id" },
+  { label: "Initialer", field: "initials" },
+  { label: "Kön", field: "gender" },
+  { label: "Födelseår", field: "birth_year" },
+  { label: "Status", field: "status" },
+  { label: "Startdatum", field: "created_at" },
+] as const;
+type CustomerSortField = (typeof customerSortFields)[number]["field"];
+
 export const KunderPage = (): JSX.Element => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [newCustomers, setNewCustomers] = useState<NewCustomer[]>([]);
   const [errors, setErrors] = useState<{ [idx: number]: { initials?: string; gender?: string; birth_year?: string } }>({});
-  const [sortField, setSortField] = useState<string>("id");
+  const [sortField, setSortField] = useState<CustomerSortField>("id");
   const [sortAsc, setSortAsc] = useState<boolean>(true);
   const [includeInactive, setIncludeInactive] = useState<boolean>(false);
   const navigate = useNavigate();
@@ -54,8 +64,9 @@ export const KunderPage = (): JSX.Element => {
       setDeleteId(null);
       toast.success("Kund avaktiverad!");
       triggerRefresh();
-    } catch (err: any) {
-      toast.error(err?.message || "Kunde inte avaktivera kund");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Kunde inte avaktivera kund";
+      toast.error(message);
     } finally {
       setDeleting(false);
     }
@@ -69,8 +80,9 @@ export const KunderPage = (): JSX.Element => {
       setCustomers(updated);
       toast.success("Kund återaktiverad!");
       triggerRefresh();
-    } catch (err: any) {
-      toast.error(err?.message || "Kunde inte återaktivera kund");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Kunde inte återaktivera kund";
+      toast.error(message);
     } finally {
       setReactivating(false);
     }
@@ -90,8 +102,9 @@ export const KunderPage = (): JSX.Element => {
       const updated = await getCustomers(includeInactive);
       setCustomers(updated);
       triggerRefresh();
-    } catch (e: any) {
-      toast.error(e?.message || 'Kunde inte ändra skyddsstatus');
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Kunde inte ändra skyddsstatus';
+      toast.error(message);
     } finally {
       setProtecting(null);
     }
@@ -202,19 +215,20 @@ export const KunderPage = (): JSX.Element => {
   }, [includeInactive, refreshKey]);
 
   // Sortera kunder
+  const getComparableValue = (customer: Customer, field: CustomerSortField) => {
+    if (field === "created_at") {
+      return customer.created_at ? new Date(customer.created_at) : new Date(0);
+    }
+    if (field === "status") {
+      return customer.active ? 1 : 0;
+    }
+    const record = customer as unknown as Record<string, string | number | boolean | null | undefined>;
+    return record[field] ?? "";
+  };
+
   const sortedCustomers = [...customers].sort((a, b) => {
-    let av: any = a[sortField as keyof Customer];
-    let bv: any = b[sortField as keyof Customer];
-    // Om det är datum, sortera som datum
-    if (sortField === "created_at") {
-      av = av ? new Date(av) : new Date(0);
-      bv = bv ? new Date(bv) : new Date(0);
-    }
-    // Om det är status, sortera på active-flaggan
-    if (sortField === "status") {
-      av = a.active ? 1 : 0;
-      bv = b.active ? 1 : 0;
-    }
+    const av = getComparableValue(a, sortField);
+    const bv = getComparableValue(b, sortField);
     if (av < bv) return sortAsc ? -1 : 1;
     if (av > bv) return sortAsc ? 1 : -1;
     return 0;
@@ -261,14 +275,7 @@ export const KunderPage = (): JSX.Element => {
             <table className="responsive-table text-left mt-3 tablet:min-w-[800px]" data-tour="customers-table">
               <thead>
                 <tr >
-                  {[
-                    { label: "Kund-ID", field: "id" },
-                  { label: "Initialer", field: "initials" },
-                  { label: "Kön", field: "gender" },
-                  { label: "Födelseår", field: "birth_year" },
-                    { label: "Status", field: "status" },
-                    { label: "Startdatum", field: "created_at" },
-                  ].map(col => (
+                  {customerSortFields.map(col => (
                     <th
                       key={col.field}
                       className="px-1 mobile:px-4 py-2 mobile:py-3 font-semibold text-gray-500 uppercase tracking-wider text-xs mobile:text-sm text-center cursor-pointer select-none group whitespace-nowrap"

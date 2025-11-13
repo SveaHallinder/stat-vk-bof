@@ -11,7 +11,7 @@ interface CaseComboboxProps {
 }
 
 function formatLabel(caseItem: CaseWithNames): string {
-  const customer = (caseItem as any).customer_active === false || caseItem.customer_name === 'ANONYM'
+  const customer = caseItem.customer_active === false || caseItem.customer_name === 'ANONYM'
     ? '—'
     : caseItem.customer_name || 'Okänd kund';
   return `${customer} – ${caseItem.effort_name ?? 'Okänd insats'}`;
@@ -36,8 +36,8 @@ export const CaseCombobox = ({ cases, value, onChange, placeholder, disabled }: 
 
   useEffect(() => {
     if (value == null) {
-      setSearch("");
-      return;
+      const frame = requestAnimationFrame(() => setSearch(""));
+      return () => cancelAnimationFrame(frame);
     }
     if (!cases.some(c => c.id === value)) {
       onChange(null);

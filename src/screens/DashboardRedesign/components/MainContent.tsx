@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { BarChartStatistik } from "./BarChartStatistik";
 import { PieChart as RePieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { createCustomer, createCase, getCases, addShift, getStatsSummary, getStatsByEffort, getPublicHandlers } from '@/lib/api';
+import { createCustomer, createCase, getCases, addShift, getStatsSummary, getStatsByEffort, getStatsCases, getPublicHandlers, type HandlerPublic, type StatsRow } from '@/lib/api';
 import { KundCombobox } from "@/components/ui/kund-combobox";
 import { InsatsCombobox } from "@/components/ui/insats-combobox";
 import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
@@ -15,7 +15,33 @@ import toast from 'react-hot-toast';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRefresh } from "@/contexts/RefreshContext";
-import { StatsSummary } from "@/types/types";
+import { CaseWithNames, StatsSummary } from "@/types/types";
+
+type EffortStatsRow = {
+  effort_name: string;
+  antal_besok: number;
+  antal_kunder: number;
+};
+
+type CaseStatsRow = {
+  customer_id: number | null;
+  antal_besok: number;
+  totala_timmar: number;
+};
+
+const toEffortStats = (rows: StatsRow[]): EffortStatsRow[] =>
+  rows.map(row => ({
+    effort_name: String(row.effort_name ?? ""),
+    antal_besok: Number(row.antal_besok ?? 0),
+    antal_kunder: Number(row.antal_kunder ?? 0),
+  }));
+
+const toCaseStats = (rows: StatsRow[]): CaseStatsRow[] =>
+  rows.map(row => ({
+    customer_id: row.customer_id ? Number(row.customer_id) : null,
+    antal_besok: Number(row.antal_besok ?? 0),
+    totala_timmar: Number(row.totala_timmar ?? 0),
+  }));
 
 export const MainContent = (): JSX.Element => {
   const navigate = useNavigate();
@@ -23,8 +49,9 @@ export const MainContent = (): JSX.Element => {
   const { refreshKey, triggerRefresh } = useRefresh();
   // Dynamisk statistik
   const [stats, setStats] = useState<StatsSummary | null>(null);
-  const [effortData, setEffortData] = useState<any[] | null>(null);
-  const [handlers, setHandlers] = useState<any[] | null>(null);
+  const [effortData, setEffortData] = useState<EffortStatsRow[] | null>(null);
+  const [caseStats, setCaseStats] = useState<CaseStatsRow[] | null>(null);
+  const [handlers, setHandlers] = useState<HandlerPublic[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const formatLocalDate = useCallback((date: Date) => {
@@ -55,9 +82,10 @@ export const MainContent = (): JSX.Element => {
     setIsLoading(true);
     try {
       // Ladda data parallellt men med bättre felhantering
-      const [statsResult, effortResult, handlersResult] = await Promise.allSettled([
+      const [statsResult, effortResult, casesResult, handlersResult] = await Promise.allSettled([
         getStatsSummary(dateRange),
         getStatsByEffort(dateRange),
+        getStatsCases(dateRange),
         getPublicHandlers()
       ]);
       
@@ -67,7 +95,11 @@ export const MainContent = (): JSX.Element => {
       }
       
       if (effortResult.status === 'fulfilled') {
-        setEffortData(effortResult.value);
+        setEffortData(toEffortStats(effortResult.value));
+      }
+      
+      if (casesResult.status === 'fulfilled') {
+        setCaseStats(toCaseStats(casesResult.value));
       }
       
       if (handlersResult.status === 'fulfilled') {
@@ -89,34 +121,58 @@ export const MainContent = (): JSX.Element => {
     return () => clearTimeout(timer);
   }, [user, loadDashboardData, refreshKey]);
 
+  const periodSummary = useMemo(() => {
+    if (!caseStats || caseStats.length === 0) return null;
+    const customers = new Set<number>();
+    let visits = 0;
+    let hours = 0;
+
+    caseStats.forEach(row => {
+      if (row.customer_id) {
+        customers.add(Number(row.customer_id));
+      }
+      visits += Number(row.antal_besok ?? 0);
+      hours += Number(row.totala_timmar ?? 0);
+    });
+
+    return {
+      customers: customers.size,
+      cases: caseStats.length,
+      visits,
+      hours,
+    };
+  }, [caseStats]);
+
   // Memoized stats cards
   const statsCards = useMemo(() => {
-    const aktivaKunder = stats?.aktiva_kunder_total ?? stats?.antal_kunder;
-    const aktivaInsatser = stats?.aktiva_insatser_total ?? (effortData ? effortData.length : undefined);
+    const nyaKunder = stats?.ny_antal_kunder ?? periodSummary?.customers ?? stats?.antal_kunder ?? stats?.aktiva_kunder_total ?? 0;
+    const nyaInsatser = stats?.ny_antal_insatser ?? periodSummary?.cases ?? stats?.aktiva_insatser_total ?? 0;
+    const totalBesok = periodSummary?.visits ?? stats?.antal_besok ?? 0;
+    const totalHours = periodSummary?.hours ?? stats?.totala_timmar ?? 0;
 
     return [
       {
-        title: "Aktiva kunder",
-        value: aktivaKunder ?? "-",
-        note: "Totalt för hela enheten",
+        title: "Nya kunder",
+        value: nyaKunder ?? "-",
+        note: "Registrerade besök under perioden",
       },
       {
-        title: "Aktiva insatser",
-        value: aktivaInsatser ?? "-",
-        note: "Totalt för hela enheten",
+        title: "Nya insatser",
+        value: nyaInsatser ?? "-",
+        note: "Insatser med registrerade besök",
       },
       {
         title: "Antal besök",
-        value: stats ? stats.antal_besok : "-",
+        value: totalBesok ?? "-",
         note: "Totala besök för månaden",
       },
       {
         title: "Utförda besökstimmar",
-        value: stats ? `${stats.totala_timmar.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} ` : "-",
+        value: `${totalHours.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} `,
         note: "Totala besökstimmar för månaden",
       },
     ];
-  }, [stats, effortData]);
+  }, [stats, periodSummary]);
 
   // Memoized chart data
   const chartData = useMemo(() => 
@@ -192,11 +248,12 @@ export const MainContent = (): JSX.Element => {
       setNewCustomer({ initials: '', gender: '', birthYear: '', isGroup: false });
       toast.success('Kund registrerad!');
       setErrors({});
+      await loadDashboardData();
       triggerRefresh();
     } catch (err) {
       toast.error('Kunde inte spara kund');
     }
-  }, [newCustomer, validateCustomer, triggerRefresh]);
+  }, [newCustomer, validateCustomer, triggerRefresh, loadDashboardData]);
 
   // Form state för Registrera insats
   const [newCase, setNewCase] = useState({
@@ -207,7 +264,9 @@ export const MainContent = (): JSX.Element => {
   });
 
   const [newCaseErrors, setNewCaseErrors] = useState<{ customerId?: string; effortId?: string; handler1Id?: string }>({});
-  const [activeCases, setActiveCases] = useState<any[]>([]);
+  const [activeCases, setActiveCases] = useState<CaseWithNames[]>([]);
+
+  const getToday = useCallback(() => new Date().toISOString().slice(0, 10), []);
 
   // Memoized case loading function
   const loadActiveCases = useCallback(async () => {
@@ -231,13 +290,13 @@ export const MainContent = (): JSX.Element => {
     loadActiveCases();
   }, [loadActiveCases, refreshKey]);
 
-  function validateNewCase(c: typeof newCase) {
+  const validateNewCase = useCallback((c: typeof newCase) => {
     const err: { customerId?: string; effortId?: string; handler1Id?: string } = {};
     if (!c.customerId) err.customerId = "Du måste välja kund";
     if (!c.effortId) err.effortId = "Du måste välja insats";
     if (!c.handler1Id) err.handler1Id = "Du måste välja behandlare";
     return err;
-  }
+  }, []);
 
   // Hjälpfunktion för att räkna faktiska fel (inte undefined värden)
   function getActualErrorCount(errors: typeof newCaseErrors): number {
@@ -277,19 +336,21 @@ export const MainContent = (): JSX.Element => {
       setNewCase({ customerId: "", effortId: "", handler1Id: "", handler2Id: "" });
       toast.success('Insats registrerad!');
       setNewCaseErrors({});
+      await loadDashboardData();
       triggerRefresh();
-    } catch (err: any) {
-      // Silent error handling
-      
-      if (err.error && err.error.includes('samma kombination finns redan')) {
-        toast.error(err.error, { duration: 8000 }); // 8 sekunder
-      } else if (err.message && err.message.includes('samma kombination finns redan')) {
-        toast.error('En aktiv insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatser.', { duration: 8000 }); // 8 sekunder
+    } catch (err: unknown) {
+      const parsed = err as { error?: string; message?: string } | undefined;
+      const errorMessage = parsed?.error || parsed?.message;
+      const duplicatePhrase = 'samma kombination finns redan';
+
+      if (errorMessage?.includes(duplicatePhrase)) {
+        const toastMessage = parsed?.error || 'En aktiv insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatser.';
+        toast.error(toastMessage, { duration: 8000 });
       } else {
         toast.error('Kunde inte skapa insats');
       }
     }
-  }, [newCase, validateNewCase, triggerRefresh]);
+  }, [newCase, validateNewCase, triggerRefresh, loadDashboardData]);
 
   // Form state för Registrera tid
   const [registerTime, setRegisterTime] = useState({
@@ -311,13 +372,13 @@ export const MainContent = (): JSX.Element => {
     setRegisterTimeErrors(prev => ({ ...prev, [name]: undefined }));
   }, [registerTime]);
 
-  function validateRegisterTime(rt: typeof registerTime) {
+  const validateRegisterTime = useCallback((rt: typeof registerTime) => {
     const err: { customer?: string; date?: string; hours?: string } = {};
     if (!rt.customer) err.customer = "Du måste välja insats";
     if (!rt.date) err.date = "Du måste ange datum";
     if (!rt.hours || isNaN(Number(rt.hours)) || Number(rt.hours) <= 0) err.hours = "Du måste ange antal timmar";
     return err;
-  }
+  }, []);
 
   const handleRegisterTimeCancel = useCallback(() => {
     setOpenModal(null);
@@ -330,7 +391,7 @@ export const MainContent = (): JSX.Element => {
       hours: "",
     });
     setRegisterTimeErrors({});
-  }, []);
+  }, [getToday]);
 
   const handleRegisterTimeSave = useCallback(async () => {
     const errors = validateRegisterTime(registerTime);
@@ -367,11 +428,12 @@ export const MainContent = (): JSX.Element => {
       });
       setOpenModal(null);
       toast.success("Tid registrerad!");
+      await loadDashboardData();
       triggerRefresh();
     } catch (err) {
       toast.error("Kunde inte spara tid");
     }
-  }, [registerTime, activeCases, triggerRefresh]);
+  }, [registerTime, activeCases, triggerRefresh, loadDashboardData, validateRegisterTime, getToday]);
 
   // Form state för Ta ut statistik
   const [statistik, setStatistik] = useState({
@@ -409,9 +471,18 @@ export const MainContent = (): JSX.Element => {
         gender: statistik.gender.length > 0 ? statistik.gender.join(',') : undefined,
         insats: statistik.effort.length > 0 ? statistik.effort.join(',') : undefined
       });
+      const filteredCases = await getStatsCases({
+        from: statistik.from,
+        to: statistik.to,
+        effortCategory: statistik.effortCategory.length > 0 ? statistik.effortCategory.join(',') : undefined,
+        handler: statistik.handler.length > 0 ? statistik.handler.join(',') : undefined,
+        gender: statistik.gender.length > 0 ? statistik.gender.join(',') : undefined,
+        insats: statistik.effort.length > 0 ? statistik.effort.join(',') : undefined
+      });
       
       setStats(filteredStats);
-      setEffortData(filteredEffortData);
+      setEffortData(toEffortStats(filteredEffortData));
+      setCaseStats(toCaseStats(filteredCases));
       setShowStatistikChart(true);
     } catch (error) {
       toast.error('Kunde inte hämta filtrerad data');
@@ -458,8 +529,6 @@ export const MainContent = (): JSX.Element => {
     XLSX.writeFile(wb, 'statistik.xlsx');
   }, [chartData]);
 
-  const getToday = useCallback(() => new Date().toISOString().slice(0, 10), []);
-
   // Navigera till olika sidor från dashboard-korten
   const handleCardClick = useCallback((destination: string) => {
     switch (destination) {
@@ -484,7 +553,7 @@ export const MainContent = (): JSX.Element => {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-lg sm:text-xl font-light text-[#222]">Månadens överblick</h2>
-            <p className="text-sm text-gray-500">Period: {monthLabel}</p>
+            <p className="text-sm text-gray-500">{monthLabel}</p>
           </div>
           <p className="text-xs text-gray-400">Aktuella siffror uppdateras automatiskt</p>
         </div>
@@ -525,7 +594,6 @@ export const MainContent = (): JSX.Element => {
             )})
           )}
         </div>
-        
         {/* Snabbåtgärder */}
         <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 lg:p-6 flex flex-col shadow-sm items-start" data-tour="quick-actions">
           <h3 className="text-[#333] text-base sm:text-lg font-light mb-3 sm:mb-4 lg:mb-6 tracking-tight">Snabbåtgärder</h3>

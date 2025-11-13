@@ -1,5 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 
+const hasDisabledProperty = (element: HTMLElement): element is HTMLElement & { disabled: boolean } =>
+  'disabled' in element;
+
 // Keyboard navigation hook
 export const useKeyboardNavigation = () => {
   const focusableElements = useRef<HTMLElement[]>([]);
@@ -10,9 +13,9 @@ export const useKeyboardNavigation = () => {
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]'
     ) as NodeListOf<HTMLElement>;
     
-    focusableElements.current = Array.from(elements).filter(el => 
+    focusableElements.current = Array.from(elements).filter(el =>
       el.offsetParent !== null && // Synlig
-      !(el as any).disabled && // Inte inaktiverad
+      !(hasDisabledProperty(el) && el.disabled) && // Inte inaktiverad
       el.style.display !== 'none' // Inte dold
     );
   }, []);

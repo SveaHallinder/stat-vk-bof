@@ -51,8 +51,9 @@ export const ArendelistaPage = (): JSX.Element => {
       setCases(prev => (append ? [...prev, ...data] : data));
       offsetRef.current = offset + data.length;
       setHasMore(data.length === PAGE_SIZE);
-    } catch (err: any) {
-      if (err?.name !== 'AbortError') {
+    } catch (error) {
+      const err = error as Error & { name?: string };
+      if (err.name !== 'AbortError') {
         toast.error("Kunde inte hämta insatsen");
         setLoadError({ mode: append ? 'append' : 'initial', message: 'Kunde inte hämta insatsen. Försök igen.' });
       }
@@ -85,9 +86,16 @@ export const ArendelistaPage = (): JSX.Element => {
     return matchesSearch && matchesStatus;
   });
 
+  const getSortValue = (obj: CaseWithNames, field: keyof CaseWithNames) => {
+    const raw = obj[field];
+    if (typeof raw === "number") return raw;
+    if (typeof raw === "boolean") return raw ? 1 : 0;
+    return String(raw ?? "").toLowerCase();
+  };
+
   const sorted = [...filtered].sort((a, b) => {
-    const av: any = a[sortField] ?? "";
-    const bv: any = b[sortField] ?? "";
+    const av = getSortValue(a, sortField);
+    const bv = getSortValue(b, sortField);
     if (av < bv) return sortAsc ? -1 : 1;
     if (av > bv) return sortAsc ? 1 : -1;
     return 0;
@@ -172,7 +180,7 @@ export const ArendelistaPage = (): JSX.Element => {
                     className="border-t hover:bg-gray-50 cursor-pointer transition-colors group"
                     onClick={() => handleCaseClick(c)}
                   >
-                    <td data-label="Kund" className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] group-hover:font-medium text-xs mobile:text-sm">{(c as any).customer_active === false || c.customer_name === 'ANONYM' ? '—' : c.customer_name}</td>
+                    <td data-label="Kund" className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] group-hover:font-medium text-xs mobile:text-sm">{(c.customer_active === false || c.customer_name === 'ANONYM') ? '—' : c.customer_name}</td>
                     <td data-label="Insats" className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.effort_name}</td>
                     <td data-label="Startdatum" className="py-2 mobile:py-3 px-2 mobile:px-4 text-xs mobile:text-sm">
                       {new Date(c.created_at).toLocaleDateString('sv-SE')}

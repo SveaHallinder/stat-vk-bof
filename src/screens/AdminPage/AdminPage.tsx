@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { MoreHorizontal, PlusCircle, RefreshCcw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,11 +65,7 @@ export const AdminPage = (): JSX.Element => {
   const [resetPasswordCopied, setResetPasswordCopied] = React.useState(false);
   const { refreshKey, triggerRefresh } = useRefresh();
 
-  useEffect(() => {
-    fetchEfforts();
-  }, [showInactiveEfforts, refreshKey]);
-
-  async function fetchEfforts() {
+  const fetchEfforts = useCallback(async () => {
     try {
       const url = showInactiveEfforts ? `/efforts?all=true` : `/efforts`;
       const res = await api(url);
@@ -80,13 +76,13 @@ export const AdminPage = (): JSX.Element => {
       toast.error("Kunde inte hämta insatser");
       setInsatser([]);
     }
-  }
+  }, [showInactiveEfforts]);
 
   useEffect(() => {
-    fetchHandlers();
-  }, [showInactive, refreshKey]);
+    fetchEfforts();
+  }, [fetchEfforts, refreshKey]);
 
-  async function fetchHandlers() {
+  const fetchHandlers = useCallback(async () => {
     try {
       const url = showInactive ? `/handlers?all=true` : `/handlers`;
       const res = await api(url);
@@ -97,7 +93,11 @@ export const AdminPage = (): JSX.Element => {
       toast.error("Kunde inte hämta behandlare");
       setHandlers([]);
     }
-  }
+  }, [showInactive]);
+
+  useEffect(() => {
+    fetchHandlers();
+  }, [fetchHandlers, refreshKey]);
 
   useEffect(() => {
     fetchInvites();

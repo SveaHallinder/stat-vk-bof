@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { getEfforts } from "@/lib/api";
+import { useRefresh } from "@/contexts/RefreshContext";
+import type { Effort } from "@/types/types";
 
-interface Effort {
+type EffortOption = {
   id: string;
   name: string;
-}
+};
 
 interface InsatsComboboxProps {
   value: string;
@@ -13,22 +15,23 @@ interface InsatsComboboxProps {
 }
 
 export const InsatsCombobox = ({ value, onChange, placeholder }: InsatsComboboxProps) => {
-  const [insatser, setInsatser] = useState<Effort[]>([]);
+  const [insatser, setInsatser] = useState<EffortOption[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { refreshKey } = useRefresh();
 
   useEffect(() => {
     async function fetchEfforts() {
       try {
         const data = await getEfforts();
-        setInsatser(data.map((i: any) => ({ id: i.id.toString(), name: i.name })));
+        setInsatser(data.map((effort: Effort) => ({ id: effort.id.toString(), name: effort.name })));
       } catch (err) {
         setInsatser([]);
       }
     }
     fetchEfforts();
-  }, []);
+  }, [refreshKey]);
 
   // Hantera klick utanför
   useEffect(() => {

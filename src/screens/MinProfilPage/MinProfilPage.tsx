@@ -6,6 +6,7 @@ import { LogOut } from 'lucide-react';
 import { Customer, CaseWithNames } from '../../types/types';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { getRoleLabel } from "@/lib/roleLabels";
+import type { User } from '../../contexts/AuthContext';
 
 // Optimized customer row component with React.memo
 const CustomerRow = React.memo<{
@@ -42,7 +43,7 @@ const CustomerRow = React.memo<{
 
 // Optimized profile info component with React.memo
 const ProfileInfo = React.memo<{
-  user: any;
+  user: User | null;
   onLogout: () => void;
 }>(({ user, onLogout }) => (
   <div className="bg-white rounded-lg shadow p-6">
@@ -121,6 +122,10 @@ const CustomersTable = React.memo<{
   </div>
 ));
 
+CustomerRow.displayName = 'CustomerRow';
+ProfileInfo.displayName = 'ProfileInfo';
+CustomersTable.displayName = 'CustomersTable';
+
 const MinProfilPage: React.FC = () => {
   const { user, logout } = useAuth();
   const { refreshKey } = useRefresh();
@@ -149,15 +154,10 @@ const MinProfilPage: React.FC = () => {
     if (!user) return [];
     const userCustomerIds = [...new Set(userCases.map(c => c.customer_id))];
     return customers.filter(c => userCustomerIds.includes(c.id));
-  }, [customers, userCases]);
+  }, [customers, userCases, user]);
 
-  useEffect(() => {
-    if (user) {
-      fetchUserData();
-    }
-  }, [user, refreshKey]);
-
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
+    if (!user) return;
     try {
       // Hämta användarens kunder och insatsen
       const [customersRes, casesRes] = await Promise.all([
@@ -186,7 +186,11 @@ const MinProfilPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData, refreshKey]);
 
   if (loading) {
     return (

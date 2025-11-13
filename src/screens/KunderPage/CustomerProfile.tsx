@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Layout } from "@/components/Layout";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,15 +10,25 @@ import { getCustomer, updateCustomer, getCustomerEfforts, getShiftsForCase, upda
 import { api } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRefresh } from "@/contexts/RefreshContext";
-import type { CaseWithNames, ShiftEntry, ShiftStatus, Effort } from "@/types/types";
+import type { CaseWithNames, ShiftEntry, ShiftStatus, Effort, Customer } from "@/types/types";
+import type { HandlerPublic } from "@/lib/api";
 import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
 import toast from "react-hot-toast";
 
-export const CustomerProfile = () => {
+type EditableCustomer = {
+  initials: string;
+  birthYear: string;
+  gender: string;
+  startDate: string;
+  active: boolean;
+  isGroup: boolean;
+};
+
+export const CustomerProfile = (): JSX.Element => {
   const { id } = useParams();
-  const [customer, setCustomer] = useState<any>(null);
+  const [customer, setCustomer] = useState<Customer | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const [editCustomer, setEditCustomer] = useState<any>(null);
+  const [editCustomer, setEditCustomer] = useState<EditableCustomer | null>(null);
   const [editCustomerErrors, setEditCustomerErrors] = useState<{ initials?: string; birthYear?: string; gender?: string }>({});
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
@@ -49,7 +59,7 @@ export const CustomerProfile = () => {
   const [newCase, setNewCase] = useState({ effortId: "", handler1Id: "", handler2Id: "" });
   const [savingCase, setSavingCase] = useState(false);
   const [efforts, setEfforts] = useState<Effort[]>([]);
-  const [handlers, setHandlers] = useState<any[]>([]);
+  const [handlers, setHandlers] = useState<HandlerPublic[]>([]);
   const [pii, setPii] = useState<{ initials: string; gender: string } | null>(null);
   const { user } = useAuth();
   const { refreshKey, triggerRefresh } = useRefresh();
@@ -57,6 +67,23 @@ export const CustomerProfile = () => {
   
   // Toggle för att visa/dölja avslutade insatsen
   const [showClosedCases, setShowClosedCases] = useState(false);
+
+  const handleToggleCase = useCallback(async (c: CaseWithNames) => {
+    const isOpen = openCaseId === c.id;
+    if (isOpen) {
+      setOpenCaseId(null);
+      return;
+    }
+    setOpenCaseId(c.id);
+    if (!shiftsByCase[c.id]) {
+      try {
+        const rows = await getShiftsForCase(c.id.toString());
+        setShiftsByCase(prev => ({ ...prev, [c.id]: rows }));
+      } catch {
+        toast.error("Kunde inte hämta besök");
+      }
+    }
+  }, [openCaseId, shiftsByCase]);
 
 
   useEffect(() => {
@@ -97,7 +124,7 @@ export const CustomerProfile = () => {
     if (match) {
       handleToggleCase(match);
     }
-  }, [cases, location.state]);
+  }, [cases, location.state, handleToggleCase]);
 
   // Öppna rätt insats automatiskt om caseId finns i URL
   useEffect(() => {
@@ -119,14 +146,14 @@ export const CustomerProfile = () => {
         }, 100);
       }
     }
-  }, [cases, location.search]);
+  }, [cases, location.search, handleToggleCase]);
 
   if (!customer) {
     return <div className="p-8 text-center text-gray-500">Laddar kunddata...</div>;
   }
 
   const isGroup = Boolean(customer.isGroup ?? customer.is_group);
-  const displayInitials = customer?.active ? customer.initials : '—';
+  const displayInitials = customer.active ? customer.initials : '—';
   const baseTitle = isGroup
     ? `${displayInitials} – Grupp`
     : `${displayInitials} - ${customer.gender ?? '—'} (${customer.birthYear ?? '—'})`;
@@ -135,17 +162,6 @@ export const CustomerProfile = () => {
     : null;
   const customerTitle = baseTitle;
   const effectiveTitle = piiTitle ?? customerTitle;
-
-  function validateEditCustomer(c: any) {
-    const err: { initials?: string; birthYear?: string; gender?: string } = {};
-    if (!c.initials) err.initials = "Obligatoriskt fält";
-    if (!c.isGroup) {
-      if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
-      else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
-      if (!c.gender) err.gender = "Obligatoriskt fält";
-    }
-    return err;
-  }
 
   const handleOpenEdit = () => {
     setEditCustomer({
@@ -160,9 +176,21 @@ export const CustomerProfile = () => {
     setEditOpen(true);
   };
 
-  const handleEditCustomerChange = (field: string, value: any) => {
-    setEditCustomer((prev: any) => {
-      let updated;
+  function validateEditCustomer(c: EditableCustomer) {
+    const err: { initials?: string; birthYear?: string; gender?: string } = {};
+    if (!c.initials) err.initials = "Obligatoriskt fält";
+    if (!c.isGroup) {
+      if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
+      else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
+      if (!c.gender) err.gender = "Obligatoriskt fält";
+    }
+    return err;
+  }
+
+  const handleEditCustomerChange = (field: keyof EditableCustomer, value: string | boolean) => {
+    setEditCustomer((prev) => {
+      if (!prev) return null;
+      let updated: EditableCustomer;
       if (field === 'active') {
         updated = { ...prev, active: value === 'Aktiv' || value === true };
       } else if (field === 'isGroup') {
@@ -174,10 +202,9 @@ export const CustomerProfile = () => {
           birthYear: isChecked ? '' : prev.birthYear,
         };
       } else if (field === 'initials' && typeof value === 'string') {
-        // Konvertera initialer till versaler automatiskt
         updated = { ...prev, [field]: value.toUpperCase() };
       } else {
-        updated = { ...prev, [field]: value };
+        updated = { ...prev, [field]: value as string };
       }
       setEditCustomerErrors(validateEditCustomer(updated));
       return updated;
@@ -236,24 +263,6 @@ export const CustomerProfile = () => {
       triggerRefresh();
     } catch (e) {
       toast.error("Kunde inte uppdatera insats");
-    }
-  }
-
-  // Shift handling
-  async function handleToggleCase(c: CaseWithNames) {
-    const isOpen = openCaseId === c.id;
-    if (isOpen) {
-      setOpenCaseId(null);
-      return;
-    }
-    setOpenCaseId(c.id);
-    if (!shiftsByCase[c.id]) {
-      try {
-        const rows = await getShiftsForCase(c.id.toString());
-        setShiftsByCase(prev => ({ ...prev, [c.id]: rows }));
-      } catch {
-        toast.error("Kunde inte hämta besök");
-      }
     }
   }
 
@@ -388,8 +397,9 @@ export const CustomerProfile = () => {
       setShowNewCase(false);
       toast.success("Ny insats skapad!");
       triggerRefresh();
-    } catch (error: any) {
-      if (error.message && error.message.includes('samma kombination finns redan')) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes('samma kombination finns redan')) {
         toast.error('En aktiv insats med samma kombination finns redan för denna kund.');
       } else {
         toast.error("Kunde inte skapa insats");
@@ -421,6 +431,10 @@ export const CustomerProfile = () => {
       toast.error("Kunde inte återuppta insats");
     }
   };
+
+  if (!customer) {
+    return <div className="p-8 text-center text-gray-500">Laddar kunddata...</div>;
+  }
 
   return (
     <Layout title="Kundprofil">

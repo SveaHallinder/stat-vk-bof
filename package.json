@@ -6,9 +6,12 @@
   "description": "Vallentuna Kommun - Statistik och tidsregistrering system",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "lint": "eslint --ext .ts,.tsx src",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\""
   },
-  "dependencies": {
+"dependencies": {
     "@headlessui/react": "^2.2.4",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-label": "^2.1.7",
@@ -36,15 +39,23 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.2",
     "xlsx": "^0.18.5",
-    "zod": "^4.1.4"
+    "zod": "^4.1.4",
+    "react-error-boundary": "^4.0.1"
   },
   "devDependencies": {
     "@types/pg": "^8.15.4",
     "@types/react": "^18.2.0",
     "@types/react-dom": "18.2.0",
     "@vitejs/plugin-react": "4.3.4",
+    "@typescript-eslint/eslint-plugin": "^6.7.2",
+    "@typescript-eslint/parser": "^6.7.2",
     "esbuild": "0.24.0",
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "15.12.0",
+    "prettier": "^3.3.1",
     "tailwindcss": "3.4.16",
     "vite": "^6.0.4"
   },

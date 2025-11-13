@@ -70,14 +70,17 @@ export const userSchema = z.object({
 });
 
 // Validering för lösenordsåterställning
+const specialCharacters = "!@#$%^&*()_+-=[]{};':\"\\|,.<>/?";
+const containsSpecialCharacter = (value: string): boolean =>
+  specialCharacters.split('').some(char => value.includes(char));
+
 export const passwordResetSchema = z.object({
   password: z.string()
     .min(8, 'Lösenord måste vara minst 8 tecken')
     .regex(/^(?=.*[a-z])/, 'Lösenord måste innehålla minst en liten bokstav')
     .regex(/^(?=.*[A-Z])/, 'Lösenord måste innehålla minst en stor bokstav')
     .regex(/^(?=.*\d)/, 'Lösenord måste innehålla minst en siffra')
-    .regex(/^(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/, 'Lösenord måste innehålla minst ett specialtecken')
-    .refine((password) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password), {
+    .refine(containsSpecialCharacter, {
       message: 'Lösenord måste innehålla minst ett specialtecken',
       path: ['password']
     }),

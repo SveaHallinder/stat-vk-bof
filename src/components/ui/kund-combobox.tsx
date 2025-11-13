@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { getCustomers } from "@/lib/api";
+import { useRefresh } from "@/contexts/RefreshContext";
+import type { Customer } from "@/types/types";
 
-interface Customer {
+type CustomerOption = {
   id: string;
   label: string;
-}
+};
 
 interface KundComboboxProps {
   value: string;
@@ -13,20 +15,22 @@ interface KundComboboxProps {
 }
 
 export const KundCombobox = ({ value, onChange, placeholder }: KundComboboxProps) => {
-  const [kunder, setKunder] = useState<Customer[]>([]);
+  const [kunder, setKunder] = useState<CustomerOption[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { refreshKey } = useRefresh();
 
   useEffect(() => {
     async function fetchCustomers() {
       try {
         const data = await getCustomers();
         setKunder(
-          data.map((k: any) => {
+          data.map((k: Customer) => {
             const isGroup = k.is_group || k.isGroup;
             const genderPart = isGroup ? 'Grupp' : (k.gender ?? '');
-            const birthPart = isGroup || !k.birthYear ? '' : `(${k.birthYear})`;
+            const birthValue = typeof k.birthYear !== 'undefined' ? k.birthYear : k.birth_year;
+            const birthPart = isGroup || !birthValue ? '' : `(${birthValue})`;
             const label = [k.initials, genderPart, birthPart].filter(Boolean).join(' ').trim();
             return {
               id: k.id.toString(),
@@ -39,7 +43,7 @@ export const KundCombobox = ({ value, onChange, placeholder }: KundComboboxProps
       }
     }
     fetchCustomers();
-  }, []);
+  }, [refreshKey]);
 
   // Hantera klick utanför
   useEffect(() => {

@@ -3,13 +3,14 @@ export interface Customer {
   initials: string;
   gender: string | null;
   birth_year: number | null;
-  birthYear?: number | null;
+  birthYear?: number | string | null;
   created_at: string;
   active: boolean;
   is_protected?: boolean;
   can_view?: boolean;
   is_group?: boolean;
   isGroup?: boolean;
+  label?: string;
 }
 
 export interface Effort {
@@ -104,5 +105,7 @@ export interface StatsSummary {
   avbokningsgrad: number;
   aktiva_kunder_total?: number;
   aktiva_insatser_total?: number;
+  ny_antal_kunder?: number;
+  ny_antal_insatser?: number;
 }
   

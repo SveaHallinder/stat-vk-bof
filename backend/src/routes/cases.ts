@@ -5,6 +5,7 @@ import { generateAlias } from "../utils/alias";
 import { validateCaseData, sanitizeTextInputs } from "../middleware/validation";
 import { resolvePagination } from "../utils/pagination";
 import { getAuditLogger } from "../utils/auditLogger";
+import { invalidateStatsCache } from "../utils/cache";
 
 export default function cases(pool: Pool) {
   const router = Router();
@@ -114,6 +115,7 @@ export default function cases(pool: Pool) {
         [Number(customer_id), Number(handler1_id), handler2_id === "" || handler2_id === "0" || !handler2_id ? null : Number(handler2_id), Number(effort_id), active !== false]
       );
       const createdCase = r.rows[0];
+      invalidateStatsCache();
       res.status(201).json(createdCase);
 
       if (req.user) {
@@ -277,6 +279,7 @@ export default function cases(pool: Pool) {
       if (!existingRow) return res.status(404).json({ error: "Insats hittades inte" });
       const r = await pool.query("UPDATE cases SET active = FALSE WHERE id = $1 RETURNING *", [caseId]);
       const updatedCase = r.rows[0];
+      invalidateStatsCache();
       res.json(updatedCase);
 
       if (req.user) {
@@ -303,6 +306,7 @@ export default function cases(pool: Pool) {
       if (!existingRow) return res.status(404).json({ error: "Insats hittades inte" });
       const r = await pool.query("UPDATE cases SET active = TRUE WHERE id = $1 RETURNING *", [caseId]);
       const updatedCase = r.rows[0];
+      invalidateStatsCache();
       res.json(updatedCase);
 
       if (req.user) {
@@ -420,6 +424,7 @@ export default function cases(pool: Pool) {
       );
       if (r.rows.length === 0) return res.status(404).json({ error: "Insats hittades inte" });
       const updatedCase = r.rows[0];
+      invalidateStatsCache();
       res.json(updatedCase);
 
       if (req.user) {
