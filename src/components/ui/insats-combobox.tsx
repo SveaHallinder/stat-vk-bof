@@ -24,7 +24,7 @@ export const InsatsCombobox = ({ value, onChange, placeholder }: InsatsComboboxP
     async function fetchEfforts() {
       try {
         const data = await getEfforts();
-        setInsatser(data.map((i: any) => ({ id: i.id.toString(), name: i.name })));
+        setInsatser(data.map((effort: Effort) => ({ id: effort.id.toString(), name: effort.name })));
       } catch (err) {
         setInsatser([]);
       }

@@ -25,7 +25,7 @@ export const KundCombobox = ({ value, onChange, placeholder }: KundComboboxProps
       try {
         const data = await getCustomers();
         setKunder(
-          data.map((k: any) => {
+          data.map((k: Customer) => {
             const isGroup = k.is_group || k.isGroup;
             const genderPart = isGroup ? 'Grupp' : (k.gender ?? '');
             const birthPart = isGroup || !k.birthYear ? '' : `(${k.birthYear})`;

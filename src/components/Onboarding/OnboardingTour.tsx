@@ -27,14 +27,19 @@ export const OnboardingTour: React.FC = () => {
   // Poll for target element when step changes
   useEffect(() => {
     if (!active) return;
-    setWaiting(false);
-    setTargetRect(null);
+    const initId = requestAnimationFrame(() => {
+      setWaiting(false);
+      setTargetRect(null);
+    });
 
     // Immediate attempt
     const immediate = getElementRect(step.selector);
     if (immediate) {
-      setTargetRect(immediate);
-      return;
+      const immediateFrame = requestAnimationFrame(() => setTargetRect(immediate));
+      return () => {
+        cancelAnimationFrame(immediateFrame);
+        cancelAnimationFrame(initId);
+      };
     }
 
     // Poll up to 2 seconds for dynamic content
@@ -62,6 +67,7 @@ export const OnboardingTour: React.FC = () => {
     return () => {
       if (pollRef.current) cancelAnimationFrame(pollRef.current);
       pollRef.current = null;
+      cancelAnimationFrame(initId);
     };
   }, [active, stepIndex, step?.selector]);
 
@@ -171,4 +177,3 @@ export const OnboardingTour: React.FC = () => {
   if (!active) return null;
   return overlay;
 };
-

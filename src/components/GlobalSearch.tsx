@@ -36,10 +36,10 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
         setResults(searchResults);
       }
     } catch (error) {
-      if (searchId === latestSearchId.current) {
-        setResults([]);
-        toast.error(error instanceof Error ? error.message : "Kunde inte söka just nu");
-      }
+    if (searchId === latestSearchId.current) {
+      setResults([]);
+      toast.error(error instanceof Error ? error.message : "Kunde inte söka just nu");
+    }
     } finally {
       if (searchId === latestSearchId.current) {
         setIsLoading(false);
@@ -69,8 +69,8 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
   const handleResultClick = (result: GlobalSearchResult) => {
     // Blockera åtkomst till skyddad kund för icke-behöriga
     if (result.type === 'customer') {
-      const c: any = result.data;
-      if (c?.is_protected && c?.can_view === false) {
+      const customerData = result.data as { is_protected?: boolean; can_view?: boolean } | undefined;
+      if (customerData?.is_protected && customerData?.can_view === false) {
         toast.error('Åtkomst nekad till skyddad kund');
         return;
       }
@@ -181,8 +181,8 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
               ))}
             </div>
           ) : searchQuery && !isLoading ? (
-            <div className="p-4 text-center text-gray-500">
-              Inga resultat hittades för "{searchQuery}"
+          <div className="p-4 text-center text-gray-500">
+              Inga resultat hittades för “{searchQuery}”
             </div>
           ) : null}
         </div>

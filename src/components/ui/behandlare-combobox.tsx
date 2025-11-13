@@ -31,11 +31,10 @@ export const BehandlareCombobox: React.FC<BehandlareComboboxProps> = ({ value, o
         const endpoint = user?.role === 'admin' ? '/handlers' : '/handlers/public';
         const res = await api(endpoint);
         if (!res.ok) throw new Error();
-        const data = await res.json();
-        
+        const data = (await res.json()) as Handler[];
         // Filtrera bara aktiva behandlare om vi använder admin-endpoint
         if (user?.role === 'admin') {
-          setHandlers(data.filter((h: any) => h.active !== false));
+          setHandlers(data.filter(h => h.active !== false));
         } else {
           // För public endpoint behöver vi inte filtrera eftersom den redan returnerar aktiva
           setHandlers(data);

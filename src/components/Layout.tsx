@@ -7,6 +7,7 @@ import { User, Menu, HelpCircle } from "lucide-react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import { ApiHealthBanner } from "@/components/ApiHealthBanner";
 import { getRoleLabel } from "@/lib/roleLabels";
+import { GlobalSearchResult } from "@/types/types";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,11 +23,13 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
   const [fadeKey, setFadeKey] = useState(0);
 
   useEffect(() => {
-    // Bump key på varje route‑byte för att trigga mjuk fade‑in
-    setFadeKey(k => k + 1);
+    const frame = window.requestAnimationFrame(() => {
+      setFadeKey(k => k + 1);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [location.pathname]);
 
-  const handleSearchResult = (result: any) => {
+  const handleSearchResult = (result: GlobalSearchResult) => {
     switch (result.type) {
       case 'customer': {
         navigate(`/kunder/${result.id}`);
@@ -42,13 +45,13 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
         break;
       }
       case 'case': {
-        const c = result.data;
+        const c = result.data as { customer_id?: number } | undefined;
         if (c?.customer_id) navigate(`/kunder/${c.customer_id}?caseId=${result.id}`);
         else navigate('/arendelista');
         break;
       }
       case 'shift': {
-        const s = result.data;
+        const s = result.data as { customer_id?: number; case_id?: number } | undefined;
         if (s?.customer_id) navigate(`/kunder/${s.customer_id}?caseId=${s.case_id}`);
         else if (s?.case_id) navigate(`/arendelista?caseId=${s.case_id}`);
         else navigate('/registrera-tid');

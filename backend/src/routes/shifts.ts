@@ -5,6 +5,7 @@ import { generateAlias } from "../utils/alias";
 import { validateShiftData, sanitizeTextInputs } from "../middleware/validation";
 import { resolvePagination } from "../utils/pagination";
 import { getAuditLogger } from "../utils/auditLogger";
+import { invalidateStatsCache } from "../utils/cache";
 
 export default function shifts(pool: Pool) {
   const router = Router();
@@ -224,6 +225,7 @@ export default function shifts(pool: Pool) {
       );
       const createdShift = result.rows[0];
       res.status(201).json(createdShift);
+      invalidateStatsCache();
 
       if (req.user) {
         await logSafe(() => auditLogger.logCreate(
@@ -275,6 +277,7 @@ export default function shifts(pool: Pool) {
       }
       const updatedShift = result.rows[0];
       res.json(updatedShift);
+      invalidateStatsCache();
 
       if (req.user) {
         await logSafe(() => auditLogger.logUpdate(
@@ -303,10 +306,14 @@ export default function shifts(pool: Pool) {
         [caseId]
       );
       
+      const rowCount = result.rowCount ?? 0;
       res.json({ 
-        message: `Inaktiverade ${result.rowCount} shifts för case ${caseId}`,
-        deactivatedCount: result.rowCount 
+        message: `Inaktiverade ${rowCount} shifts för case ${caseId}`,
+        deactivatedCount: rowCount 
       });
+      if (rowCount > 0) {
+        invalidateStatsCache();
+      }
     } catch (e) {
       console.error("Error deactivating shifts for case:", e);
       res.status(500).json({ error: "Kunde inte inaktivera shifts för case" });

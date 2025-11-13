@@ -33,3 +33,7 @@ export class SimpleCache<T = unknown> {
 }
 
 export const statsCache = new SimpleCache<any>(30_000);
+
+export const invalidateStatsCache = (): void => {
+  statsCache.clear();
+};
