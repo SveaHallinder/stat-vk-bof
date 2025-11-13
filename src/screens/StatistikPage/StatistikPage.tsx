@@ -84,6 +84,16 @@ const viewOptions = [
   { value: 'birthYear', label: 'Födelseår' },
 ] as const;
 
+type StatsSeriesRow = {
+  handler_name?: string;
+  effort_name?: string;
+  gender?: string;
+  label?: string;
+  antal_besok?: number | string;
+  totala_timmar?: number | string;
+  antal_kunder?: number | string;
+};
+
 type ViewMode = typeof viewOptions[number]['value'];
 
 const useMediaQuery = (query: string) => {
@@ -93,11 +103,9 @@ const useMediaQuery = (query: string) => {
   });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return undefined;
     const mediaQuery = window.matchMedia(query);
     const listener = (event: MediaQueryListEvent) => setMatches(event.matches);
-
-    setMatches(mediaQuery.matches);
 
     if (mediaQuery.addEventListener) mediaQuery.addEventListener('change', listener);
     else mediaQuery.addListener(listener);
@@ -133,10 +141,10 @@ export const StatistikPage = (): JSX.Element => {
   const [dateRange, setDateRange] = useState<{ from: Date|null, to: Date|null }>({ from: null, to: null });
 
   // Stapeldiagram-data
-  const [effortData, setEffortData] = useState<any[] | null>(null);
-  const [handlerData, setHandlerData] = useState<any[] | null>(null);
-  const [genderData, setGenderData] = useState<any[] | null>(null);
-  const [birthYearData, setBirthYearData] = useState<any[] | null>(null);
+  const [effortData, setEffortData] = useState<StatsSeriesRow[] | null>(null);
+  const [handlerData, setHandlerData] = useState<StatsSeriesRow[] | null>(null);
+  const [genderData, setGenderData] = useState<StatsSeriesRow[] | null>(null);
+  const [birthYearData, setBirthYearData] = useState<StatsSeriesRow[] | null>(null);
   const [selectedGenders, setSelectedGenders] = useState<string[]>([]);
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
   const [selectedEfforts, setSelectedEfforts] = useState<string[]>([]);
@@ -204,7 +212,7 @@ export const StatistikPage = (): JSX.Element => {
           secondarySuffix: ' h',
           showChart: true,
           xAxisLabel: 'Kön',
-          data: (genderData || []).map((d: any) => ({
+          data: (genderData || []).map((d: StatsSeriesRow) => ({
             label: d.gender ?? 'Okänd',
             primaryValue: Number(d.antal_besok) || 0,
             secondaryValue: Number(d.totala_timmar) || 0,
@@ -220,7 +228,7 @@ export const StatistikPage = (): JSX.Element => {
           secondarySuffix: '',
           showChart: true,
           xAxisLabel: 'Födelseår',
-          data: (birthYearData || []).map((d: any) => ({
+          data: (birthYearData || []).map((d: StatsSeriesRow) => ({
             label: d.label ?? 'Okänt',
             primaryValue: Number(d.antal_besok) || 0,
             secondaryValue: Number(d.antal_kunder) || 0,
@@ -236,8 +244,8 @@ export const StatistikPage = (): JSX.Element => {
           secondarySuffix: ' h',
           showChart: true,
           xAxisLabel: 'Insats',
-          data: (effortData || []).map((d: any) => ({
-            label: d.effort_name,
+          data: (effortData || []).map((d: StatsSeriesRow) => ({
+            label: d.effort_name ?? 'Okänt',
             primaryValue: Number(d.antal_besok) || 0,
             secondaryValue: Number(d.totala_timmar) || 0,
             meta: formatMeta({ customers: Number(d.antal_kunder) || 0, totalHours: Number(d.totala_timmar) || 0 }),
@@ -281,22 +289,22 @@ export const StatistikPage = (): JSX.Element => {
   const formatHours = (value: number) => Number(value || 0).toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' h';
 
   const renderAggregatedTable = () => {
-    let rows: any[] = [];
-    let columns: { header: string; render: (row: any) => ReactNode; align?: 'left' | 'right' }[] = [];
+    let rows: StatsSeriesRow[] = [];
+    let columns: { header: string; render: (row: StatsSeriesRow) => ReactNode; align?: 'left' | 'right' }[] = [];
 
     if (viewMode === 'handler') {
       rows = handlerData || [];
       columns = [
         { header: 'Behandlare', render: row => row.handler_name || 'Okänd' },
         { header: 'Besök', render: row => Number(row.antal_besok || 0).toLocaleString('sv-SE'), align: 'right' },
-        { header: 'Totala timmar', render: row => formatHours(row.totala_timmar || 0), align: 'right' },
+        { header: 'Totala timmar', render: row => formatHours(Number(row.totala_timmar || 0)), align: 'right' },
       ];
     } else if (viewMode === 'gender') {
       rows = genderData || [];
       columns = [
         { header: 'Kön', render: row => row.gender || 'Okänd' },
         { header: 'Besök', render: row => Number(row.antal_besok || 0).toLocaleString('sv-SE'), align: 'right' },
-        { header: 'Totala timmar', render: row => formatHours(row.totala_timmar || 0), align: 'right' },
+        { header: 'Totala timmar', render: row => formatHours(Number(row.totala_timmar || 0)), align: 'right' },
       ];
     } else if (viewMode === 'birthYear') {
       rows = birthYearData || [];
@@ -304,14 +312,14 @@ export const StatistikPage = (): JSX.Element => {
         { header: 'Födelseår', render: row => row.label ?? 'Okänt' },
         { header: 'Kunder', render: row => Number(row.antal_kunder || 0).toLocaleString('sv-SE'), align: 'right' },
         { header: 'Besök', render: row => Number(row.antal_besok || 0).toLocaleString('sv-SE'), align: 'right' },
-        { header: 'Totala timmar', render: row => formatHours(row.totala_timmar || 0), align: 'right' },
+        { header: 'Totala timmar', render: row => formatHours(Number(row.totala_timmar || 0)), align: 'right' },
       ];
     } else {
       rows = effortData || [];
       columns = [
         { header: 'Insats', render: row => row.effort_name || 'Okänd' },
         { header: 'Besök', render: row => Number(row.antal_besok || 0).toLocaleString('sv-SE'), align: 'right' },
-        { header: 'Totala timmar', render: row => formatHours(row.totala_timmar || 0), align: 'right' },
+        { header: 'Totala timmar', render: row => formatHours(Number(row.totala_timmar || 0)), align: 'right' },
         { header: 'Kunder', render: row => Number(row.antal_kunder || 0).toLocaleString('sv-SE'), align: 'right' },
       ];
     }
@@ -806,24 +814,32 @@ export const StatistikPage = (): JSX.Element => {
         "Behandlare 2"
       ];
 
-      const detailRows = rawData.map(item => [
-        item.shift_id ?? '',
-        item.date ? new Date(item.date).toISOString().slice(0, 10) : '',
-        item.status ?? '',
-        Number(item.hours ?? 0),
-        item.effort_name ?? '',
-        item.effort_id ?? '',
-        item.customer_initials ?? '',
-        item.customer_id ?? '',
-        item.customer_is_group ? 'Grupp' : 'Individ',
-        item.customer_birth_year ?? '',
-        item.customer_gender ?? '',
-        item.case_id ?? '',
-        item.case_active ? 'Ja' : 'Nej',
-        item.customer_active ? 'Ja' : 'Nej',
-        item.handler1_name ?? '',
-        item.handler2_name ?? ''
-      ]);
+      const detailRows = rawData.map(item => {
+        const dateValue = item.date;
+        const formattedDate =
+          typeof dateValue === 'string' || typeof dateValue === 'number'
+            ? new Date(dateValue).toISOString().slice(0, 10)
+            : '';
+
+        return [
+          item.shift_id ?? '',
+          formattedDate,
+          item.status ?? '',
+          Number(item.hours ?? 0),
+          item.effort_name ?? '',
+          item.effort_id ?? '',
+          item.customer_initials ?? '',
+          item.customer_id ?? '',
+          item.customer_is_group ? 'Grupp' : 'Individ',
+          item.customer_birth_year ?? '',
+          item.customer_gender ?? '',
+          item.case_id ?? '',
+          item.case_active ? 'Ja' : 'Nej',
+          item.customer_active ? 'Ja' : 'Nej',
+          item.handler1_name ?? '',
+          item.handler2_name ?? ''
+        ];
+      });
 
       const detailSummary = rawData.reduce((acc, item) => acc + Number(item.hours ?? 0), 0);
       const detailSummaryRow = Array(detailHeader.length).fill('');

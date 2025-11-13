@@ -43,7 +43,8 @@ export const OnboardingTour: React.FC = () => {
     }
 
     // Poll up to 2 seconds for dynamic content
-    setWaiting(true);
+    let waitingId: number | null = null;
+    waitingId = requestAnimationFrame(() => setWaiting(true));
     let elapsed = 0;
     const start = performance.now();
     const poll = () => {
@@ -68,6 +69,7 @@ export const OnboardingTour: React.FC = () => {
       if (pollRef.current) cancelAnimationFrame(pollRef.current);
       pollRef.current = null;
       cancelAnimationFrame(initId);
+      if (waitingId) cancelAnimationFrame(waitingId);
     };
   }, [active, stepIndex, step?.selector]);
 

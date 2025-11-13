@@ -49,10 +49,11 @@ export async function api(path: string, options: RequestInit = {}): Promise<Resp
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
-  const headers: Record<string, string> = {
-    ...(options.headers as any || {}),
-    ...getAuthHeaders(),
-  };
+  const headers = new Headers(options.headers);
+  const authHeaders = getAuthHeaders();
+  Object.entries(authHeaders).forEach(([key, value]) => {
+    headers.set(key, value);
+  });
 
   // Default timeout if no signal provided
   let controller: AbortController | undefined;
@@ -65,8 +66,7 @@ export async function api(path: string, options: RequestInit = {}): Promise<Resp
     // Ensure timeout cleared after first attempt completes
     // We'll clear it below by tracking controller existence only
     // (No-op if aborted earlier)
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    (controller.signal as any).addEventListener?.('abort', () => clearTimeout(t));
+    controller.signal.addEventListener?.('abort', () => clearTimeout(t));
   }
 
   const doFetch = () => fetch(url, { ...options, headers, signal });
@@ -79,10 +79,9 @@ export async function api(path: string, options: RequestInit = {}): Promise<Resp
     const newAccess = await tryRefreshAccessToken();
     if (newAccess) {
       // retry with new token
-      const retryHeaders: Record<string, string> = {
-        ...(options.headers as any || {}),
-        Authorization: `Bearer ${newAccess}`,
-      };
+      const retryHeaders = new Headers(options.headers);
+      Object.entries(getAuthHeaders()).forEach(([key, value]) => retryHeaders.set(key, value));
+      retryHeaders.set('Authorization', `Bearer ${newAccess}`);
       res = await fetch(url, { ...options, headers: retryHeaders, signal });
     }
   }
