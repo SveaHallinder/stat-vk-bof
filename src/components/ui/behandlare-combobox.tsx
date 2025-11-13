@@ -2,12 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRefresh } from "@/contexts/RefreshContext";
-
-interface Handler {
-  id: number;
-  name: string;
-  email: string;
-}
+import type { Handler } from "@/types/types";
 
 interface BehandlareComboboxProps {
   value: string;
