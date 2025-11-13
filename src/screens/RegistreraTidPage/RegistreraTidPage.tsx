@@ -16,7 +16,7 @@ import { HandlerPublic } from "@/lib/api";
 import { LoadingSpinner, Skeleton } from "@/components/ui/loading-spinner";
 import { enhancedToast } from "@/components/ui/enhanced-toast";
 import { validateForm, schemas } from "@/lib/validation";
-import { useKeyboardNavigation, useFocusTrap } from "@/lib/keyboard-navigation";
+import { useFocusTrap } from "@/lib/keyboard-navigation";
 
 // Hjälpfunktion för att få dagens datum
 function today(): string {
@@ -30,6 +30,22 @@ interface TimeEntry {
   hours: number;
   status: "Utförd" | "Avbokad";
 }
+
+type NamedError = { name?: string };
+const hasNameProperty = (error: unknown): error is NamedError =>
+  typeof error === 'object' && error !== null && 'name' in error;
+
+const isAbortError = (error: unknown): boolean =>
+  hasNameProperty(error) && error.name === 'AbortError';
+
+type ApiErrorPayload = { error?: unknown };
+const extractServerError = (error: unknown): string => {
+  if (typeof error === 'object' && error !== null && 'error' in error) {
+    const payload = error as ApiErrorPayload;
+    return typeof payload.error === 'string' ? payload.error : '';
+  }
+  return '';
+};
 
 export const RegisteraTidPage = (): JSX.Element => {
   const { user } = useAuth();
@@ -70,9 +86,6 @@ export const RegisteraTidPage = (): JSX.Element => {
   const [editingShift, setEditingShift] = useState<ShiftEntry | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
-  
-  // Keyboard navigation
-  const { focusFirst: _focusFirst } = useKeyboardNavigation();
   
   // Focus trap för modal
   const modalFocusTrapRef = useFocusTrap(showEditModal);
@@ -214,7 +227,7 @@ export const RegisteraTidPage = (): JSX.Element => {
       setHandlers(handlersData);
       setShifts(shiftsData);
     } catch (error) {
-      if ((error as any)?.name !== 'AbortError') {
+      if (!isAbortError(error)) {
         console.error("Error loading data:", error);
         setDataError('Kunde inte ladda data. Kontrollera anslutning och försök igen.');
         enhancedToast.error("Kunde inte ladda data.");
@@ -258,7 +271,7 @@ export const RegisteraTidPage = (): JSX.Element => {
   };
 
   // Uppdatera tidsregistrering
-  const updateTimeEntry = (id: string, field: keyof TimeEntry, value: any) => {
+  const updateTimeEntry = <K extends keyof TimeEntry>(id: string, field: K, value: TimeEntry[K]) => {
     setTimeEntries(prev => prev.map(entry => 
       entry.id === id ? { ...entry, [field]: value } : entry
     ));
@@ -304,10 +317,12 @@ export const RegisteraTidPage = (): JSX.Element => {
       
       enhancedToast.success("Insats registrerad");
       triggerRefresh();
-    } catch (error: any) {
-      if (error.error && error.error.includes('samma kombination finns redan')) {
-        enhancedToast.error(error.error, { duration: 8000 }); // 8 sekunder
-      } else if (error.message && error.message.includes('samma kombination finns redan')) {
+    } catch (error) {
+      const serverMessage = extractServerError(error);
+      const fallbackMessage = error instanceof Error ? error.message : '';
+      if (serverMessage.includes('samma kombination finns redan')) {
+        enhancedToast.error(serverMessage, { duration: 8000 }); // 8 sekunder
+      } else if (fallbackMessage.includes('samma kombination finns redan')) {
         enhancedToast.error('En aktiv insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatser.', { duration: 8000 }); // 8 sekunder
       } else {
         enhancedToast.error("Kunde inte skapa insats. Kontrollera din internetanslutning och försök igen.");
@@ -741,29 +756,33 @@ export const RegisteraTidPage = (): JSX.Element => {
                       </td>
                     </tr>
                   ) : (
-                    shifts.map((shift) => (
-                      <tr 
-                        key={shift.id} 
-                        className={`hover:bg-blue-50 border-t border-gray-200 transition-colors cursor-pointer`}
-                        onClick={() => handleShiftClick(shift)}
-                      >
-                        <td data-label="Kund" className="px-4 py-4 font-medium text-gray-800">{(shift as any).customer_active === false || shift.customer_name === 'ANONYM' ? '—' : shift.customer_name}</td>
-                        <td data-label="Behandlare 1" className="px-4 py-4 text-gray-600">{shift.handler1_name}</td>
-                        <td data-label="Behandlare 2" className="px-4 py-4 text-gray-600">{shift.handler2_name || "-"}</td>
-                        <td data-label="Insats" className="px-4 py-4 text-gray-600">{shift.effort_name}</td>
-                        <td data-label="Datum" className="px-4 py-4 text-gray-600">{shift.date ? shift.date.slice(0,10) : "-"}</td>
-                        <td data-label="Timmar" className="px-4 py-4 text-gray-600 font-medium">{shift.hours}</td>
-                        <td data-label="Status" className="actions px-4 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            shift.status === 'Utförd' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {shift.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                    shifts.map((shift) => {
+                      const hideCustomer = shift.customer_active === false || shift.customer_name === 'ANONYM';
+                      const customerDisplay = hideCustomer ? '—' : (shift.customer_name ?? '—');
+                      return (
+                        <tr 
+                          key={shift.id} 
+                          className={`hover:bg-blue-50 border-t border-gray-200 transition-colors cursor-pointer`}
+                          onClick={() => handleShiftClick(shift)}
+                        >
+                          <td data-label="Kund" className="px-4 py-4 font-medium text-gray-800">{customerDisplay}</td>
+                          <td data-label="Behandlare 1" className="px-4 py-4 text-gray-600">{shift.handler1_name}</td>
+                          <td data-label="Behandlare 2" className="px-4 py-4 text-gray-600">{shift.handler2_name || "-"}</td>
+                          <td data-label="Insats" className="px-4 py-4 text-gray-600">{shift.effort_name}</td>
+                          <td data-label="Datum" className="px-4 py-4 text-gray-600">{shift.date ? shift.date.slice(0,10) : "-"}</td>
+                          <td data-label="Timmar" className="px-4 py-4 text-gray-600 font-medium">{shift.hours}</td>
+                          <td data-label="Status" className="actions px-4 py-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              shift.status === 'Utförd' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {shift.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
             </table>
