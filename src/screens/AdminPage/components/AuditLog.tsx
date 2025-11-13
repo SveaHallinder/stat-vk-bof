@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
@@ -9,6 +9,8 @@ import { Search, Filter, Download, Trash2, RefreshCw } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { useRefresh } from '@/contexts/RefreshContext';
 
+type AuditLogDetails = Record<string, unknown> | string | null;
+
 interface AuditLogEntry {
   id: number;
   user_id: number | null;
@@ -17,7 +19,7 @@ interface AuditLogEntry {
   entity_type: string;
   entity_id: number | null;
   entity_name: string | null;
-  details: any;
+  details: AuditLogDetails;
   ip_address: string | null;
   user_agent: string | null;
   created_at: string;
@@ -50,11 +52,7 @@ const AuditLog: React.FC = () => {
   const actions = ['LOGIN', 'LOGOUT', 'CREATE', 'UPDATE', 'DELETE', 'EXPORT', 'ACCESS', 'CLEANUP'];
   const entityTypes = ['user', 'customer', 'case', 'shift', 'effort', 'handler', 'data', 'audit_log'];
 
-  useEffect(() => {
-    loadAuditLogs();
-  }, [pagination.page, pagination.limit, refreshKey]);
-
-  const loadAuditLogs = async () => {
+  const loadAuditLogs = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -81,7 +79,11 @@ const AuditLog: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange, pagination.limit, pagination.page, search, selectedAction, selectedEntityType, selectedUsername]);
+
+  useEffect(() => {
+    loadAuditLogs();
+  }, [loadAuditLogs, pagination.page, pagination.limit, refreshKey]);
 
   const handleSearch = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
@@ -138,7 +140,7 @@ const AuditLog: React.FC = () => {
     link.click();
   };
 
-  const formatDetails = (details: any): string => {
+  const formatDetails = (details: AuditLogEntry['details']): string => {
     if (!details) return '';
     
     try {

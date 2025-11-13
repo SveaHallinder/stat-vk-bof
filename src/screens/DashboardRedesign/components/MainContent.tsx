@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { BarChartStatistik } from "./BarChartStatistik";
 import { PieChart as RePieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { createCustomer, createCase, getCases, addShift, getStatsSummary, getStatsByEffort, getStatsCases, getPublicHandlers } from '@/lib/api';
+import { createCustomer, createCase, getCases, addShift, getStatsSummary, getStatsByEffort, getStatsCases, getPublicHandlers, type HandlerPublic, type StatsRow } from '@/lib/api';
 import { KundCombobox } from "@/components/ui/kund-combobox";
 import { InsatsCombobox } from "@/components/ui/insats-combobox";
 import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
@@ -15,7 +15,33 @@ import toast from 'react-hot-toast';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRefresh } from "@/contexts/RefreshContext";
-import { StatsSummary } from "@/types/types";
+import { CaseWithNames, StatsSummary } from "@/types/types";
+
+type EffortStatsRow = {
+  effort_name: string;
+  antal_besok: number;
+  antal_kunder: number;
+};
+
+type CaseStatsRow = {
+  customer_id: number | null;
+  antal_besok: number;
+  totala_timmar: number;
+};
+
+const toEffortStats = (rows: StatsRow[]): EffortStatsRow[] =>
+  rows.map(row => ({
+    effort_name: String(row.effort_name ?? ""),
+    antal_besok: Number(row.antal_besok ?? 0),
+    antal_kunder: Number(row.antal_kunder ?? 0),
+  }));
+
+const toCaseStats = (rows: StatsRow[]): CaseStatsRow[] =>
+  rows.map(row => ({
+    customer_id: row.customer_id ? Number(row.customer_id) : null,
+    antal_besok: Number(row.antal_besok ?? 0),
+    totala_timmar: Number(row.totala_timmar ?? 0),
+  }));
 
 export const MainContent = (): JSX.Element => {
   const navigate = useNavigate();
@@ -23,9 +49,9 @@ export const MainContent = (): JSX.Element => {
   const { refreshKey, triggerRefresh } = useRefresh();
   // Dynamisk statistik
   const [stats, setStats] = useState<StatsSummary | null>(null);
-  const [effortData, setEffortData] = useState<any[] | null>(null);
-  const [caseStats, setCaseStats] = useState<any[] | null>(null);
-  const [handlers, setHandlers] = useState<any[] | null>(null);
+  const [effortData, setEffortData] = useState<EffortStatsRow[] | null>(null);
+  const [caseStats, setCaseStats] = useState<CaseStatsRow[] | null>(null);
+  const [handlers, setHandlers] = useState<HandlerPublic[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const formatLocalDate = useCallback((date: Date) => {
@@ -69,11 +95,11 @@ export const MainContent = (): JSX.Element => {
       }
       
       if (effortResult.status === 'fulfilled') {
-        setEffortData(effortResult.value);
+        setEffortData(toEffortStats(effortResult.value));
       }
       
       if (casesResult.status === 'fulfilled') {
-        setCaseStats(casesResult.value);
+        setCaseStats(toCaseStats(casesResult.value));
       }
       
       if (handlersResult.status === 'fulfilled') {
@@ -238,7 +264,9 @@ export const MainContent = (): JSX.Element => {
   });
 
   const [newCaseErrors, setNewCaseErrors] = useState<{ customerId?: string; effortId?: string; handler1Id?: string }>({});
-  const [activeCases, setActiveCases] = useState<any[]>([]);
+  const [activeCases, setActiveCases] = useState<CaseWithNames[]>([]);
+
+  const getToday = useCallback(() => new Date().toISOString().slice(0, 10), []);
 
   // Memoized case loading function
   const loadActiveCases = useCallback(async () => {
@@ -262,13 +290,13 @@ export const MainContent = (): JSX.Element => {
     loadActiveCases();
   }, [loadActiveCases, refreshKey]);
 
-  function validateNewCase(c: typeof newCase) {
+  const validateNewCase = useCallback((c: typeof newCase) => {
     const err: { customerId?: string; effortId?: string; handler1Id?: string } = {};
     if (!c.customerId) err.customerId = "Du måste välja kund";
     if (!c.effortId) err.effortId = "Du måste välja insats";
     if (!c.handler1Id) err.handler1Id = "Du måste välja behandlare";
     return err;
-  }
+  }, []);
 
   // Hjälpfunktion för att räkna faktiska fel (inte undefined värden)
   function getActualErrorCount(errors: typeof newCaseErrors): number {
@@ -310,13 +338,14 @@ export const MainContent = (): JSX.Element => {
       setNewCaseErrors({});
       await loadDashboardData();
       triggerRefresh();
-    } catch (err: any) {
-      // Silent error handling
-      
-      if (err.error && err.error.includes('samma kombination finns redan')) {
-        toast.error(err.error, { duration: 8000 }); // 8 sekunder
-      } else if (err.message && err.message.includes('samma kombination finns redan')) {
-        toast.error('En aktiv insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatser.', { duration: 8000 }); // 8 sekunder
+    } catch (err: unknown) {
+      const parsed = err as { error?: string; message?: string } | undefined;
+      const errorMessage = parsed?.error || parsed?.message;
+      const duplicatePhrase = 'samma kombination finns redan';
+
+      if (errorMessage?.includes(duplicatePhrase)) {
+        const toastMessage = parsed?.error || 'En aktiv insats med samma kombination finns redan för denna kund. Du kan inte skapa flera identiska insatser.';
+        toast.error(toastMessage, { duration: 8000 });
       } else {
         toast.error('Kunde inte skapa insats');
       }
@@ -343,13 +372,13 @@ export const MainContent = (): JSX.Element => {
     setRegisterTimeErrors(prev => ({ ...prev, [name]: undefined }));
   }, [registerTime]);
 
-  function validateRegisterTime(rt: typeof registerTime) {
+  const validateRegisterTime = useCallback((rt: typeof registerTime) => {
     const err: { customer?: string; date?: string; hours?: string } = {};
     if (!rt.customer) err.customer = "Du måste välja insats";
     if (!rt.date) err.date = "Du måste ange datum";
     if (!rt.hours || isNaN(Number(rt.hours)) || Number(rt.hours) <= 0) err.hours = "Du måste ange antal timmar";
     return err;
-  }
+  }, []);
 
   const handleRegisterTimeCancel = useCallback(() => {
     setOpenModal(null);
@@ -362,7 +391,7 @@ export const MainContent = (): JSX.Element => {
       hours: "",
     });
     setRegisterTimeErrors({});
-  }, []);
+  }, [getToday]);
 
   const handleRegisterTimeSave = useCallback(async () => {
     const errors = validateRegisterTime(registerTime);
@@ -404,7 +433,7 @@ export const MainContent = (): JSX.Element => {
     } catch (err) {
       toast.error("Kunde inte spara tid");
     }
-  }, [registerTime, activeCases, triggerRefresh, loadDashboardData]);
+  }, [registerTime, activeCases, triggerRefresh, loadDashboardData, validateRegisterTime, getToday]);
 
   // Form state för Ta ut statistik
   const [statistik, setStatistik] = useState({
@@ -452,8 +481,8 @@ export const MainContent = (): JSX.Element => {
       });
       
       setStats(filteredStats);
-      setEffortData(filteredEffortData);
-      setCaseStats(filteredCases);
+      setEffortData(toEffortStats(filteredEffortData));
+      setCaseStats(toCaseStats(filteredCases));
       setShowStatistikChart(true);
     } catch (error) {
       toast.error('Kunde inte hämta filtrerad data');
@@ -499,8 +528,6 @@ export const MainContent = (): JSX.Element => {
     XLSX.utils.book_append_sheet(wb, ws, 'Statistik');
     XLSX.writeFile(wb, 'statistik.xlsx');
   }, [chartData]);
-
-  const getToday = useCallback(() => new Date().toISOString().slice(0, 10), []);
 
   // Navigera till olika sidor från dashboard-korten
   const handleCardClick = useCallback((destination: string) => {

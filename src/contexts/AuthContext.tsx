@@ -20,6 +20,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minuter
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -54,9 +55,88 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Silent localStorage handling
   }, []);
 
-  // Session timeout - 30 minuter inaktivitet
-  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minuter
+  // Session timeout - 30 minuter inaktivitet (konstant definierad högst upp)
   const inactivityTimerRef = useRef<NodeJS.Timeout>();
+
+  const logout = useCallback(async () => {
+    try {
+      await api(`/users/logout`, { method: 'POST' });
+    } catch (error) {
+      console.error('Error while logging out:', error);
+    } finally {
+      setUser(null);
+      setAccessToken(null);
+      setRefreshToken(null);
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      sessionStorage.removeItem('accessToken');
+      sessionStorage.removeItem('refreshToken');
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+    }
+  }, []);
+
+  const refreshAccessToken = useCallback(async (): Promise<boolean> => {
+    if (!refreshToken) return false;
+    
+    try {
+      const response = await api(`/users/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refreshToken })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAccessToken(data.accessToken);
+        setUser(data.user);
+        localStorage.setItem('accessToken', data.accessToken);
+        return true;
+      } else {
+        await logout();
+        return false;
+      }
+    } catch (error) {
+      await logout();
+      return false;
+    }
+  }, [refreshToken, logout]);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    if (accessToken) {
+      inactivityTimerRef.current = setTimeout(() => {
+        logout();
+      }, SESSION_TIMEOUT);
+    }
+  }, [accessToken, logout]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const response = await api(`/users/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Login failed ${response.status}: ${text.slice(0,120)}`);
+    }
+
+    const data = await response.json();
+    setUser(data.user);
+    setAccessToken(data.accessToken);
+    setRefreshToken(data.refreshToken);
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('refreshToken', data.refreshToken);
+  }, []);
 
   // Kontrollera om användaren är inloggad vid app-start
   useEffect(() => {
@@ -102,7 +182,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     checkAuth();
-  }, [accessToken, refreshToken]);
+  }, [accessToken, refreshToken, refreshAccessToken, logout]);
 
   // Event listeners för session timeout
   useEffect(() => {
@@ -124,93 +204,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       };
     }
-  }, [accessToken]);
-
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await api(`/users/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Login failed ${response.status}: ${text.slice(0,120)}`);
-      }
-
-      const data = await response.json();
-      setUser(data.user);
-      setAccessToken(data.accessToken);
-      setRefreshToken(data.refreshToken);
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const refreshAccessToken = async (): Promise<boolean> => {
-    if (!refreshToken) return false;
-    
-    try {
-      const response = await api(`/users/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ refreshToken })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAccessToken(data.accessToken);
-        setUser(data.user);
-        localStorage.setItem('accessToken', data.accessToken);
-        return true;
-      } else {
-        // Refresh token är ogiltig
-        logout();
-        return false;
-      }
-    } catch (error) {
-      logout();
-      return false;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      // Försök informera backend så refresh token i DB tas bort
-      await api(`/users/logout`, { method: 'POST' });
-    } catch {
-      // Ignorera fel vid utloggning
-    } finally {
-      setUser(null);
-      setAccessToken(null);
-      setRefreshToken(null);
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      sessionStorage.removeItem('accessToken');
-      sessionStorage.removeItem('refreshToken');
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
-    }
-  };
-
-  const resetInactivityTimer = useCallback(() => {
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-    }
-    if (accessToken) {
-      inactivityTimerRef.current = setTimeout(() => {
-        logout();
-      }, SESSION_TIMEOUT);
-    }
-  }, [accessToken]);
+  }, [accessToken, resetInactivityTimer]);
 
   const isAuthenticated = !!user && !!accessToken;
 

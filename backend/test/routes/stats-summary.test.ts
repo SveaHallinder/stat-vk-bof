@@ -25,7 +25,9 @@ describe('GET /stats/summary', () => {
       .mockResolvedValueOnce({ rows: [{ total_hours: '7.5' }] }) // timmar
       .mockResolvedValueOnce({ rows: [{ avbok: '1', total: '5' }] }) // avbokningar/total
       .mockResolvedValueOnce({ rows: [{ aktiva_kunder_total: '12' }] }) // aktiva kunder
-      .mockResolvedValueOnce({ rows: [{ aktiva_insatser_total: '20' }] }); // aktiva insatser
+      .mockResolvedValueOnce({ rows: [{ aktiva_insatser_total: '20' }] }) // aktiva insatser
+      .mockResolvedValueOnce({ rows: [{ new_customers: '3' }] }) // nya kunder
+      .mockResolvedValueOnce({ rows: [{ new_cases: '4' }] }); // nya insatser
 
     const pool = { query: poolQuery } as unknown as Pool;
 
@@ -43,7 +45,9 @@ describe('GET /stats/summary', () => {
       avbokningsgrad: 20,
       aktiva_kunder_total: 12,
       aktiva_insatser_total: 20,
+      ny_antal_kunder: 3,
+      ny_antal_insatser: 4,
     });
-    expect(poolQuery.mock.calls.length).toBe(6);
+    expect(poolQuery.mock.calls.length).toBe(8);
   });
 });

@@ -247,7 +247,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (step.route && location.pathname !== step.route) {
       navigate(step.route);
     }
-  }, [active, stepIndex, steps, location.pathname]);
+  }, [active, stepIndex, steps, location.pathname, navigate]);
 
   // Load persisted progress when user changes
   useEffect(() => {

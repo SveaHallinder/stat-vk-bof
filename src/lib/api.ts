@@ -10,6 +10,7 @@ import { Customer, Handler, Effort, CaseWithNames, ShiftEntry, GlobalSearchResul
 import { api } from "./apiClient";
 
 type QueryValue = string | number | boolean | null | undefined;
+export type StatsRow = Record<string, string | number | boolean | null>;
 
 const appendQueryParams = (params: URLSearchParams, values?: Record<string, QueryValue>) => {
   if (!values) return;
@@ -20,6 +21,16 @@ const appendQueryParams = (params: URLSearchParams, values?: Record<string, Quer
     } else {
       params.append(key, String(value));
     }
+  }
+};
+
+const extractErrorMessage = async (res: Response, fallback: string): Promise<string> => {
+  try {
+    const errorBody = await res.json();
+    return errorBody?.message || errorBody?.error || fallback;
+  } catch (parseError) {
+    console.error("Failed to parse error response", parseError);
+    return fallback;
   }
 };
 
@@ -37,12 +48,8 @@ export async function getCustomers(all = false): Promise<Customer[]> {
 export async function protectCustomer(id: number): Promise<{ id: number; is_protected: boolean }> {
   const res = await api(`/customers/${id}/protect`, { method: 'POST' });
   if (!res.ok) {
-    try {
-      const err = await res.json();
-      throw new Error(err?.message || err?.error || 'Kunde inte märka kund som skyddad');
-    } catch {
-      throw new Error('Kunde inte märka kund som skyddad');
-    }
+    const message = await extractErrorMessage(res, 'Kunde inte märka kund som skyddad');
+    throw new Error(message);
   }
   return res.json();
 }
@@ -50,12 +57,8 @@ export async function protectCustomer(id: number): Promise<{ id: number; is_prot
 export async function unprotectCustomer(id: number): Promise<{ id: number; is_protected: boolean }> {
   const res = await api(`/customers/${id}/unprotect`, { method: 'POST' });
   if (!res.ok) {
-    try {
-      const err = await res.json();
-      throw new Error(err?.message || err?.error || 'Kunde inte ta bort skyddad markering');
-    } catch {
-      throw new Error('Kunde inte ta bort skyddad markering');
-    }
+    const message = await extractErrorMessage(res, 'Kunde inte ta bort skyddad markering');
+    throw new Error(message);
   }
   return res.json();
 }
@@ -76,12 +79,9 @@ export async function softDeleteCustomer(id: string): Promise<Customer> {
     headers: { "Content-Type": "application/json" }
   });
   if (!res.ok) {
-    let msg = "Kunde inte avaktivera kund";
-    try {
-      const err = await res.json();
-      if (err && err.error) msg = err.error;
-    } catch {}
-    throw new Error(msg);
+    const msg = "Kunde inte avaktivera kund";
+    const message = await extractErrorMessage(res, msg);
+    throw new Error(message);
   }
   return res.json();
 }
@@ -92,12 +92,9 @@ export async function reactivateCustomer(id: string): Promise<Customer> {
     headers: { "Content-Type": "application/json" }
   });
   if (!res.ok) {
-    let msg = "Kunde inte återaktivera kund";
-    try {
-      const err = await res.json();
-      if (err && err.error) msg = err.error;
-    } catch {}
-    throw new Error(msg);
+    const msg = "Kunde inte återaktivera kund";
+    const message = await extractErrorMessage(res, msg);
+    throw new Error(message);
   }
   return res.json();
 }
@@ -318,7 +315,7 @@ export async function getStatsSummary(
 export async function getStatsByEffort(
   params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
   options?: RequestInit
-): Promise<any> {
+): Promise<StatsRow[]> {
   let url = `/stats/by-effort`;
   if (params) {
     const search = new URLSearchParams();
@@ -336,13 +333,14 @@ export async function getStatsByEffort(
   }
   const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per insats");
-  return res.json();
+  const data = await res.json() as StatsRow[];
+  return data;
 }
 
 export async function getStatsByHandler(
   params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
   options?: RequestInit
-): Promise<any> {
+): Promise<StatsRow[]> {
   let url = `/stats/by-handler`;
   if (params) {
     const search = new URLSearchParams();
@@ -360,7 +358,8 @@ export async function getStatsByHandler(
   }
   const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per behandlare");
-  return res.json();
+  const data = await res.json() as StatsRow[];
+  return data;
 }
 
 export async function searchAll(query: string, perType?: number): Promise<GlobalSearchResult[]> {
@@ -381,7 +380,7 @@ export async function searchAll(query: string, perType?: number): Promise<Global
 export async function getStatsByGender(
   params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
   options?: RequestInit
-): Promise<any> {
+): Promise<StatsRow[]> {
   let url = `/stats/by-gender`;
   if (params) {
     const search = new URLSearchParams();
@@ -399,13 +398,14 @@ export async function getStatsByGender(
   }
   const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per kön");
-  return res.json();
+  const data = await res.json() as StatsRow[];
+  return data;
 }
 
 export async function getStatsByBirthYear(
   params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
   options?: RequestInit
-): Promise<any> {
+): Promise<StatsRow[]> {
   let url = `/stats/by-birthyear`;
   if (params) {
     const search = new URLSearchParams();
@@ -423,13 +423,14 @@ export async function getStatsByBirthYear(
   }
   const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per födelseår");
-  return res.json();
+  const data = await res.json() as StatsRow[];
+  return data;
 }
 
 export async function getStatsCases(
   params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
   options?: RequestInit
-): Promise<any[]> {
+): Promise<StatsRow[]> {
   let url = `/stats/cases`;
   if (params) {
     const search = new URLSearchParams();
@@ -447,12 +448,13 @@ export async function getStatsCases(
   }
   const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta ärenden");
-  return res.json();
+  const data = await res.json() as StatsRow[];
+  return data;
 }
 export async function getStatsRaw(
   params?: { from?: string; to?: string; insats?: string; effortCategory?: string; gender?: string; birthYear?: string; handler?: string; customer?: string; includeInactive?: boolean; shiftStatus?: 'Alla' | 'Utförd' | 'Avbokad' },
   options?: RequestInit
-): Promise<any[]> {
+): Promise<StatsRow[]> {
   let url = `/stats/raw`;
   if (params) {
     const search = new URLSearchParams();
@@ -470,13 +472,14 @@ export async function getStatsRaw(
   }
   const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta detaljerad statistik");
-  return res.json();
+  const data = await res.json() as StatsRow[];
+  return data;
 }
 
 export async function getStatsByMonth(
   params?: { from?: string; to?: string; insats?: string; includeInactive?: boolean },
   options?: RequestInit
-): Promise<any> {
+): Promise<StatsRow[]> {
   let url = `/stats/by-month`;
   if (params) {
     const search = new URLSearchParams();
@@ -488,7 +491,8 @@ export async function getStatsByMonth(
   }
   const res = await api(url, options);
   if (!res.ok) throw new Error("Kunde inte hämta statistik per månad");
-  return res.json();
+  const data = await res.json() as StatsRow[];
+  return data;
 }
 
 export async function getHandlers(all = false): Promise<Handler[]> {
