@@ -62,7 +62,9 @@ VITE_APP_NAME=Vallentuna Kommun
 }
 
 const shouldLazyLoadStatistik = import.meta.env.VITE_ENABLE_LAZY === "1";
-const StatistikPageLazy = lazy(() => import("./screens/StatistikPage"));
+const StatistikPageLazy = lazy(async () => ({
+  default: (await import("./screens/StatistikPage")).StatistikPage,
+}));
 
 const statistikRouteElement = (
   <ProtectedRoute>

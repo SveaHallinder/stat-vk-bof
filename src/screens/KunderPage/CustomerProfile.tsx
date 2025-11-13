@@ -68,6 +68,23 @@ export const CustomerProfile = (): JSX.Element => {
   // Toggle för att visa/dölja avslutade insatsen
   const [showClosedCases, setShowClosedCases] = useState(false);
 
+  const handleToggleCase = useCallback(async (c: CaseWithNames) => {
+    const isOpen = openCaseId === c.id;
+    if (isOpen) {
+      setOpenCaseId(null);
+      return;
+    }
+    setOpenCaseId(c.id);
+    if (!shiftsByCase[c.id]) {
+      try {
+        const rows = await getShiftsForCase(c.id.toString());
+        setShiftsByCase(prev => ({ ...prev, [c.id]: rows }));
+      } catch {
+        toast.error("Kunde inte hämta besök");
+      }
+    }
+  }, [openCaseId, shiftsByCase]);
+
 
   useEffect(() => {
     if (id) {
@@ -131,8 +148,12 @@ export const CustomerProfile = (): JSX.Element => {
     }
   }, [cases, location.search, handleToggleCase]);
 
+  if (!customer) {
+    return <div className="p-8 text-center text-gray-500">Laddar kunddata...</div>;
+  }
+
   const isGroup = Boolean(customer.isGroup ?? customer.is_group);
-  const displayInitials = customer?.active ? customer.initials : '—';
+  const displayInitials = customer.active ? customer.initials : '—';
   const baseTitle = isGroup
     ? `${displayInitials} – Grupp`
     : `${displayInitials} - ${customer.gender ?? '—'} (${customer.birthYear ?? '—'})`;
@@ -141,17 +162,6 @@ export const CustomerProfile = (): JSX.Element => {
     : null;
   const customerTitle = baseTitle;
   const effectiveTitle = piiTitle ?? customerTitle;
-
-  function validateEditCustomer(c: EditableCustomer) {
-    const err: { initials?: string; birthYear?: string; gender?: string } = {};
-    if (!c.initials) err.initials = "Obligatoriskt fält";
-    if (!c.isGroup) {
-      if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
-      else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
-      if (!c.gender) err.gender = "Obligatoriskt fält";
-    }
-    return err;
-  }
 
   const handleOpenEdit = () => {
     setEditCustomer({
@@ -165,6 +175,17 @@ export const CustomerProfile = (): JSX.Element => {
     setEditCustomerErrors({});
     setEditOpen(true);
   };
+
+  function validateEditCustomer(c: EditableCustomer) {
+    const err: { initials?: string; birthYear?: string; gender?: string } = {};
+    if (!c.initials) err.initials = "Obligatoriskt fält";
+    if (!c.isGroup) {
+      if (!c.birthYear) err.birthYear = "Obligatoriskt fält";
+      else if (!/^\d{4}$/.test(c.birthYear)) err.birthYear = "Födelseår måste vara 4 siffror";
+      if (!c.gender) err.gender = "Obligatoriskt fält";
+    }
+    return err;
+  }
 
   const handleEditCustomerChange = (field: keyof EditableCustomer, value: string | boolean) => {
     setEditCustomer((prev) => {
@@ -244,24 +265,6 @@ export const CustomerProfile = (): JSX.Element => {
       toast.error("Kunde inte uppdatera insats");
     }
   }
-
-  // Shift handling
-  const handleToggleCase = useCallback(async (c: CaseWithNames) => {
-    const isOpen = openCaseId === c.id;
-    if (isOpen) {
-      setOpenCaseId(null);
-      return;
-    }
-    setOpenCaseId(c.id);
-    if (!shiftsByCase[c.id]) {
-      try {
-        const rows = await getShiftsForCase(c.id.toString());
-        setShiftsByCase(prev => ({ ...prev, [c.id]: rows }));
-      } catch {
-        toast.error("Kunde inte hämta besök");
-      }
-    }
-  }, [openCaseId, shiftsByCase]);
 
   const handleEditShift = (shift: ShiftEntry) => {
     // Spara det ursprungliga datumet när man redigerar

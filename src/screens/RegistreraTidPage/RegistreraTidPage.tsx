@@ -465,10 +465,10 @@ export const RegisteraTidPage = (): JSX.Element => {
                     
                     <div className="flex flex-col sm:flex-row sm:items-end gap-3 md:col-span-2">
                       <div className="sm:w-36" data-tour="time-status-select">
-                        <Select 
-                          value={entry.status} 
-                          onValueChange={(value) => updateTimeEntry(entry.id, 'status', value)}
-                        >
+                      <Select 
+                        value={entry.status} 
+                        onValueChange={(value) => updateTimeEntry(entry.id, 'status', value as TimeEntry['status'])}
+                      >
                           <SelectTrigger className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 h-10">
                             <SelectValue />
                           </SelectTrigger>

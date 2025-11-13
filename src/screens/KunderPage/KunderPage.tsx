@@ -222,7 +222,7 @@ export const KunderPage = (): JSX.Element => {
     if (field === "status") {
       return customer.active ? 1 : 0;
     }
-    const record = customer as Record<string, string | number | boolean | null | undefined>;
+    const record = customer as unknown as Record<string, string | number | boolean | null | undefined>;
     return record[field] ?? "";
   };
 
