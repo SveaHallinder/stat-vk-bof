@@ -10,7 +10,10 @@ export const BarChartStatistik = ({ data, titel, maxY: maxYProp }: BarChartStati
   const [tooltip, setTooltip] = useState<{ x: number; y: number; value: string } | null>(null);
   const maxBesok = Math.max(...data.map(d => d.besok), 1);
   const maxKunder = Math.max(...data.map(d => d.kunder), 1);
-  const maxY = maxYProp ?? Math.max(maxBesok, maxKunder, 1);
+  const baseMax = maxYProp ?? Math.max(maxBesok, maxKunder, 1);
+  const axisTop = Math.max(Math.ceil(baseMax / 0.5) * 0.5, 2);
+  const tickStep = 0.5;
+  const tickCount = Math.max(Math.round(axisTop / tickStep), 4);
 
   return (
     <div className="bg-white rounded-xl p-4 mobile:p-6 lg:p-8 flex flex-col items-center shadow-sm">
@@ -20,10 +23,11 @@ export const BarChartStatistik = ({ data, titel, maxY: maxYProp }: BarChartStati
       <div className="w-full h-48 mobile:h-56 lg:h-64 flex">
         {/* Y-axis labels - outside scroll area */}
         <div className="flex flex-col justify-between items-end pr-3 mobile:pr-4 lg:pr-6 py-2 w-12 mobile:w-16 lg:w-20 text-xs text-gray-400 select-none flex-shrink-0">
-          {[...Array(6)].map((_, i) => {
-            const value = Math.round((maxY / 5) * (5 - i));
+          {Array.from({ length: tickCount + 1 }).map((_, i) => {
+            const value = axisTop - i * tickStep;
+            const display = Number(value.toFixed(1));
             return (
-              <span key={i}>{value}</span>
+              <span key={i}>{display}</span>
             );
           })}
         </div>
@@ -40,7 +44,7 @@ export const BarChartStatistik = ({ data, titel, maxY: maxYProp }: BarChartStati
                     className="bg-[#17694c] rounded-t-sm mobile:rounded-md lg:rounded-lg transition-all duration-700 cursor-pointer relative"
                     style={{
                       width: '16px',
-                      height: `${Math.max((item.besok / maxY) * 100, 15)}%`,
+                      height: `${Math.max((item.besok / axisTop) * 100, 15)}%`,
                       minHeight: '20px',
                     }}
                     onMouseEnter={e => {
@@ -58,7 +62,7 @@ export const BarChartStatistik = ({ data, titel, maxY: maxYProp }: BarChartStati
                     className="bg-[#1769dc] rounded-t-sm mobile:rounded-md lg:rounded-lg transition-all duration-700 cursor-pointer relative"
                     style={{
                       width: '16px',
-                      height: `${Math.max((item.kunder / maxY) * 100, 15)}%`,
+                      height: `${Math.max((item.kunder / axisTop) * 100, 15)}%`,
                       minHeight: '20px',
                     }}
                     onMouseEnter={e => {
