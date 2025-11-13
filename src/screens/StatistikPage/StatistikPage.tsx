@@ -94,6 +94,14 @@ type StatsSeriesRow = {
   antal_kunder?: number | string;
 };
 
+type BirthYearStatsRow = StatsSeriesRow & { snitt_timmar?: number | string | null };
+type ShiftStatusFilter = 'Alla' | 'Utförd' | 'Avbokad';
+type AbortableError = { name?: string };
+type ExportFilters = Record<string, string>;
+
+const isAbortError = (error: unknown): error is AbortableError =>
+  typeof error === 'object' && error !== null && 'name' in error && (error as AbortableError).name === 'AbortError';
+
 type ViewMode = typeof viewOptions[number]['value'];
 
 const useMediaQuery = (query: string) => {
@@ -152,7 +160,7 @@ export const StatistikPage = (): JSX.Element => {
   const [selectedHandlers, setSelectedHandlers] = useState<string[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [includeInactive, setIncludeInactive] = useState<boolean>(false);
-  const [shiftStatus, setShiftStatus] = useState<'Alla' | 'Utförd' | 'Avbokad'>('Alla');
+  const [shiftStatus, setShiftStatus] = useState<ShiftStatusFilter>('Alla');
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('effort');
   const chartRef = useRef<HTMLDivElement>(null);
@@ -196,7 +204,7 @@ export const StatistikPage = (): JSX.Element => {
           secondarySuffix: ' h',
           showChart: true,
           xAxisLabel: 'Behandlare',
-          data: (handlerData || []).map((d: any) => ({
+          data: (handlerData || []).map((d: StatsSeriesRow) => ({
             label: d.handler_name || 'Okänd',
             primaryValue: Number(d.antal_besok) || 0,
             secondaryValue: Number(d.totala_timmar) || 0,
@@ -456,7 +464,7 @@ export const StatistikPage = (): JSX.Element => {
         </div>
         <div className="flex flex-col gap-1 w-full min-w-0">
           <label className="font-normal text-xs text-gray-500">Tidsstatus</label>
-          <Select value={shiftStatus} onValueChange={(v) => setShiftStatus(v as any)}>
+          <Select value={shiftStatus} onValueChange={(value) => setShiftStatus(value as ShiftStatusFilter)}>
             <SelectTrigger className="h-10">
               <SelectValue placeholder="Alla" />
             </SelectTrigger>
@@ -553,8 +561,8 @@ export const StatistikPage = (): JSX.Element => {
     getCustomers(true).then((data) => {
       // Konvertera Customer[] till CustomerItem[] genom att säkerställa att birthYear finns
       const customerItems: CustomerItem[] = data
-        .filter((c: any) => typeof c.birthYear === "number")
-        .map((c: any) => ({
+        .filter((c): c is Customer & { birthYear: number } => typeof c.birthYear === "number")
+        .map((c) => ({
           ...c,
           birthYear: c.birthYear,
         }));
@@ -606,11 +614,11 @@ export const StatistikPage = (): JSX.Element => {
     const controller = new AbortController();
     abortRef.current = controller;
     Promise.all([
-      getStatsSummary(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta statistik"); return null; }),
-      getStatsByEffort(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta diagramdata"); return null; }),
-      getStatsByHandler(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta statistik per behandlare"); return null; }),
-      getStatsByGender(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta statistik per kön"); return null; }),
-      getStatsByBirthYear(params, { signal: controller.signal }).catch(_err => { if ((_err as any)?.name !== 'AbortError') toast.error("Kunde inte hämta statistik per födelseår"); return null; })
+      getStatsSummary(params, { signal: controller.signal }).catch(error => { if (!isAbortError(error)) toast.error("Kunde inte hämta statistik"); return null; }),
+      getStatsByEffort(params, { signal: controller.signal }).catch(error => { if (!isAbortError(error)) toast.error("Kunde inte hämta diagramdata"); return null; }),
+      getStatsByHandler(params, { signal: controller.signal }).catch(error => { if (!isAbortError(error)) toast.error("Kunde inte hämta statistik per behandlare"); return null; }),
+      getStatsByGender(params, { signal: controller.signal }).catch(error => { if (!isAbortError(error)) toast.error("Kunde inte hämta statistik per kön"); return null; }),
+      getStatsByBirthYear(params, { signal: controller.signal }).catch(error => { if (!isAbortError(error)) toast.error("Kunde inte hämta statistik per födelseår"); return null; })
     ]).then(([statsData, effortData, handlerDataRes, genderDataRes, birthYearDataRes]) => {
       if (!controller.signal.aborted) {
         setStats(statsData);
@@ -633,7 +641,7 @@ export const StatistikPage = (): JSX.Element => {
   ]);
 
   // Logga export
-  const logExport = async (exportType: string, filters: any) => {
+  const logExport = async (exportType: string, filters: ExportFilters) => {
     try {
       const payload = {
         action: 'EXPORT',
@@ -718,18 +726,16 @@ export const StatistikPage = (): JSX.Element => {
 
       // Logga export
       logExport('PDF', {
-        filters: {
-          dateRange: dateRange.from && dateRange.to ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}` : "Alla",
-          selectedEfforts: selectedEfforts.length > 0 ? effortOptions.filter(e => selectedEfforts.includes(String(e.id))).map(e => e.name).join(", ") : "Alla",
-          selectedEffortCategories: selectedEffortCategories.length > 0 ? selectedEffortCategories.map(formatCategoryLabel).join(", ") : "Alla",
-          selectedGenders: selectedGenders.length > 0 ? selectedGenders.join(", ") : "Alla",
-          selectedYears: selectedYears.length > 0 ? selectedYears.join(", ") : "Alla",
-          selectedHandlers: selectedHandlers.length > 0 ? handlerOptions.filter(h => selectedHandlers.includes(String(h.id))).map(h => h.name).join(", ") : "Alla",
-          selectedCustomers: selectedCustomers.length > 0 ? customerOptions
-            .filter(c => selectedCustomers.includes(String(c.id)))
-            .map(c => (c.is_group || c.isGroup ? `${c.initials} (Grupp)` : `${c.initials} (${c.birthYear ?? '—'})`))
-            .join(", ") : "Alla"
-        }
+        dateRange: dateRange.from && dateRange.to ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}` : "Alla",
+        selectedEfforts: selectedEfforts.length > 0 ? effortOptions.filter(e => selectedEfforts.includes(String(e.id))).map(e => e.name).join(", ") : "Alla",
+        selectedEffortCategories: selectedEffortCategories.length > 0 ? selectedEffortCategories.map(formatCategoryLabel).join(", ") : "Alla",
+        selectedGenders: selectedGenders.length > 0 ? selectedGenders.join(", ") : "Alla",
+        selectedYears: selectedYears.length > 0 ? selectedYears.join(", ") : "Alla",
+        selectedHandlers: selectedHandlers.length > 0 ? handlerOptions.filter(h => selectedHandlers.includes(String(h.id))).map(h => h.name).join(", ") : "Alla",
+        selectedCustomers: selectedCustomers.length > 0 ? customerOptions
+          .filter(c => selectedCustomers.includes(String(c.id)))
+          .map(c => (c.is_group || c.isGroup ? `${c.initials} (Grupp)` : `${c.initials} (${c.birthYear ?? '—'})`))
+          .join(", ") : "Alla"
       });
       toast.success("PDF exporterad!");
     } catch {
@@ -756,6 +762,11 @@ export const StatistikPage = (): JSX.Element => {
         birthYearData ? Promise.resolve(birthYearData) : getStatsByBirthYear(params),
       ]);
 
+      const safeEffortExport: StatsSeriesRow[] = effortExport ?? [];
+      const safeHandlerExport: StatsSeriesRow[] = handlerExport ?? [];
+      const safeGenderExport: StatsSeriesRow[] = genderExport ?? [];
+      const safeBirthYearExport: BirthYearStatsRow[] = (birthYearExport ?? []) as BirthYearStatsRow[];
+
       // Bygg filterinfo
       const filterRows = [
         ["Exportdatum:", new Date().toLocaleString("sv-SE")],
@@ -778,15 +789,15 @@ export const StatistikPage = (): JSX.Element => {
         "Antal timmar",
         "Antal kunder"
       ];
-      const tableRows = (effortExport || []).map((d: any) => [
-        d.effort_name,
-        Number(d.antal_besok || 0),
-        Number(d.totala_timmar || 0),
-        Number(d.antal_kunder || 0)
+      const tableRows = safeEffortExport.map((row) => [
+        row.effort_name,
+        Number(row.antal_besok || 0),
+        Number(row.totala_timmar || 0),
+        Number(row.antal_kunder || 0)
       ]);
-      const totalBesok = (effortExport || []).reduce((sum: number, d: any) => sum + Number(d.antal_besok || 0), 0);
-      const totalTimmar = (effortExport || []).reduce((sum: number, d: any) => sum + Number(d.totala_timmar || 0), 0);
-      const totalKunder = (effortExport || []).reduce((sum: number, d: any) => sum + Number(d.antal_kunder || 0), 0);
+      const totalBesok = safeEffortExport.reduce((sum, row) => sum + Number(row.antal_besok || 0), 0);
+      const totalTimmar = safeEffortExport.reduce((sum, row) => sum + Number(row.totala_timmar || 0), 0);
+      const totalKunder = safeEffortExport.reduce((sum, row) => sum + Number(row.antal_kunder || 0), 0);
       const summaryRow = ["SUMMA", totalBesok, totalTimmar, totalKunder];
       const summarySheetData = [
         ["Statistikrapport"],
@@ -863,40 +874,40 @@ export const StatistikPage = (): JSX.Element => {
       const handlerSheetData = [
         ["Behandlare"],
         ["Namn", "Besök", "Totala timmar"],
-        ...((handlerExport || []).map((row: any) => [
+        ...safeHandlerExport.map((row) => [
           row.handler_name || 'Okänd',
           Number(row.antal_besok || 0),
           Number(row.totala_timmar || 0),
-        ]))
+        ])
       ];
       const handlerSheet = XLSX.utils.aoa_to_sheet(handlerSheetData);
-      handlerSheet['!autofilter'] = { ref: `A2:C${(handlerExport?.length || 0) + 2}` };
+      handlerSheet['!autofilter'] = { ref: `A2:C${safeHandlerExport.length + 2}` };
 
       const genderSheetData = [
         ["Kön"],
         ["Kön", "Besök", "Totala timmar"],
-        ...((genderExport || []).map((row: any) => [
+        ...safeGenderExport.map((row) => [
           row.gender || 'Okänd',
           Number(row.antal_besok || 0),
           Number(row.totala_timmar || 0),
-        ]))
+        ])
       ];
       const genderSheet = XLSX.utils.aoa_to_sheet(genderSheetData);
-      genderSheet['!autofilter'] = { ref: `A2:C${(genderExport?.length || 0) + 2}` };
+      genderSheet['!autofilter'] = { ref: `A2:C${safeGenderExport.length + 2}` };
 
       const birthYearSheetData = [
         ["Födelseår"],
         ["Födelseår", "Kunder", "Besök", "Totala timmar", "Snitt timmar (Utförd)"],
-        ...((birthYearExport || []).map((row: any) => [
+        ...safeBirthYearExport.map((row) => [
           row.label ?? 'Okänt',
           Number(row.antal_kunder || 0),
           Number(row.antal_besok || 0),
           Number(row.totala_timmar || 0),
           Number(row.snitt_timmar || 0),
-        ]))
+        ])
       ];
       const birthYearSheet = XLSX.utils.aoa_to_sheet(birthYearSheetData);
-      birthYearSheet['!autofilter'] = { ref: `A2:E${(birthYearExport?.length || 0) + 2}` };
+      birthYearSheet['!autofilter'] = { ref: `A2:E${safeBirthYearExport.length + 2}` };
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, summarySheet, 'Statistik');
@@ -907,18 +918,16 @@ export const StatistikPage = (): JSX.Element => {
       XLSX.writeFile(wb, 'statistik.xlsx');
       
       logExport('Excel', {
-        filters: {
-          dateRange: dateRange.from && dateRange.to ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}` : "Alla",
-          selectedEfforts: selectedEfforts.length > 0 ? effortOptions.filter(e => selectedEfforts.includes(String(e.id))).map(e => e.name).join(", ") : "Alla",
-          selectedEffortCategories: selectedEffortCategories.length > 0 ? selectedEffortCategories.map(formatCategoryLabel).join(", ") : "Alla",
-          selectedGenders: selectedGenders.length > 0 ? selectedGenders.join(", ") : "Alla",
-          selectedYears: selectedYears.length > 0 ? selectedYears.join(", ") : "Alla",
-          selectedHandlers: selectedHandlers.length > 0 ? handlerOptions.filter(h => selectedHandlers.includes(String(h.id))).map(h => h.name).join(", ") : "Alla",
-          selectedCustomers: selectedCustomers.length > 0 ? customerOptions
-            .filter(c => selectedCustomers.includes(String(c.id)))
-            .map(c => (c.is_group || c.isGroup ? `${c.initials} (Grupp)` : `${c.initials} (${c.birthYear ?? '—'})`))
-            .join(", ") : "Alla"
-        }
+        dateRange: dateRange.from && dateRange.to ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}` : "Alla",
+        selectedEfforts: selectedEfforts.length > 0 ? effortOptions.filter(e => selectedEfforts.includes(String(e.id))).map(e => e.name).join(", ") : "Alla",
+        selectedEffortCategories: selectedEffortCategories.length > 0 ? selectedEffortCategories.map(formatCategoryLabel).join(", ") : "Alla",
+        selectedGenders: selectedGenders.length > 0 ? selectedGenders.join(", ") : "Alla",
+        selectedYears: selectedYears.length > 0 ? selectedYears.join(", ") : "Alla",
+        selectedHandlers: selectedHandlers.length > 0 ? handlerOptions.filter(h => selectedHandlers.includes(String(h.id))).map(h => h.name).join(", ") : "Alla",
+        selectedCustomers: selectedCustomers.length > 0 ? customerOptions
+          .filter(c => selectedCustomers.includes(String(c.id)))
+          .map(c => (c.is_group || c.isGroup ? `${c.initials} (Grupp)` : `${c.initials} (${c.birthYear ?? '—'})`))
+          .join(", ") : "Alla"
       });
       
       toast.success(`Excel exporterad! (${rawData.length} rader)`);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Layout } from "@/components/Layout";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,10 +131,6 @@ export const CustomerProfile = (): JSX.Element => {
     }
   }, [cases, location.search, handleToggleCase]);
 
-  if (!customer) {
-    return <div className="p-8 text-center text-gray-500">Laddar kunddata...</div>;
-  }
-
   const isGroup = Boolean(customer.isGroup ?? customer.is_group);
   const displayInitials = customer?.active ? customer.initials : '—';
   const baseTitle = isGroup
@@ -250,7 +246,7 @@ export const CustomerProfile = (): JSX.Element => {
   }
 
   // Shift handling
-  async function handleToggleCase(c: CaseWithNames) {
+  const handleToggleCase = useCallback(async (c: CaseWithNames) => {
     const isOpen = openCaseId === c.id;
     if (isOpen) {
       setOpenCaseId(null);
@@ -265,7 +261,7 @@ export const CustomerProfile = (): JSX.Element => {
         toast.error("Kunde inte hämta besök");
       }
     }
-  }
+  }, [openCaseId, shiftsByCase]);
 
   const handleEditShift = (shift: ShiftEntry) => {
     // Spara det ursprungliga datumet när man redigerar
@@ -432,6 +428,10 @@ export const CustomerProfile = (): JSX.Element => {
       toast.error("Kunde inte återuppta insats");
     }
   };
+
+  if (!customer) {
+    return <div className="p-8 text-center text-gray-500">Laddar kunddata...</div>;
+  }
 
   return (
     <Layout title="Kundprofil">

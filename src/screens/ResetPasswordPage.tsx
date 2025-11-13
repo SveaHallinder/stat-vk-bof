@@ -65,7 +65,7 @@ export const ResetPasswordPage: React.FC = () => {
         validation = { success: true, data: validatedData };
       } catch (error) {
         if (error instanceof z.ZodError) {
-          const errors = error.issues.map((err: any) => err.message);
+          const errors = error.issues.map((issue) => issue.message);
           validation = { success: false, errors };
         } else {
           validation = { success: false, errors: ['Ett oväntat fel uppstod vid validering'] };
