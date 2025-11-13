@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, ReactNode } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import {
@@ -570,8 +570,8 @@ export const StatistikPage = (): JSX.Element => {
   }, [user, refreshKey]);
 
   // Bygg query params från filter
-  function buildParams() {
-    const params: any = {};
+  const buildParams = useCallback(() => {
+    const params: Record<string, string | boolean> = {};
     if (dateRange.from) params.from = dateRange.from.toISOString().slice(0, 10);
     if (dateRange.to) params.to = dateRange.to.toISOString().slice(0, 10);
     if (selectedEfforts.length > 0) params.insats = selectedEfforts.join(",");
@@ -584,11 +584,21 @@ export const StatistikPage = (): JSX.Element => {
     if (shiftStatus && shiftStatus !== 'Alla') params.shiftStatus = shiftStatus;
     
     return params;
-  }
+  }, [
+    dateRange,
+    includeInactive,
+    selectedCustomers,
+    selectedEffortCategories,
+    selectedEfforts,
+    selectedGenders,
+    selectedHandlers,
+    selectedYears,
+    shiftStatus,
+  ]);
 
   const abortRef = useRef<AbortController | null>(null);
 
-  function loadStats() {
+  const loadStats = useCallback(() => {
     setLoading(true);
     const params = buildParams();
     // Avbryt ev. pågående hämtningar
@@ -610,7 +620,7 @@ export const StatistikPage = (): JSX.Element => {
         setBirthYearData(birthYearDataRes);
       }
     }).finally(() => setLoading(false));
-  }
+  }, [buildParams]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -618,15 +628,7 @@ export const StatistikPage = (): JSX.Element => {
     }, 300);
     return () => clearTimeout(t);
   }, [
-    dateRange,
-    selectedEfforts,
-    selectedEffortCategories,
-    selectedGenders,
-    selectedYears,
-    selectedHandlers,
-    selectedCustomers,
-    includeInactive,
-    shiftStatus,
+    loadStats,
     refreshKey,
   ]);
 

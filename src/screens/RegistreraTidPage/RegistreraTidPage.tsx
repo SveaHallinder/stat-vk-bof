@@ -77,6 +77,95 @@ export const RegisteraTidPage = (): JSX.Element => {
   // Focus trap för modal
   const modalFocusTrapRef = useFocusTrap(showEditModal);
   
+  // Spara alla tidsregistreringar
+  const saveAllEntries = useCallback(async () => {
+    // Validera alla tidsregistreringar med Zod
+    const validationResults = timeEntries.map(entry => ({
+      entry,
+      validation: validateForm(schemas.timeEntry, {
+        caseId: entry.caseId,
+        date: entry.date,
+        hours: entry.hours,
+        status: entry.status
+      })
+    }));
+
+    const validEntries = validationResults
+      .filter(result => result.validation.success)
+      .map(result => result.entry);
+
+    if (validEntries.length === 0) {
+      enhancedToast.error("Inga giltiga tidsregistreringar att spara");
+      return;
+    }
+
+    const invalidEntries = validationResults.filter(result => !result.validation.success);
+    if (invalidEntries.length > 0) {
+      const errorMessages = invalidEntries
+        .map(result => 'validation' in result && !result.validation.success ? result.validation.errors.join(', ') : 'Okänt fel')
+        .join('; ');
+      enhancedToast.error(`Valideringsfel: ${errorMessages}`);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const operations = validEntries.map(entry =>
+        addShift({
+          case_id: entry.caseId!,
+          date: entry.date,
+          hours: entry.hours,
+          status: entry.status
+        })
+      );
+
+      const outcomes = await Promise.allSettled(operations);
+      const succeeded = outcomes.filter(result => result.status === 'fulfilled').length;
+      const failed = outcomes
+        .map((result, idx) => result.status === 'rejected' ? { entry: validEntries[idx], reason: result.reason } : null)
+        .filter((item): item is { entry: TimeEntry; reason: unknown } => Boolean(item));
+
+      if (succeeded > 0) {
+        enhancedToast.success(`${succeeded} tidsregistrering${succeeded > 1 ? 'ar' : ''} sparades!`, {
+          icon: '✅',
+          duration: 4000
+        });
+
+        try {
+          const updatedShifts = await getShifts();
+          setShifts(updatedShifts);
+        } catch (error) {
+          console.error("Kunde inte ladda om tidsregistreringar:", error);
+          enhancedToast.error("Tidsregistreringar sparades men kunde inte ladda om listan");
+        }
+
+        setTimeEntries([{
+          id: "1",
+          caseId: null,
+          date: today(),
+          hours: 1,
+          status: "Utförd"
+        }]);
+        setHasUnsavedChanges(false);
+        triggerRefresh();
+      }
+
+      if (failed.length > 0) {
+        const firstError = failed[0].reason instanceof Error
+          ? failed[0].reason.message
+          : 'Okänt fel vid sparande';
+        enhancedToast.error(`Det gick inte att spara ${failed.length} rad(er): ${firstError}`);
+      }
+    } catch (error) {
+      console.error("Error saving shifts:", error);
+      enhancedToast.error("Kunde inte spara tidsregistreringarna. Kontrollera din internetanslutning och försök igen.", {
+        duration: 5000
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [timeEntries, triggerRefresh]);
+
   // Keyboard event handlers
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -102,7 +191,7 @@ export const RegisteraTidPage = (): JSX.Element => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [hasUnsavedChanges, showEditModal, showCreateCase]);
+  }, [hasUnsavedChanges, showEditModal, showCreateCase, saveAllEntries]);
 
   // Synka standardfilter när användarrollen laddas
   useEffect(() => {
@@ -225,95 +314,6 @@ export const RegisteraTidPage = (): JSX.Element => {
       }
     } finally {
       setIsLoadingCases(false);
-    }
-  };
-
-  // Spara alla tidsregistreringar
-  const saveAllEntries = async () => {
-    // Validera alla tidsregistreringar med Zod
-    const validationResults = timeEntries.map(entry => ({
-      entry,
-      validation: validateForm(schemas.timeEntry, {
-        caseId: entry.caseId,
-        date: entry.date,
-        hours: entry.hours,
-        status: entry.status
-      })
-    }));
-
-    const validEntries = validationResults
-      .filter(result => result.validation.success)
-      .map(result => result.entry);
-
-    if (validEntries.length === 0) {
-      enhancedToast.error("Inga giltiga tidsregistreringar att spara");
-      return;
-    }
-
-    const invalidEntries = validationResults.filter(result => !result.validation.success);
-    if (invalidEntries.length > 0) {
-      const errorMessages = invalidEntries
-        .map(result => 'validation' in result && !result.validation.success ? result.validation.errors.join(', ') : 'Okänt fel')
-        .join('; ');
-      enhancedToast.error(`Valideringsfel: ${errorMessages}`);
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const operations = validEntries.map(entry =>
-        addShift({
-          case_id: entry.caseId!,
-          date: entry.date,
-          hours: entry.hours,
-          status: entry.status
-        })
-      );
-
-      const outcomes = await Promise.allSettled(operations);
-      const succeeded = outcomes.filter(result => result.status === 'fulfilled').length;
-      const failed = outcomes
-        .map((result, idx) => result.status === 'rejected' ? { entry: validEntries[idx], reason: result.reason } : null)
-        .filter((item): item is { entry: TimeEntry; reason: unknown } => Boolean(item));
-
-      if (succeeded > 0) {
-        enhancedToast.success(`${succeeded} tidsregistrering${succeeded > 1 ? 'ar' : ''} sparades!`, {
-          icon: '✅',
-          duration: 4000
-        });
-
-        try {
-          const updatedShifts = await getShifts();
-          setShifts(updatedShifts);
-        } catch (error) {
-          console.error("Kunde inte ladda om tidsregistreringar:", error);
-          enhancedToast.error("Tidsregistreringar sparades men kunde inte ladda om listan");
-        }
-
-        setTimeEntries([{
-          id: "1",
-          caseId: null,
-          date: today(),
-          hours: 1,
-          status: "Utförd"
-        }]);
-        setHasUnsavedChanges(false);
-        triggerRefresh();
-      }
-
-      if (failed.length > 0) {
-        const firstError = failed[0].reason instanceof Error
-          ? failed[0].reason.message
-          : 'Okänt fel vid sparande';
-        enhancedToast.error(`Det gick inte att spara ${failed.length} rad(er): ${firstError}`);
-      }
-    } catch (error) {
-      console.error("Error saving shifts:", error);
-      enhancedToast.error("Kunde inte spara tidsregistreringarna. Kontrollera din internetanslutning och försök igen.", {
-        duration: 5000
-      });
-    } finally {
-      setIsSaving(false);
     }
   };
 

@@ -151,13 +151,8 @@ const MinProfilPage: React.FC = () => {
     return customers.filter(c => userCustomerIds.includes(c.id));
   }, [customers, userCases]);
 
-  useEffect(() => {
-    if (user) {
-      fetchUserData();
-    }
-  }, [user, refreshKey]);
-
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
+    if (!user) return;
     try {
       // Hämta användarens kunder och insatsen
       const [customersRes, casesRes] = await Promise.all([
@@ -186,7 +181,11 @@ const MinProfilPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData, refreshKey]);
 
   if (loading) {
     return (
