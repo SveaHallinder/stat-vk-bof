@@ -23,29 +23,6 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       chunkSizeWarningLimit: 1000,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (!id.includes('node_modules')) {
-              return undefined;
-            }
-
-            if (id.includes('recharts')) {
-              return 'charts';
-            }
-
-            if (id.includes('html2canvas') || id.includes('jspdf') || id.includes('xlsx')) {
-              return 'export-tools';
-            }
-
-            if (id.includes('react') || id.includes('node_modules/scheduler')) {
-              return 'vendor';
-            }
-
-            return 'misc-vendor';
-          },
-        },
-      },
     },
   };
 });
