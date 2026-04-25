@@ -448,6 +448,13 @@ export const KunderPage = (): JSX.Element => {
                     </td>
                   </tr>
                 ))}
+                {newCustomers.length === 0 && sortedCustomers.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-500">
+                      Inga kunder ännu. Tryck på <span className="font-medium text-[#17694c]">+ Lägg till ny kund</span> för att börja.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

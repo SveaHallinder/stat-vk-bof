@@ -320,6 +320,13 @@ export const AdminPage = (): JSX.Element => {
                     </tr>
                   </thead>
                   <tbody>
+                    {insatser.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-12 text-center text-sm text-gray-500">
+                          Inga insatser ännu. Tryck på <span className="font-medium text-[#17694c]">+ Lägg till ny insats</span> för att börja.
+                        </td>
+                      </tr>
+                    )}
                     {insatser.map((i, idx) => (
                       <TableRow key={i.id}>
                         <TableCell label="Insats" className={`font-medium ${i.active ? "text-gray-800" : "text-gray-400 italic"}`}>{i.name}</TableCell>

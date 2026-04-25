@@ -198,6 +198,13 @@ export const ArendelistaPage = (): JSX.Element => {
                     <td data-label="Behandlare 2" className="py-2 mobile:py-3 px-2 mobile:px-4 group-hover:text-[#17694c] text-xs mobile:text-sm">{c.handler2_name || '-'}</td>
                   </tr>
                 ))}
+                {!isLoading && sorted.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500">
+                      Inga insatser hittades. Skapa en insats från en kunds profilsida för att börja.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
             {hasMore && (
@@ -207,7 +214,7 @@ export const ArendelistaPage = (): JSX.Element => {
                   onClick={() => fetchPage(offsetRef.current, true)}
                   disabled={isLoadingMore}
                 >
-                  {isLoadingMore ? "Laddar..." : "Ladda fler"}
+                  {isLoadingMore ? "Laddar…" : "Ladda fler"}
                 </Button>
               </div>
             )}
@@ -224,7 +231,7 @@ export const ArendelistaPage = (): JSX.Element => {
               </div>
             )}
             {isLoading && cases.length === 0 && (
-              <div className="py-6 text-center text-sm text-gray-500">Laddar insatser...</div>
+              <div className="py-6 text-center text-sm text-gray-500">Laddar insatser…</div>
             )}
           </div>
         </CardContent>
