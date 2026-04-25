@@ -382,7 +382,7 @@ export const RegisteraTidPage = (): JSX.Element => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-[#17694c] rounded-full flex items-center justify-center">
                 <Clock className="w-4 h-4 text-white" />
               </div>
               <span>Tidsregistreringar</span>
@@ -446,7 +446,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                         type="date"
                         value={entry.date}
                         onChange={(e) => updateTimeEntry(entry.id, 'date', e.target.value)}
-                        className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 w-full h-10"
+                        className="border-gray-300 focus:border-[#17694c] focus:ring-[#17694c] w-full h-10"
                       />
                     </div>
                     
@@ -458,7 +458,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                         step="0.5"
                         value={entry.hours}
                         onChange={(e) => updateTimeEntry(entry.id, 'hours', Number(e.target.value))}
-                        className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 w-full h-10"
+                        className="border-gray-300 focus:border-[#17694c] focus:ring-[#17694c] w-full h-10"
                         placeholder="0.5"
                       />
                     </div>
@@ -469,7 +469,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                         value={entry.status} 
                         onValueChange={(value) => updateTimeEntry(entry.id, 'status', value as TimeEntry['status'])}
                       >
-                          <SelectTrigger className="border-gray-300 focus:border-blue-600 focus:ring-blue-600 h-10">
+                          <SelectTrigger className="border-gray-300 focus:border-[#17694c] focus:ring-[#17694c] h-10">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -488,7 +488,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                               isSaving 
                                 ? 'bg-gray-400 cursor-not-allowed' 
                                 : hasUnsavedChanges 
-                                  ? 'bg-blue-600 hover:bg-blue-700' 
+                                  ? 'bg-[#17694c] hover:bg-[#125b3f]' 
                                   : 'bg-gray-300 cursor-not-allowed'
                             } text-white transition-colors h-full sm:h-auto`}
                             data-tour="time-save-btn"
@@ -527,7 +527,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                     onClick={addTimeEntry} 
                     variant="outline" 
                     size="sm" 
-                    className="bg-white hover:bg-gray-50 border-blue-200 text-blue-700 hover:text-blue-800"
+                    className="bg-white hover:bg-[#eaf6f1] border-[#17694c]/30 text-[#17694c] hover:text-[#125b3f]"
                     data-tour="time-add-btn"
                   >
                     <Plus className="w-4 h-4 mr-2" />
@@ -545,7 +545,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                         isSaving 
                           ? 'bg-gray-400 cursor-not-allowed' 
                           : hasUnsavedChanges 
-                            ? 'bg-blue-600 hover:bg-blue-700' 
+                            ? 'bg-[#17694c] hover:bg-[#125b3f]' 
                             : 'bg-gray-300 cursor-not-allowed'
                       } text-white px-6 py-2`}
                       data-tour="time-save-all-btn"
@@ -601,7 +601,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                 onClick={() => setShowCreateCase(!showCreateCase)} 
                 variant="outline"
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700 px-4 py-2 font-medium cursor-pointer z-10 relative mobile:w-full mobile:mx-6 mobile:min-h-10 mobile:mb-0 lg:max-w-fit float-left lg:ml-0"
+                className="bg-[#17694c] hover:bg-[#125b3f] text-white border-[#17694c] hover:border-[#125b3f] px-4 py-2 font-medium cursor-pointer z-10 relative mobile:w-full mobile:mx-6 mobile:min-h-10 mobile:mb-0 lg:max-w-fit float-left lg:ml-0"
                 data-tour="create-case-toggle"
                 type="button"
               >
@@ -706,14 +706,14 @@ export const RegisteraTidPage = (): JSX.Element => {
 
       {/* Befintliga shifts */}
       <Card className="border-radius-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-          <CardTitle className="flex items-center gap-2 text-blue-900">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+        <CardHeader className="bg-[#f0f7f3]">
+          <CardTitle className="flex items-center gap-2 text-[#0d4530]">
+            <div className="w-8 h-8 bg-[#17694c] rounded-full flex items-center justify-center">
               <CheckCircle className="w-4 h-4 text-white" />
             </div>
             <div>
               <div className="text-lg font-semibold">Registrerade tider</div>
-              <div className="text-sm font-light text-blue-700">Översikt över alla tidsregistreringar</div>
+              <div className="text-sm font-normal text-[#17694c]">Översikt över alla tidsregistreringar</div>
             </div>
           </CardTitle>
         </CardHeader>
@@ -762,7 +762,7 @@ export const RegisteraTidPage = (): JSX.Element => {
                       return (
                         <tr 
                           key={shift.id} 
-                          className={`hover:bg-blue-50 border-t border-gray-200 transition-colors cursor-pointer`}
+                          className={`hover:bg-[#f0f7f3] border-t border-gray-200 transition-colors cursor-pointer`}
                           onClick={() => handleShiftClick(shift)}
                         >
                           <td data-label="Kund" className="px-4 py-4 font-medium text-gray-800">{customerDisplay}</td>
