@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { Customer } from "@/types/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRefresh } from "@/contexts/RefreshContext";
+import { formatLocalDate } from "@/lib/utils";
 
 
 type NewCustomer = {
@@ -406,7 +407,7 @@ export const KunderPage = (): JSX.Element => {
                         {customer.active ? "Pågående" : "Avslutad"}
                       </span>
                     </td>
-                    <td data-label="Startdatum" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center text-xs mobile:text-sm whitespace-nowrap">{customer.created_at?.slice(0, 10)}</td>
+                    <td data-label="Startdatum" className="px-2 mobile:px-4 py-2 mobile:py-3 text-center text-xs mobile:text-sm whitespace-nowrap">{formatLocalDate(customer.created_at)}</td>
                     <td data-label="Åtgärder" className="actions px-2 mobile:px-4 py-2 mobile:py-3 text-center whitespace-nowrap">
                       <div className="flex gap-2 items-center justify-center" onClick={e => e.stopPropagation()}>
                         {customer.active ? (

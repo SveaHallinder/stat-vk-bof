@@ -10,6 +10,7 @@ import { getCustomer, updateCustomer, getCustomerEfforts, getShiftsForCase, upda
 import { api } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRefresh } from "@/contexts/RefreshContext";
+import { formatLocalDate } from "@/lib/utils";
 import type { CaseWithNames, ShiftEntry, ShiftStatus, Effort, Customer } from "@/types/types";
 import type { HandlerPublic } from "@/lib/api";
 import { BehandlareCombobox } from "@/components/ui/behandlare-combobox";
@@ -168,7 +169,7 @@ export const CustomerProfile = (): JSX.Element => {
       initials: customer.initials || "",
       birthYear: customer.birthYear ? String(customer.birthYear) : "",
       gender: isGroup ? '' : (customer.gender || "Flicka"),
-      startDate: customer.created_at ? customer.created_at.slice(0, 10) : "",
+      startDate: formatLocalDate(customer.created_at),
       active: typeof customer.active === "boolean" ? customer.active : true,
       isGroup,
     });
@@ -516,7 +517,7 @@ export const CustomerProfile = (): JSX.Element => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Startdatum</span>
-                <span className="font-medium text-gray-800">{customer.created_at?.slice(0, 10)}</span>
+                <span className="font-medium text-gray-800">{formatLocalDate(customer.created_at)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Totala besökstimmar</span>
