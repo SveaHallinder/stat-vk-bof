@@ -59,16 +59,35 @@ export default function search(pool: Pool) {
 
       const results: SearchResult[] = [];
 
-      // Customers
+      // Customers — match unprotected by literal initials, protected by viewer-specific alias
       const customers = await pool.query(
         `SELECT id, initials, gender, birth_year, is_protected, is_group, active
          FROM customers
-         WHERE active = TRUE AND initials ILIKE $1
+         WHERE active = TRUE AND initials ILIKE $1 AND COALESCE(is_protected, FALSE) = FALSE
          ORDER BY id DESC
          LIMIT $2`,
         [likeTerm, perType]
       );
-      for (const row of customers.rows) {
+
+      const customerRows: any[] = [...customers.rows];
+      const qLower = q.toLowerCase();
+      if (qLower.includes('anon')) {
+        const protectedCandidates = await pool.query(
+          `SELECT id, initials, gender, birth_year, is_protected, is_group, active
+           FROM customers
+           WHERE active = TRUE AND is_protected = TRUE
+           ORDER BY id DESC`
+        );
+        for (const row of protectedCandidates.rows) {
+          const alias = generateAlias(row.id, viewerId);
+          if (alias.toLowerCase().includes(qLower)) {
+            customerRows.push(row);
+            if (customerRows.length - customers.rows.length >= perType) break;
+          }
+        }
+      }
+
+      for (const row of customerRows) {
         const safeInitials = getSafeInitials(row, { viewerId, viewerRole, assignedCustomerIds: assignedSet });
         if (row.is_protected && safeInitials === 'Anonym kund') {
           continue;
@@ -148,7 +167,7 @@ export default function search(pool: Pool) {
          LEFT JOIN handlers h2 ON h2.id = cases.handler2_id
          WHERE cases.active = TRUE
            AND (
-             customers.initials ILIKE $1 OR
+             (customers.initials ILIKE $1 AND COALESCE(customers.is_protected, FALSE) = FALSE) OR
              efforts.name ILIKE $1 OR
              COALESCE(h1.name, '') ILIKE $1 OR
              COALESCE(h2.name, '') ILIKE $1
@@ -208,7 +227,7 @@ export default function search(pool: Pool) {
          LEFT JOIN efforts ON efforts.id = cases.effort_id
          WHERE shifts.active = TRUE
            AND (
-             customers.initials ILIKE $1 OR
+             (customers.initials ILIKE $1 AND COALESCE(customers.is_protected, FALSE) = FALSE) OR
              efforts.name ILIKE $1 OR
              TO_CHAR(shifts.date, 'YYYY-MM-DD') ILIKE $1
            )
