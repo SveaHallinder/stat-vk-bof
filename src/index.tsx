@@ -85,7 +85,11 @@ createRoot(document.getElementById("app") as HTMLElement).render(
         <AuthProvider>
           <RefreshProvider>
             <OnboardingProvider>
-              <Toaster position="top-center" toastOptions={{ duration: 2500 }} />
+              <Toaster
+                position="top-right"
+                toastOptions={{ duration: 2500 }}
+                containerStyle={{ top: 80 }}
+              />
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
