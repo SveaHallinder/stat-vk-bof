@@ -24,17 +24,27 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables - KRITISKT ATT INTE COMMITTA!
+# Environment variables — secrets must NEVER be committed
+# Vite convention: .env.production and .env.staging may contain ONLY public
+# VITE_* values that get baked into the public client bundle. Any sensitive
+# values (API keys, tokens, DB credentials) MUST go in .env.local or
+# .env.[mode].local — these stay gitignored. Backend env files are NEVER
+# committed under any circumstance (they hold JWT_SECRET, DATABASE_URL, etc.).
 .env
 .env.local
 .env.development
-.env.staging
-.env.production
+.env.development.local
+.env.production.local
+.env.staging.local
+.env.test
+.env.test.local
 .env.*.local
 
-# Backend environment files
-backend/.env*
-backend/env*
+# Backend environment files — ALL backend env files are gitignored.
+backend/.env
+backend/.env.*
+backend/env
+backend/env.*
 
 # Database
 *.sqlite

@@ -29,7 +29,11 @@ export const RefreshProvider = ({ children, intervalMs }: RefreshProviderProps) 
 
   const [refreshKey, setRefreshKey] = useState(0);
   const intervalRef = useRef<number | null>(null);
-  const lastRefreshAtRef = useRef<number>(Date.now());
+  const lastRefreshAtRef = useRef<number>(0);
+
+  useEffect(() => {
+    lastRefreshAtRef.current = Date.now();
+  }, []);
 
   const triggerRefresh = useCallback(() => {
     lastRefreshAtRef.current = Date.now();

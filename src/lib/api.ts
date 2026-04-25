@@ -158,14 +158,14 @@ export async function getCustomerEfforts(customerId: number, options?: { include
 export async function getCustomerCases(customerId: number) {
   const res = await api(`/cases?customer_id=${customerId}`);
   if (!res.ok) {
-    throw new Error(`Kunde inte hämta insatsen för kund ${customerId}`);
+    throw new Error(`Kunde inte hämta insatserna för kund ${customerId}`);
   }
   return res.json();
 }
 
 export async function getCasesForCustomerEffort(customerId: string, effortId: string): Promise<CaseWithNames[]> {
   const res = await api(`/cases?customer_id=${customerId}&effort_id=${effortId}`);
-  if (!res.ok) throw new Error("Kunde inte hämta insatsen för kund och insats");
+  if (!res.ok) throw new Error("Kunde inte hämta insatserna för kund och insats");
   return res.json();
 }
 
@@ -183,7 +183,7 @@ export async function getCases(all = false, options?: GetCasesOptions): Promise<
   const query = searchParams.toString();
   const path = query ? `/cases?${query}` : `/cases`;
   const res = await api(path, options?.request);
-  if (!res.ok) throw new Error("Kunde inte hämta insatsen");
+  if (!res.ok) throw new Error("Kunde inte hämta insatserna");
   const data = await res.json();
   return data;
 }
@@ -191,7 +191,7 @@ export async function getCases(all = false, options?: GetCasesOptions): Promise<
 // Ny funktion för att hämta aktiva insatsen för en specifik kund
 export async function getActiveCasesByCustomer(customerId: number): Promise<CaseWithNames[]> {
   const res = await api(`/cases?customer_id=${customerId}&active=true`);
-  if (!res.ok) throw new Error("Kunde inte hämta insatsen för kund");
+  if (!res.ok) throw new Error("Kunde inte hämta insatserna för kund");
   return res.json();
 }
 

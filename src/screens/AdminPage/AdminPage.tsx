@@ -798,7 +798,7 @@ export const AdminPage = (): JSX.Element => {
               {/* Verifieringskod */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  erifieringskod (8 siffror)
+                  Verifieringskod (8 tecken)
                 </label>
                 <div className="flex flex-col sm:flex-row items-center gap-2">
                   <input

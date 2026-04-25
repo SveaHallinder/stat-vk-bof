@@ -54,8 +54,8 @@ export const ArendelistaPage = (): JSX.Element => {
     } catch (error) {
       const err = error as Error & { name?: string };
       if (err.name !== 'AbortError') {
-        toast.error("Kunde inte hämta insatsen");
-        setLoadError({ mode: append ? 'append' : 'initial', message: 'Kunde inte hämta insatsen. Försök igen.' });
+        toast.error("Kunde inte hämta insatserna");
+        setLoadError({ mode: append ? 'append' : 'initial', message: 'Kunde inte hämta insatserna. Försök igen.' });
       }
     } finally {
       append ? setIsLoadingMore(false) : setIsLoading(false);
@@ -69,7 +69,7 @@ export const ArendelistaPage = (): JSX.Element => {
     void fetchPage(0, false);
   }, [fetchPage, refreshKey]);
 
-  const statusOptions = ["Aktivt", "inaktiv"];
+  const statusOptions = ["Aktiv", "Inaktiv"];
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -82,7 +82,7 @@ export const ArendelistaPage = (): JSX.Element => {
       !term || 
       (c.customer_name || "").toLowerCase().includes(term) || 
       (c.effort_name || "").toLowerCase().includes(term);
-    const matchesStatus = statusFilter === "all" || (c.active ? "Aktivt" : "inaktiv") === statusFilter;
+    const matchesStatus = statusFilter === "all" || (c.active ? "Aktiv" : "Inaktiv") === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -124,7 +124,7 @@ export const ArendelistaPage = (): JSX.Element => {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All status</SelectItem>
+                <SelectItem value="all">Alla</SelectItem>
                 {statusOptions.map(s => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}

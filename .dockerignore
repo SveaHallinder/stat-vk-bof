@@ -1,0 +1,90 @@
+# --- Build artifacts & dependencies (rebuilt inside the image) ---
+node_modules
+**/node_modules
+dist
+dist-ssr
+build
+**/dist
+**/build
+.cache
+.turbo
+.parcel-cache
+coverage
+.nyc_output
+
+# --- Source control & CI metadata (never needed in images) ---
+.git
+.gitignore
+.gitattributes
+.gitlab-ci.yml
+.github
+
+# --- Environment files (NEVER bake secrets into image layers) ---
+# Vite reads .env.production/.env.staging from the build context, so DO NOT
+# block those — but every other .env variant is either secret or local-only.
+.env
+.env.local
+.env.development
+.env.development.local
+.env.production.local
+.env.staging.local
+.env.test
+.env.test.local
+backend/.env
+backend/.env.*
+backend/env
+backend/env.*
+
+# --- Editor / OS / tool clutter ---
+.vscode
+.idea
+.cursor
+.gstack
+.claude
+.DS_Store
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+Thumbs.db
+
+# --- Logs & runtime ---
+logs
+**/logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Local databases / certificates / keys (never in build context) ---
+*.sqlite
+*.db
+*.pem
+*.key
+*.crt
+*.p12
+
+# --- Tests & docs (not needed at runtime) ---
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+test
+backend/test
+*.md
+docs
+
+# --- Misc ---
+README*
+LICENSE*
+CHANGELOG*
+.editorconfig
+.prettierrc*
+.eslintrc*
+.eslintignore
+archive
+.cursor-*

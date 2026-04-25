@@ -13,6 +13,12 @@ variables:
 .harbor-login: &harbor-login
   before_script:
     - echo "${HARBOR_PASSWORD}" | docker login -u "${HARBOR_USERNAME}" --password-stdin ${HARBOR_REGISTRY}
+  after_script:
+    # Always clear Harbor creds from the runner — even on job failure — so
+    # subsequent jobs (potentially from other projects sharing the ai-ops
+    # tag) cannot inherit ~/.docker/config.json. `|| true` keeps the job
+    # exit status authoritative.
+    - docker logout ${HARBOR_REGISTRY} || true
 
 # STAGING
 build-backend-staging:

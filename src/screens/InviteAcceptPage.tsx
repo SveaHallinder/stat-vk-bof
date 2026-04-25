@@ -126,7 +126,7 @@ export const InviteAcceptPage = () => {
               <input
                 id="verificationCode"
                 type="text"
-                placeholder="dinverifieringskod"
+                placeholder="ABCD1234"
                 value={verificationCode}
                 onChange={e => setVerificationCode(e.target.value.toUpperCase())}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-center text-lg tracking-widest"
@@ -134,7 +134,7 @@ export const InviteAcceptPage = () => {
                 required
               />
               <p className="text-sm text-gray-500 mt-1">
-                Ange 8-siffrig koden från din inbjudan
+                Ange den 8-tecken långa koden från din inbjudan
               </p>
             </div>
 

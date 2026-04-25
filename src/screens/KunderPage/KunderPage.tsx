@@ -439,7 +439,7 @@ export const KunderPage = (): JSX.Element => {
                               <Loader2 className="animate-spin w-4 h-4" />
                             ) : (
                               <span className="text-purple-700 font-semibold text-xs mobile:text-sm">
-                                {customer.is_protected ? 'Avskydda' : 'Skydda'}
+                                {customer.is_protected ? 'Ta bort skydd' : 'Skydda'}
                               </span>
                             )}
                           </button>

@@ -1121,7 +1121,7 @@ export const StatistikPage = (): JSX.Element => {
             </>
           ) : (
             <div className="text-gray-500 text-sm py-6 text-center w-full">
-              Insatsvyn visar ingen graf. Scrolla ned för att se hela listan på insats.
+              Insatsvyn visar ingen graf. Scrolla ned för att se hela listan över insatser.
             </div>
           )}
         </div>

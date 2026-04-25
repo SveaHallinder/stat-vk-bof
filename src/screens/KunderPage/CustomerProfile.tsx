@@ -260,7 +260,7 @@ export const CustomerProfile = (): JSX.Element => {
       });
       setCases(prev => prev.map(x => x.id === updated.id ? updated : x));
       setEditingCase(null);
-      toast.success("Insats uppdaterat!");
+      toast.success("Insats uppdaterad!");
       triggerRefresh();
     } catch (e) {
       toast.error("Kunde inte uppdatera insats");
@@ -426,7 +426,7 @@ export const CustomerProfile = (): JSX.Element => {
         ...x,  // Behåll alla ursprungliga fält inklusive namn
         active: true  // Uppdatera bara active-status
       } : x));
-      toast.success("Insats återupptaget!");
+      toast.success("Insats återupptagen!");
       triggerRefresh();
     } catch (error) {
       toast.error("Kunde inte återuppta insats");
