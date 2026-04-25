@@ -552,7 +552,7 @@ export const MainContent = (): JSX.Element => {
         {/* Sammanfattning */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-lg sm:text-xl font-light text-[#222]">Månadens överblick</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-[#222]">Månadens överblick</h2>
             <p className="text-sm text-gray-500">{monthLabel}</p>
           </div>
           <p className="text-xs text-gray-400">Aktuella siffror uppdateras automatiskt</p>
@@ -582,7 +582,7 @@ export const MainContent = (): JSX.Element => {
                 <div className="text-gray-500 text-xs sm:text-sm font-semibold tracking-wide uppercase">
                   {card.title}
                 </div>
-                <div className="text-lg sm:text-2xl lg:text-3xl xl:text-4xl text-[#222] font-light mt-1 sm:mt-2">
+                <div className="text-lg sm:text-2xl lg:text-3xl xl:text-4xl text-[#222] font-semibold mt-1 sm:mt-2">
                   {card.value}
                 </div>
                 {card.note && (
@@ -596,7 +596,7 @@ export const MainContent = (): JSX.Element => {
         </div>
         {/* Snabbåtgärder */}
         <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 lg:p-6 flex flex-col shadow-sm items-start" data-tour="quick-actions">
-          <h3 className="text-[#333] text-base sm:text-lg font-light mb-3 sm:mb-4 lg:mb-6 tracking-tight">Snabbåtgärder</h3>
+          <h3 className="text-[#333] text-base sm:text-lg font-semibold mb-3 sm:mb-4 lg:mb-6 tracking-tight">Snabbåtgärder</h3>
           <div className="grid w-full gap-2 sm:gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <Button
               variant="outline"

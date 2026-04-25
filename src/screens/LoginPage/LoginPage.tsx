@@ -54,7 +54,7 @@ export const LoginPage = () => {
     <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-light text-[#333]">
+          <CardTitle className="text-2xl font-semibold text-[#333]">
             Logga in
           </CardTitle>
           <p className="text-gray-600 text-sm">

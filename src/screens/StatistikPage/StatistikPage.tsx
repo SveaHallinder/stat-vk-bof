@@ -980,21 +980,21 @@ export const StatistikPage = (): JSX.Element => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-center" data-tour="stats-summary-cards">
             <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col items-center justify-center shadow-sm min-h-[80px] sm:min-h-[100px]">
               <div className="text-gray-600 text-[11px] sm:text-xs lg:text-sm font-medium mb-2 sm:mb-3 tracking-wide uppercase leading-tight">Antal besök</div>
-              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-light">{stats ? stats.antal_besok.toLocaleString() : "-"}</div>
+              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-semibold">{stats ? stats.antal_besok.toLocaleString() : "-"}</div>
             </div>
             <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col items-center justify-center shadow-sm min-h-[80px] sm:min-h-[100px]">
               <div className="text-gray-600 text-[11px] sm:text-xs lg:text-sm font-medium mb-2 sm:mb-3 tracking-wide uppercase leading-tight">Antal kunder</div>
-              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-light">{stats ? stats.antal_kunder : "-"}</div>
+              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-semibold">{stats ? stats.antal_kunder : "-"}</div>
             </div>
             <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col items-center justify-center shadow-sm min-h-[80px] sm:min-h-[100px]">
               <div className="text-gray-600 text-[11px] sm:text-xs lg:text-sm font-medium mb-2 sm:mb-3 tracking-wide uppercase leading-tight">Besökstimmar</div>
-              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-light">
+              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-semibold">
                 {stats ? `${stats.totala_timmar.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}` : "-"}
               </div>
             </div>
             <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col items-center justify-center shadow-sm min-h-[80px] sm:min-h-[100px]">
               <div className="text-gray-600 text-[11px] sm:text-xs lg:text-sm font-medium mb-2 sm:mb-3 tracking-wide uppercase leading-tight">Avbokningsgrad</div>
-              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-light">{stats ? `${stats.avbokningsgrad}%` : "-"}</div>
+              <div className="text-[#222] text-xl sm:text-2xl lg:text-3xl font-semibold">{stats ? `${stats.avbokningsgrad}%` : "-"}</div>
             </div>
           </div>
         )}

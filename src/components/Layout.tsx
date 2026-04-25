@@ -94,7 +94,7 @@ export const Layout = ({ children, title }: LayoutProps): JSX.Element => {
                 <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
               </button>
               
-              <h1 className="text-lg sm:text-xl md:text-2xl font-extralight text-gray-800 leading-tight truncate">{title}</h1>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-800 leading-tight truncate">{title}</h1>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 md:gap-4 w-full md:w-auto min-w-0">
               <div className="w-full sm:w-auto min-w-0 order-1 sm:order-1">
