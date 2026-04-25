@@ -29,10 +29,18 @@ export const RefreshProvider = ({ children, intervalMs }: RefreshProviderProps) 
 
   const [refreshKey, setRefreshKey] = useState(0);
   const intervalRef = useRef<number | null>(null);
+  const lastRefreshAtRef = useRef<number>(Date.now());
 
   const triggerRefresh = useCallback(() => {
+    lastRefreshAtRef.current = Date.now();
     setRefreshKey(prev => prev + 1);
   }, []);
+
+  const triggerRefreshIfStale = useCallback(() => {
+    if (Date.now() - lastRefreshAtRef.current >= MIN_INTERVAL) {
+      triggerRefresh();
+    }
+  }, [triggerRefresh]);
 
   useEffect(() => {
     const tick = () => triggerRefresh();
@@ -51,13 +59,13 @@ export const RefreshProvider = ({ children, intervalMs }: RefreshProviderProps) 
   }, [resolvedInterval, triggerRefresh]);
 
   useEffect(() => {
-    const handleFocus = () => triggerRefresh();
+    const handleFocus = () => triggerRefreshIfStale();
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        triggerRefresh();
+        triggerRefreshIfStale();
       }
     };
-    const handleOnline = () => triggerRefresh();
+    const handleOnline = () => triggerRefreshIfStale();
 
     window.addEventListener('focus', handleFocus);
     window.addEventListener('online', handleOnline);
@@ -68,7 +76,7 @@ export const RefreshProvider = ({ children, intervalMs }: RefreshProviderProps) 
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [triggerRefresh]);
+  }, [triggerRefreshIfStale]);
 
   const value = useMemo<RefreshContextValue>(() => ({
     refreshKey,
