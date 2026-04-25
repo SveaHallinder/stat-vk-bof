@@ -53,10 +53,10 @@ export const Sidebar = ({ onClose }: SidebarProps): JSX.Element => {
               />
             </div>
           </div>
-          <h2 className="font-light text-white text-xl mt-3 font-['Arial-Bold',Helvetica] group-hover:text-white/90 transition-colors">
+          <h2 className="font-semibold text-white text-xl mt-3 group-hover:text-white/90 transition-colors">
             Öppenvård
           </h2>
-          <p className="font-normal text-white/80 text-sm font-['Arial-Regular',Helvetica] group-hover:text-white/70 transition-colors">
+          <p className="font-normal text-white/80 text-sm group-hover:text-white/70 transition-colors">
             Barn och Familj
           </p>
         </div>
@@ -69,11 +69,9 @@ export const Sidebar = ({ onClose }: SidebarProps): JSX.Element => {
               <Link key={item.id} to={item.path} onClick={handleNavClick}>
                 <Button
                   variant="ghost"
-                  className={`group w-full h-12 flex items-center justify-start px-4 text-base font-['Arial-${
-                    item.active ? "Bold" : "Regular"
-                  }',Helvetica] ${
+                  className={`group w-full h-12 flex items-center justify-start px-4 text-base ${
                     item.active
-                      ? "bg-white text-[#17694c] font-bold shadow-lg transform scale-105 border border-white/20"
+                      ? "bg-white text-[#17694c] font-semibold shadow-lg transform scale-105 border border-white/20"
                       : "bg-transparent text-white font-normal hover:bg-white/10 hover:shadow-md hover:transform hover:scale-105 hover:border hover:border-white/10"
                   } rounded-xl transition-all duration-300 ease-out relative overflow-hidden`}
                 >
@@ -110,11 +108,9 @@ export const Sidebar = ({ onClose }: SidebarProps): JSX.Element => {
           <Link to={user?.role === 'admin' ? "/admin" : "/min-profil"} onClick={handleNavClick}>
             <Button
               variant="ghost"
-              className={`group w-full h-12 flex items-center justify-start px-4 text-base font-['Arial-${
-                location.pathname === (user?.role === 'admin' ? "/admin" : "/min-profil") ? "Bold" : "Regular"
-              }',Helvetica] ${
+              className={`group w-full h-12 flex items-center justify-start px-4 text-base ${
                 location.pathname === (user?.role === 'admin' ? "/admin" : "/min-profil")
-                  ? "bg-white text-[#17694c] font-bold shadow-lg transform scale-105 border border-white/20"
+                  ? "bg-white text-[#17694c] font-semibold shadow-lg transform scale-105 border border-white/20"
                   : "bg-transparent text-white font-normal hover:bg-white/10 hover:shadow-md hover:transform hover:scale-105 hover:border hover:border-white/10"
               } rounded-xl transition-all duration-300 ease-out relative overflow-hidden`}
             >
