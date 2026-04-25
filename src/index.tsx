@@ -1,5 +1,6 @@
 import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
+import type { Root } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./globals.css";
 import { validateEnv } from "./config/env";
@@ -73,7 +74,33 @@ const statistikRouteElement = (
   </ProtectedRoute>
 );
 
-createRoot(document.getElementById("app") as HTMLElement).render(
+const appElement = document.getElementById("app");
+
+if (!appElement) {
+  throw new Error("Kunde inte hitta app-rooten.");
+}
+
+declare global {
+  interface Window {
+    __SVEA_APP_ROOT__?: Root;
+  }
+}
+
+if (import.meta.env.DEV && window.__SVEA_APP_ROOT__) {
+  window.__SVEA_APP_ROOT__.unmount();
+}
+
+if (import.meta.env.DEV) {
+  appElement.replaceChildren();
+}
+
+const root = createRoot(appElement);
+
+if (import.meta.env.DEV) {
+  window.__SVEA_APP_ROOT__ = root;
+}
+
+root.render(
   <StrictMode>
     <ErrorBoundary>
       <BrowserRouter
@@ -116,3 +143,12 @@ createRoot(document.getElementById("app") as HTMLElement).render(
     </ErrorBoundary>
   </StrictMode>
 );
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    root.unmount();
+    if (window.__SVEA_APP_ROOT__ === root) {
+      window.__SVEA_APP_ROOT__ = undefined;
+    }
+  });
+}
