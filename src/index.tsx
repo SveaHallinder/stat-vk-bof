@@ -19,6 +19,7 @@ import { LoginPage } from "./screens/LoginPage";
 import { InviteAcceptPage } from "./screens/InviteAcceptPage";
 import { ResetPasswordPage } from "./screens/ResetPasswordPage";
 import { Forbidden } from "./components/Forbidden";
+import { NotFound } from "./components/NotFound";
 import { Toaster } from "react-hot-toast";
 import { LoadingSpinner } from "./components/ui/loading-spinner";
 import { OnboardingProvider } from "./contexts/OnboardingContext";
@@ -95,6 +96,7 @@ createRoot(document.getElementById("app") as HTMLElement).render(
                   <Route path="/statistik" element={statistikRouteElement} />
                   <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
                   <Route path="/min-profil" element={<ProtectedRoute><MinProfilPage /></ProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
                 <OnboardingTour />
               </Suspense>
