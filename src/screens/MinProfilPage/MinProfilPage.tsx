@@ -72,7 +72,7 @@ const ProfileInfo = React.memo<{
       <div className="mt-6 pt-4 border-t border-gray-200">
         <button
           onClick={onLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-colors"
         >
           <LogOut className="w-4 h-4" />
           Logga ut
