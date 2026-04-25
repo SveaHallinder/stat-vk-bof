@@ -96,6 +96,7 @@ type StatsSeriesRow = {
 
 type BirthYearStatsRow = StatsSeriesRow & { snitt_timmar?: number | string | null };
 type ShiftStatusFilter = 'Alla' | 'Utförd' | 'Avbokad';
+type FilterOption = { label: string; value: string };
 type AbortableError = { name?: string };
 type ExportFilters = Record<string, string>;
 
@@ -138,6 +139,20 @@ const formatCategoryLabel = (value: string) => value
     return trimmed;
   })
   .join(', ');
+
+const compareByName = (a: string | null | undefined, b: string | null | undefined) =>
+  (a || '').localeCompare(b || '', 'sv-SE', { sensitivity: 'base' });
+
+const formatDateParam = (date: Date) => date.toISOString().slice(0, 10);
+
+const isInvalidDateRange = (from: Date | null, to: Date | null) =>
+  Boolean(from && to && formatDateParam(from) > formatDateParam(to));
+
+const shiftStatusOptions: Array<{ value: ShiftStatusFilter; label: string }> = [
+  { value: 'Alla', label: 'Alla' },
+  { value: 'Utförd', label: 'Genomförd' },
+  { value: 'Avbokad', label: 'Avbokad' },
+];
 
 export const StatistikPage = (): JSX.Element => {
   const { user } = useAuth();
@@ -420,6 +435,11 @@ export const StatistikPage = (): JSX.Element => {
         <div className="gap-1 w-full flex flex-col min-w-0" data-tour="stats-filter-daterange">
           <label className="font-normal text-xs text-gray-500">Tidsperiod</label>
           <DateRangePicker value={dateRange} onChange={setDateRange} />
+          {dateRangeError && (
+            <p className="text-xs text-red-600" role="alert">
+              {dateRangeError}
+            </p>
+          )}
         </div>
         <div className="flex flex-col gap-1">
           <label className="font-normal text-xs text-gray-500">Kön</label>
@@ -441,7 +461,7 @@ export const StatistikPage = (): JSX.Element => {
         <div className="flex flex-col gap-1 w-full min-w-0">
           <label className="font-normal text-xs text-gray-500">Insats</label>
           <MultiSelectCombobox
-            options={effortOptions.map(e => ({ label: e.name, value: String(e.id) }))}
+            options={effortFilterOptions}
             value={selectedEfforts}
             onChange={setSelectedEfforts}
             placeholder="Alla insatser"
@@ -469,16 +489,16 @@ export const StatistikPage = (): JSX.Element => {
               <SelectValue placeholder="Alla" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Alla">Alla</SelectItem>
-              <SelectItem value="Utförd">Utförd</SelectItem>
-              <SelectItem value="Avbokad">Avbokad</SelectItem>
+              {shiftStatusOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-1 w-full min-w-0">
           <label className="font-normal text-xs text-gray-500">Behandlare</label>
           <MultiSelectCombobox
-            options={handlerOptions.map(h => ({ label: h.name, value: String(h.id) }))}
+            options={handlerFilterOptions}
             value={selectedHandlers}
             onChange={setSelectedHandlers}
             placeholder="Alla behandlare"
@@ -487,11 +507,7 @@ export const StatistikPage = (): JSX.Element => {
         <div className="flex flex-col gap-1 w-full min-w-0">
           <label className="font-normal text-xs text-gray-500">Kund</label>
           <MultiSelectCombobox
-            options={customerOptions.map(c => {
-              const isGroup = c.is_group || c.isGroup;
-              const label = isGroup ? `${c.initials} (Grupp)` : `${c.initials} (${c.birthYear ?? '—'})`;
-              return { label, value: String(c.id) };
-            })}
+            options={customerFilterOptions}
             value={selectedCustomers}
             onChange={setSelectedCustomers}
             placeholder="Alla kunder"
@@ -511,7 +527,7 @@ export const StatistikPage = (): JSX.Element => {
           className="text-sm font-medium w-full sm:w-auto"
           onClick={() => loadStats()}
           data-tour="stats-update-btn"
-          disabled={loading}
+          disabled={loading || Boolean(dateRangeError)}
         >
           {loading ? (<span className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" /> Uppdaterar...</span>) : 'Uppdatera'}
         </Button>
@@ -539,12 +555,58 @@ export const StatistikPage = (): JSX.Element => {
   );
 
   // Valbara alternativ
-  type CustomerItem = Customer & { birthYear: number };
+  type CustomerItem = Customer & { birthYear: number | null };
 
   const [effortOptions, setEffortOptions] = useState<Effort[]>([]);
   const [handlerOptions, setHandlerOptions] = useState<Handler[]>([]);
   const [customerOptions, setCustomerOptions] = useState<CustomerItem[]>([]);
   const [yearOptions, setYearOptions] = useState<{ label: string; value: string }[]>([]);
+  const dateRangeError = useMemo(() => {
+    if (!isInvalidDateRange(dateRange.from, dateRange.to)) return null;
+    return 'Startdatum måste vara före eller samma som slutdatum.';
+  }, [dateRange.from, dateRange.to]);
+
+  const effortFilterOptions = useMemo<FilterOption[]>(() => (
+    effortOptions
+      .slice()
+      .sort((a, b) => compareByName(a.name, b.name))
+      .map(e => {
+        const category = e.available_for ? formatCategoryLabel(e.available_for) : '';
+        return {
+          label: category ? `${e.name} – ${category}` : e.name,
+          value: String(e.id),
+        };
+      })
+  ), [effortOptions]);
+
+  const handlerFilterOptions = useMemo<FilterOption[]>(() => (
+    handlerOptions
+      .filter(h => includeInactive || h.active !== false)
+      .slice()
+      .sort((a, b) => compareByName(a.name, b.name))
+      .map(h => ({
+        label: h.active === false ? `${h.name} (Inaktiv)` : h.name,
+        value: String(h.id),
+      }))
+  ), [handlerOptions, includeInactive]);
+
+  const customerFilterOptions = useMemo<FilterOption[]>(() => (
+    customerOptions
+      .filter(c => includeInactive || c.active !== false)
+      .slice()
+      .sort((a, b) => compareByName(a.initials, b.initials))
+      .map(c => {
+        const isGroup = c.is_group || c.isGroup;
+        const baseLabel = c.label || c.initials || 'Okänd kund';
+        const suffix = isGroup ? 'Grupp' : `Född ${c.birthYear ?? 'okänt år'}`;
+        const inactive = c.active === false ? ' · Inaktiv' : '';
+        return {
+          label: `${baseLabel} (${suffix}${inactive})`,
+          value: String(c.id),
+        };
+      })
+  ), [customerOptions, includeInactive]);
+
   const yearLabel = (() => {
     if (dateRange.from && dateRange.to) {
       const fy = dateRange.from.getFullYear();
@@ -561,16 +623,15 @@ export const StatistikPage = (): JSX.Element => {
     getCustomers(true).then((data) => {
       // Konvertera Customer[] till CustomerItem[] genom att säkerställa att birthYear finns
       const customerItems: CustomerItem[] = data
-        .filter((c): c is Customer & { birthYear: number } => typeof c.birthYear === "number")
         .map((c) => ({
           ...c,
-          birthYear: c.birthYear,
+          birthYear: typeof c.birthYear === "number" ? c.birthYear : null,
         }));
       setCustomerOptions(customerItems);
 
       // Unika födelseår som string
       const years = Array.from(new Set(customerItems.map((c) => c.birthYear)))
-        .filter(Boolean)
+        .filter((year): year is number => typeof year === 'number')
         .map(String)
         .sort((a, b) => Number(b) - Number(a));
       setYearOptions(years.map((y: string) => ({ label: y, value: y })));
@@ -580,8 +641,8 @@ export const StatistikPage = (): JSX.Element => {
   // Bygg query params från filter
   const buildParams = useCallback(() => {
     const params: Record<string, string | boolean> = {};
-    if (dateRange.from) params.from = dateRange.from.toISOString().slice(0, 10);
-    if (dateRange.to) params.to = dateRange.to.toISOString().slice(0, 10);
+    if (dateRange.from) params.from = formatDateParam(dateRange.from);
+    if (dateRange.to) params.to = formatDateParam(dateRange.to);
     if (selectedEfforts.length > 0) params.insats = selectedEfforts.join(",");
     if (selectedEffortCategories.length > 0) params.effortCategory = selectedEffortCategories.join(",");
     if (selectedGenders.length > 0) params.gender = selectedGenders.join(",");
@@ -607,6 +668,11 @@ export const StatistikPage = (): JSX.Element => {
   const abortRef = useRef<AbortController | null>(null);
 
   const loadStats = useCallback(() => {
+    if (dateRangeError) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const params = buildParams();
     // Avbryt ev. pågående hämtningar
@@ -628,7 +694,7 @@ export const StatistikPage = (): JSX.Element => {
         setBirthYearData(birthYearDataRes);
       }
     }).finally(() => setLoading(false));
-  }, [buildParams]);
+  }, [buildParams, dateRangeError]);
 
   useEffect(() => {
     const t = setTimeout(() => {

@@ -6,14 +6,26 @@ interface BarChartStatistikProps {
   maxY?: number;
 }
 
+const getNiceAxis = (maxValue: number) => {
+  const safeMax = Math.max(maxValue, 1);
+  const targetIntervals = 5;
+  const rawStep = safeMax / targetIntervals;
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+  const residual = rawStep / magnitude;
+  const niceResidual = residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 5 ? 5 : 10;
+  const step = Math.max(1, niceResidual * magnitude);
+  const top = Math.max(step, Math.ceil(safeMax / step) * step);
+  const ticks = Array.from({ length: Math.floor(top / step) + 1 }, (_, i) => top - i * step);
+
+  return { top, ticks };
+};
+
 export const BarChartStatistik = ({ data, titel, maxY: maxYProp }: BarChartStatistikProps) => {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; value: string } | null>(null);
   const maxBesok = Math.max(...data.map(d => d.besok), 1);
   const maxKunder = Math.max(...data.map(d => d.kunder), 1);
   const baseMax = maxYProp ?? Math.max(maxBesok, maxKunder, 1);
-  const axisTop = Math.max(Math.ceil(baseMax / 0.5) * 0.5, 2);
-  const tickStep = 0.5;
-  const tickCount = Math.max(Math.round(axisTop / tickStep), 4);
+  const { top: axisTop, ticks } = getNiceAxis(baseMax);
 
   return (
     <div className="bg-white rounded-xl p-4 mobile:p-6 lg:p-8 flex flex-col items-center shadow-sm">
@@ -23,13 +35,9 @@ export const BarChartStatistik = ({ data, titel, maxY: maxYProp }: BarChartStati
       <div className="w-full h-48 mobile:h-56 lg:h-64 flex">
         {/* Y-axis labels - outside scroll area */}
         <div className="flex flex-col justify-between items-end pr-3 mobile:pr-4 lg:pr-6 py-2 w-12 mobile:w-16 lg:w-20 text-xs text-gray-400 select-none flex-shrink-0">
-          {Array.from({ length: tickCount + 1 }).map((_, i) => {
-            const value = axisTop - i * tickStep;
-            const display = Number(value.toFixed(1));
-            return (
-              <span key={i}>{display}</span>
-            );
-          })}
+          {ticks.map(value => (
+            <span key={value}>{Number.isInteger(value) ? value : Number(value.toFixed(1))}</span>
+          ))}
         </div>
 
         {/* Scrollable chart area */}
