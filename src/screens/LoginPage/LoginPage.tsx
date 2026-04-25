@@ -51,7 +51,18 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#f5f7fa] flex flex-col items-center justify-center p-4">
+      <div className="flex flex-col items-center mb-8">
+        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-200 overflow-hidden">
+          <img
+            src="/vallentuna-logo.png"
+            alt="Vallentuna kommun logo"
+            className="w-16 h-16 object-contain"
+          />
+        </div>
+        <h1 className="mt-4 text-xl font-semibold text-[#17694c]">Öppenvård</h1>
+        <p className="text-sm text-gray-600">Barn och Familj · Vallentuna kommun</p>
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-semibold text-[#333]">
