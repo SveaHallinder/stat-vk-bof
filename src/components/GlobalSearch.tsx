@@ -121,7 +121,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onResultSelect }) =>
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
         <Input
           className="w-full pl-11 pr-10 py-2 h-11 rounded-full border border-gray-300 text-base placeholder:text-[#888888] focus:border-[#17694c] focus:ring-0"
-          placeholder="Sök allt..."
+          placeholder="Sök allt…"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => setIsOpen(true)}

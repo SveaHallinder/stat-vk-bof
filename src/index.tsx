@@ -30,8 +30,8 @@ import { OnboardingTour } from "./components/Onboarding/OnboardingTour";
 const PageLoader = () => (
   <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center">
     <div className="text-center">
-      <LoadingSpinner size="lg" text="Laddar sida..." />
-      <p className="mt-4 text-gray-600">Vänligen vänta...</p>
+      <LoadingSpinner size="lg" text="Laddar sida…" />
+      <p className="mt-4 text-gray-600">Vänligen vänta…</p>
     </div>
   </div>
 );
