@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Layout } from "@/components/Layout";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +69,11 @@ export const CustomerProfile = (): JSX.Element => {
   // Toggle för att visa/dölja avslutade insatsen
   const [showClosedCases, setShowClosedCases] = useState(false);
 
+  // Spårar vilken navigation som redan har auto-öppnat en insats, så att
+  // handleToggleCase-callbackens identitetsbyte (vid setOpenCaseId) inte
+  // får useEffect:en nedan att toggla insatsen om och om igen.
+  const autoOpenedRef = useRef<{ effort: unknown; caseId: string | null }>({ effort: null, caseId: null });
+
   const handleToggleCase = useCallback(async (c: CaseWithNames) => {
     const isOpen = openCaseId === c.id;
     if (isOpen) {
@@ -118,11 +123,13 @@ export const CustomerProfile = (): JSX.Element => {
   // Öppna rätt insats automatiskt om state.openEffort finns
   useEffect(() => {
     if (!cases || !Array.isArray(cases) || !location.state || !location.state.openEffort) return;
+    if (autoOpenedRef.current.effort === location.state.openEffort) return;
     const match = cases.find(caseItem =>
       caseItem.effort_name === location.state.openEffort ||
       caseItem.effort_id === location.state.openEffort
     );
     if (match) {
+      autoOpenedRef.current.effort = location.state.openEffort;
       handleToggleCase(match);
     }
   }, [cases, location.state, handleToggleCase]);
@@ -130,22 +137,23 @@ export const CustomerProfile = (): JSX.Element => {
   // Öppna rätt insats automatiskt om caseId finns i URL
   useEffect(() => {
     if (!cases || !Array.isArray(cases)) return;
-    
+
     const urlParams = new URLSearchParams(location.search);
     const caseId = urlParams.get('caseId');
-    
-    if (caseId) {
-      const targetCase = cases.find(c => c.id.toString() === caseId);
-      if (targetCase) {
-        handleToggleCase(targetCase);
-        // Scrolla till insats
-        setTimeout(() => {
-          const element = document.getElementById(`case-${targetCase.id}`);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 100);
-      }
+    if (!caseId) return;
+    if (autoOpenedRef.current.caseId === caseId) return;
+
+    const targetCase = cases.find(c => c.id.toString() === caseId);
+    if (targetCase) {
+      autoOpenedRef.current.caseId = caseId;
+      handleToggleCase(targetCase);
+      // Scrolla till insats
+      setTimeout(() => {
+        const element = document.getElementById(`case-${targetCase.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     }
   }, [cases, location.search, handleToggleCase]);
 
