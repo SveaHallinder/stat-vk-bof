@@ -81,15 +81,18 @@ export function validateCustomerData(req: Request, res: Response, next: NextFunc
   // Konvertera initialer till versaler automatiskt
   req.body.initials = initials.toString().toUpperCase();
 
-  // Validera att initialerna nu är korrekta
-  if (!/^[A-ZÅÄÖ]{1,3}$/.test(req.body.initials)) {
-    return res.status(400).json({ error: 'Initialer måste vara 1-3 bokstäver (A-Z, Å, Ä, Ö)' });
-  }
-
   if (normalizedIsGroup) {
+    // Grupper använder fältet som ett gruppnamn, inte initialer:
+    // tillåt 1–50 tecken med bokstäver, siffror, mellanslag och bindestreck.
+    if (!/^[A-ZÅÄÖ0-9 \-]{1,50}$/.test(req.body.initials)) {
+      return res.status(400).json({ error: 'Gruppnamn måste vara 1–50 tecken (bokstäver, siffror, mellanslag, bindestreck)' });
+    }
     req.body.gender = null;
     req.body.birthYear = null;
   } else {
+    if (!/^[A-ZÅÄÖ]{1,3}$/.test(req.body.initials)) {
+      return res.status(400).json({ error: 'Initialer måste vara 1-3 bokstäver (A-Z, Å, Ä, Ö)' });
+    }
     if (!gender || !birthYear) {
       return res.status(400).json({ error: 'Initialer, kön och födelseår krävs' });
     }
