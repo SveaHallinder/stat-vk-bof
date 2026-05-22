@@ -1,12 +1,13 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 import usersRoutes from '../src/routes/users';
 import invitesRoutes from '../src/routes/invites';
 import authRoutes from '../src/routes/auth';
 import { MockPool } from './helpers/mockPool';
 
-async function startApp(pool: MockPool) {
+async function startApp(pool: { query: (...args: any[]) => Promise<any> }) {
   const app = express();
   app.use(express.json());
   app.use('/api/users', usersRoutes(pool as any));
@@ -93,5 +94,47 @@ describe('Invites and Reset Password', () => {
       server.close();
     }
   });
-});
 
+  test('Login works against legacy handlers schema without active column', async () => {
+    const passwordHash = await bcrypt.hash('LegacyPass1!', 4);
+    const legacyPool = {
+      async query(sql: string, params: any[] = []) {
+        const normalized = sql.replace(/\s+/g, ' ').trim().toLowerCase();
+        if (normalized.includes('from handlers where email = $1 and active = true')) {
+          const err: any = new Error('column "active" does not exist');
+          err.code = '42703';
+          throw err;
+        }
+        if (normalized.includes('from handlers where email = $1')) {
+          return {
+            rows: [{
+              id: 42,
+              email: params[0],
+              name: 'Legacy User',
+              role: 'handler',
+              password_hash: passwordHash,
+            }],
+          };
+        }
+        if (normalized.startsWith('update handlers set refresh_token = $1')) {
+          return { rows: [] };
+        }
+        return { rows: [] };
+      },
+    };
+    const { server, base } = await startApp(legacyPool);
+    try {
+      const res = await fetch(`${base}/api/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'legacy@x.se', password: 'LegacyPass1!' })
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.user.email).toBe('legacy@x.se');
+      expect(body).toHaveProperty('accessToken');
+    } finally {
+      server.close();
+    }
+  });
+});

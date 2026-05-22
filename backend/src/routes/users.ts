@@ -13,6 +13,18 @@ const hashRefreshToken = (token: string): string => {
   return crypto.createHash('sha256').update(token).digest('hex');
 };
 
+const isMissingActiveColumnError = (err: any): boolean => {
+  return err?.code === '42703' && String(err?.message || '').includes('active');
+};
+
+const logLoginError = (message: string, data: Record<string, unknown>) => {
+  console.error(`[users login] ${message}`, data);
+};
+
+const logLoginWarning = (message: string, data: Record<string, unknown>) => {
+  console.warn(`[users login] ${message}`, data);
+};
+
 const users = (pool: Pool) => {
   const router = Router();
 
@@ -28,16 +40,36 @@ const users = (pool: Pool) => {
 
       let user: any;
       try {
-        const result = await pool.query(
-          'SELECT * FROM handlers WHERE email = $1 AND active = true',
-          [email]
-        );
+        let result;
+        try {
+          result = await pool.query(
+            'SELECT * FROM handlers WHERE email = $1 AND active = true',
+            [email]
+          );
+        } catch (err: any) {
+          if (!isMissingActiveColumnError(err)) {
+            throw err;
+          }
+
+          logLoginWarning('legacy handlers schema missing active column, retrying lookup without active filter', {
+            code: err?.code,
+            message: err?.message,
+          });
+          result = await pool.query(
+            'SELECT * FROM handlers WHERE email = $1',
+            [email]
+          );
+        }
+
         if (result.rows.length === 0) {
           return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' });
         }
         user = result.rows[0];
+        if (user.active === false) {
+          return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' });
+        }
       } catch (err: any) {
-        console.error('Login error [user lookup]:', {
+        logLoginError('user lookup failed', {
           code: err?.code,
           detail: err?.detail,
           constraint: err?.constraint,
@@ -48,7 +80,7 @@ const users = (pool: Pool) => {
       }
 
       if (typeof user.password_hash !== 'string' || user.password_hash.length === 0) {
-        console.error('Login error [hash check]: password_hash saknas eller är ogiltig', {
+        logLoginError('password_hash saknas eller är ogiltig', {
           id: user.id,
           email: user.email,
         });
@@ -59,7 +91,7 @@ const users = (pool: Pool) => {
       try {
         isValidPassword = await bcrypt.compare(password, user.password_hash);
       } catch (err: any) {
-        console.error('Login error [bcrypt.compare]:', {
+        logLoginError('bcrypt.compare failed', {
           message: err?.message,
           hashLen: user.password_hash.length,
           id: user.id,
@@ -101,7 +133,7 @@ const users = (pool: Pool) => {
           [hashRefreshToken(refreshToken), user.id]
         );
       } catch (err: any) {
-        console.error('Login warning [refresh_token persist]:', {
+        logLoginWarning('refresh_token persist failed', {
           code: err?.code,
           detail: err?.detail,
           constraint: err?.constraint,
@@ -122,7 +154,7 @@ const users = (pool: Pool) => {
       });
 
     } catch (error: any) {
-      console.error('Login error [outer]:', {
+      logLoginError('outer handler failed', {
         code: error?.code,
         detail: error?.detail,
         constraint: error?.constraint,
