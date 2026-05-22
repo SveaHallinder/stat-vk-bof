@@ -21,61 +21,95 @@ const users = (pool: Pool) => {
   // Login endpoint med rate limiting
   router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     try {
-      const { email, password } = req.body;
+      const { email, password } = req.body || {};
       if (!email || !password) {
         return res.status(400).json({ error: 'Email och lösenord krävs' });
       }
 
-      // Hämta användare från databas
-      const result = await pool.query(
-        'SELECT * FROM handlers WHERE email = $1 AND active = true',
-        [email]
-      );
+      let user: any;
+      try {
+        const result = await pool.query(
+          'SELECT * FROM handlers WHERE email = $1 AND active = true',
+          [email]
+        );
+        if (result.rows.length === 0) {
+          return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' });
+        }
+        user = result.rows[0];
+      } catch (err: any) {
+        console.error('Login error [user lookup]:', {
+          code: err?.code,
+          detail: err?.detail,
+          constraint: err?.constraint,
+          message: err?.message,
+          stack: err?.stack,
+        });
+        return res.status(500).json({ error: 'Internt serverfel' });
+      }
 
-      if (result.rows.length === 0) {
+      if (typeof user.password_hash !== 'string' || user.password_hash.length === 0) {
+        console.error('Login error [hash check]: password_hash saknas eller är ogiltig', {
+          id: user.id,
+          email: user.email,
+        });
         return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' });
       }
 
-      const user = result.rows[0];
-
-      // Kontrollera lösenord med bcrypt
-      const isValidPassword = await bcrypt.compare(password, user.password_hash);
-      
+      let isValidPassword = false;
+      try {
+        isValidPassword = await bcrypt.compare(password, user.password_hash);
+      } catch (err: any) {
+        console.error('Login error [bcrypt.compare]:', {
+          message: err?.message,
+          hashLen: user.password_hash.length,
+          id: user.id,
+        });
+        return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' });
+      }
       if (!isValidPassword) {
         return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' });
       }
 
-      // Skapa JWT access token (kortare livslängd för säkerhet)
       const accessToken = jwt.sign(
-        { 
-          id: user.id, 
-          email: user.email, 
+        {
+          id: user.id,
+          email: user.email,
           name: user.name,
           role: user.role || 'handler',
           type: 'access'
         },
         process.env.JWT_SECRET!,
-        { expiresIn: '15m' } // 15 minuter för access token
+        { expiresIn: '15m' }
       );
 
-      // Skapa refresh token (längre livslängd)
       const refreshToken = jwt.sign(
-        { 
-          id: user.id, 
+        {
+          id: user.id,
           email: user.email,
           type: 'refresh'
         },
         process.env.JWT_SECRET!,
-        { expiresIn: '7d' } // 7 dagar för refresh token
+        { expiresIn: '7d' }
       );
 
-      // Spara refresh token i databasen (för att kunna invalidera vid behov)
-      await pool.query(
-        'UPDATE handlers SET refresh_token = $1, last_login = NOW() WHERE id = $2',
-        [hashRefreshToken(refreshToken), user.id]
-      );
+      // Best-effort: ett kolumn-/constraint-fel här ska INTE blockera login.
+      // (Resultatet är att refresh-flödet då inte fungerar för användaren förrän
+      // schemat är fixat, men access token funkar i 15 min så hen kommer in.)
+      try {
+        await pool.query(
+          'UPDATE handlers SET refresh_token = $1, last_login = NOW() WHERE id = $2',
+          [hashRefreshToken(refreshToken), user.id]
+        );
+      } catch (err: any) {
+        console.error('Login warning [refresh_token persist]:', {
+          code: err?.code,
+          detail: err?.detail,
+          constraint: err?.constraint,
+          message: err?.message,
+          id: user.id,
+        });
+      }
 
-      // Returnera användardata och tokens
       res.json({
         user: {
           id: user.id,
@@ -87,9 +121,14 @@ const users = (pool: Pool) => {
         refreshToken
       });
 
-    } catch (error) {
-      console.error('Login error:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
+    } catch (error: any) {
+      console.error('Login error [outer]:', {
+        code: error?.code,
+        detail: error?.detail,
+        constraint: error?.constraint,
+        message: error?.message,
+        stack: error?.stack,
+      });
       res.status(500).json({ error: 'Internt serverfel' });
     }
   });
