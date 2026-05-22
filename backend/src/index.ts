@@ -91,10 +91,36 @@ const pool = new Pool({
 // Initiera AuditLogger
 initAuditLogger(pool);
 
-// För utveckling/test: säkerställ att kritiska schema-tillägg finns (idempotent)
+// Self-healing schema check. All statements are idempotent (IF NOT EXISTS /
+// IF EXISTS) so this is safe to run on every pod startup. Without this,
+// staging environments where the migration scripts in repo root were never
+// applied manually start up with a partial schema and every login returns
+// 500 from inside the SELECT.
 async function ensureSchema() {
   try {
-    // Kolla om kolumnen customers.is_protected finns
+    // --- handlers (login depends on this — must come first) ---
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS handlers (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'handler',
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        refresh_token TEXT,
+        last_login TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`ALTER TABLE handlers ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;`);
+    await pool.query(`ALTER TABLE handlers ADD COLUMN IF NOT EXISTS refresh_token TEXT;`);
+    await pool.query(`ALTER TABLE handlers ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;`);
+    await pool.query(`ALTER TABLE handlers ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'handler';`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_handlers_email ON handlers(email);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_handlers_active ON handlers(active);`);
+
+    // --- customers ---
     const check = await pool.query(
       `SELECT 1 FROM information_schema.columns WHERE table_name = 'customers' AND column_name = 'is_protected' LIMIT 1`
     );
@@ -120,8 +146,15 @@ async function ensureSchema() {
       console.log('✅ customers.is_group skapad');
     }
 
-    await pool.query(`ALTER TABLE customers ALTER COLUMN gender DROP NOT NULL;`);
-    await pool.query(`ALTER TABLE customers ALTER COLUMN birth_year DROP NOT NULL;`);
+    // These two ALTER statements only succeed if customers exists. Guard so a
+    // brand-new staging DB with no customers table doesn't blow up the whole
+    // ensureSchema call (and thus all later steps).
+    try {
+      await pool.query(`ALTER TABLE customers ALTER COLUMN gender DROP NOT NULL;`);
+      await pool.query(`ALTER TABLE customers ALTER COLUMN birth_year DROP NOT NULL;`);
+    } catch (customersError) {
+      console.warn('⚠️  customers ALTER misslyckades (kanske ny DB utan tabellen ännu):', (customersError as any)?.message || customersError);
+    }
 
     // Normalisera insats-kategorier (ersätt Förebyggande enligt krav)
     try {
@@ -135,15 +168,20 @@ async function ensureSchema() {
     } catch (effortsError) {
       console.warn('⚠️  Kunde inte normalisera efforts.available_for:', (effortsError as any)?.message || effortsError);
     }
-  } catch (err) {
-    console.warn('⚠️  ensureSchema misslyckades (fortsätter ändå):', (err as any)?.message || err);
+
+    console.log('✅ ensureSchema klar');
+  } catch (err: any) {
+    console.warn('⚠️  ensureSchema misslyckades (fortsätter ändå):', {
+      code: err?.code,
+      detail: err?.detail,
+      message: err?.message,
+    });
   }
 }
 
-// Kör schema-säkring endast i utvecklingsmiljö
-if (config.isDevelopment) {
-  void ensureSchema();
-}
+// Kör schema-säkring i alla miljöer (idempotent). Detta gör att staging/prod
+// kan självläka efter att en migration glömts bort.
+void ensureSchema();
 
 
 
